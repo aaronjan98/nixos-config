@@ -36,20 +36,27 @@
   # If this ever fails (option not found), fall back to:
   # services.xserver.desktopManager.plasma5.enable = true;
 
-  # Users
-  users.users.root = {
-    # keep the hash you already generated:
-    hashedPassword = "";
+  # secrets and keys
+  sops = {
+    defaultSopsFile = ../../secrets/users.yaml;
+    age.keyFile = "/var/lib/sops-nix/key.txt";
   };
+
+  sops.secrets = {
+    "passwords/aj".key = "users.aj";
+    "passwords/root".key = "users.root";
+  };
+
+  # Users
+  users.users.root.hashedPasswordFile = config.sops.secrets."passwords/root".path;
 
   users.users.aj = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ];
-    hashedPassword = "";
     shell = pkgs.bash;
-    packages = with pkgs; [
-      tree
-    ];
+    packages = with pkgs; [ tree ];
+
+    hashedPasswordFile = config.sops.secrets."passwords/aj".path;
   };
 
   # Audio (optional, but recommended)
@@ -67,10 +74,12 @@
   # Basic system packages
   environment.systemPackages = with pkgs; [
     vim
+    neovim
     git
     wget
     curl
     htop
+    btop
     fastfetch
     firefox
     tree
