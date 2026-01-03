@@ -37,14 +37,14 @@
   # services.xserver.desktopManager.plasma5.enable = true;
 
   # secrets and keys
+  systemd.tmpfiles.rules = [ "d /run/sops-nix 0750 root root -" ];
   sops = {
     defaultSopsFile = ../../secrets/users.yaml;
     age.keyFile = "/var/lib/sops-nix/key.txt";
   };
-
   sops.secrets = {
-    "passwords/aj".key = "users.aj";
-    "passwords/root".key = "users.root";
+    "passwords/aj" = { key = "passwords_aj"; path = "/run/sops-nix/passwords_aj"; };
+    "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
   };
 
   # Users
