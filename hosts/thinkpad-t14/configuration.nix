@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/kanata.nix
+    ../../modules/gpg.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -55,7 +56,6 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" ];
     shell = pkgs.bash;
-    packages = with pkgs; [ tree ];
 
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
   };
@@ -84,6 +84,9 @@
     fastfetch
     firefox
     tree
+    gnupg
+    pass
+    pinentry-curses
   ];
 
   system.stateVersion = "25.11";
