@@ -1,0 +1,235 @@
+(defcfg
+  process-unmapped-keys yes
+)
+
+(defvar
+  ;; Timing (ms)
+  hrm_tt 200   hrm_ht 200   ;; home-row mods + special chords
+  nav_tt 200   nav_ht 200   ;; v -> arrows layer (default/caps/maj)
+  cap_tt 200   cap_ht 200   ;; caps -> esc/ctrl, and caps-exit in modes
+  lsft_tt 200  lsft_ht 200  ;; left shift -> capslayer/shift
+  rsft_tt 200  rsft_ht 200  ;; right shift -> majlayer/shift
+  spc_tt 200   spc_ht 200   ;; space -> nums layer while held
+
+  ;; “special chord” modifiers (held together)
+  fj_chord     (multi lctl lalt lmet)        ;; F/J: Ctrl+Alt+Super
+  w_chord      (multi lctl lmet)             ;; W:   Ctrl+Super
+  g_chord      (multi lctl lalt lsft lmet)   ;; G:   Ctrl+Alt+Shift+Super
+  launch_chord (multi lalt lmet)             ;; Tab+\: Alt+Super
+)
+
+(defsrc
+  ;; Row 0
+  esc
+
+  ;; Row 1 (mode keys)
+  lsft rsft
+
+  ;; Row 2 (caps + v)
+  caps v
+
+  ;; Row 3 (top alpha row)
+  q w e r t y u i o p
+
+  ;; Row 4 (home row incl ; ')
+  a s d f g h j k l scln apos
+
+  ;; Row 5 (bottom row)
+  z x c b n m
+
+  ;; Row 6 (punctuation)
+  , . /
+
+  ;; Row 7 (launcher keys + space)
+  tab bksl spc
+
+  ;; Extra: we explicitly include bspc so it’s always “available” as an output
+  bspc
+)
+
+(defalias
+  ;; ===== core special keys =====
+  ;; Caps in default: tap Esc, hold Ctrl
+  cap (tap-hold-press $cap_tt $cap_ht esc lctl)
+
+  ;; Caps in modes: tap exits to default, hold Ctrl
+  cap_exit (tap-hold $cap_tt $cap_ht (layer-switch default) lctl)
+
+  ;; v in default: tap v, hold arrows layer
+  nav  (tap-hold-press $nav_tt $nav_ht v   (layer-while-held arrows))
+
+  ;; v in capslayer: tap V, hold arrows layer
+  navC (tap-hold-press $nav_tt $nav_ht S-v (layer-while-held arrows))
+
+  ;; v in majlayer: tap 8, hold arrows layer
+  navM (tap-hold-press $nav_tt $nav_ht 8   (layer-while-held arrows))
+
+  ;; Left Shift: hold = shift, tap enters capslayer
+  lsft_caps (tap-hold $lsft_tt $lsft_ht (layer-switch capslayer) lsft)
+
+  ;; Right Shift: hold = shift, tap enters majlayer
+  rsft_maj  (tap-hold $rsft_tt $rsft_ht (layer-switch majlayer) rsft)
+
+  ;; Space: tap space, hold = nums layer while held (momentary)
+  spcN (tap-hold-press $spc_tt $spc_ht spc (layer-while-held nums))
+
+  ;; ===== home-row mods (default) =====
+  ;; tap letter, hold modifier
+  asft (tap-hold-press $hrm_tt $hrm_ht a     lsft)
+  salt (tap-hold-press $hrm_tt $hrm_ht s     lalt)
+  dmet (tap-hold-press $hrm_tt $hrm_ht d     lmet)
+
+  kmet (tap-hold-press $hrm_tt $hrm_ht k     rmet)
+  lalt (tap-hold-press $hrm_tt $hrm_ht l     ralt)
+  rsft (tap-hold-press $hrm_tt $hrm_ht scln  rsft)
+  rctl (tap-hold-press $hrm_tt $hrm_ht apos  rctl)
+
+  ;; ===== home-row mods (capslayer taps) =====
+  ;; tap outputs uppercase/shifted, hold keeps modifier
+  asftU (tap-hold-press $hrm_tt $hrm_ht S-a     lsft)
+  saltU (tap-hold-press $hrm_tt $hrm_ht S-s     lalt)
+  dmetU (tap-hold-press $hrm_tt $hrm_ht S-d     lmet)
+
+  kmetU (tap-hold-press $hrm_tt $hrm_ht S-k     rmet)
+  laltU (tap-hold-press $hrm_tt $hrm_ht S-l     ralt)
+  rsftU (tap-hold-press $hrm_tt $hrm_ht S-scln  rsft)  ;; ; -> :
+  rctlU (tap-hold-press $hrm_tt $hrm_ht S-apos  rctl)  ;; ' -> "
+
+  ;; ===== majlayer / nums: digit-on-tap while preserving mods =====
+  saltM (tap-hold-press $hrm_tt $hrm_ht 0 lalt)  ;; s -> 0
+  dmetM (tap-hold-press $hrm_tt $hrm_ht 1 lmet)  ;; d -> 1
+  kmetM (tap-hold-press $hrm_tt $hrm_ht 7 rmet)  ;; k -> 7
+  laltM (tap-hold-press $hrm_tt $hrm_ht 5 ralt)  ;; l -> 5
+
+  ;; ===== special chord mod-taps =====
+  ;; F/J share the same chord (Ctrl+Alt+Super) when held
+  fch   (tap-hold-press $hrm_tt $hrm_ht f   $fj_chord)
+  fchU  (tap-hold-press $hrm_tt $hrm_ht S-f $fj_chord)
+  fchM  (tap-hold-press $hrm_tt $hrm_ht 8   $fj_chord)
+
+  jch   (tap-hold-press $hrm_tt $hrm_ht j   $fj_chord)
+  jchU  (tap-hold-press $hrm_tt $hrm_ht S-j $fj_chord)
+  jchM  (tap-hold-press $hrm_tt $hrm_ht 6   $fj_chord)
+
+  ;; W chord (Ctrl+Super)
+  wch   (tap-hold-press $hrm_tt $hrm_ht w   $w_chord)
+  wchU  (tap-hold-press $hrm_tt $hrm_ht S-w $w_chord)
+  wchM  (tap-hold-press $hrm_tt $hrm_ht 8   $w_chord)
+
+  ;; G chord (Ctrl+Alt+Shift+Super)
+  gch   (tap-hold-press $hrm_tt $hrm_ht g   $g_chord)
+  gchU  (tap-hold-press $hrm_tt $hrm_ht S-g $g_chord)
+  gchM  (tap-hold-press $hrm_tt $hrm_ht 7   $g_chord)
+
+  ;; Launcher chord (Alt+Super) on Tab and \
+  tabL   (tap-hold-press $hrm_tt $hrm_ht tab  $launch_chord)
+  bkslL  (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
+  tabLU  (tap-hold-press $hrm_tt $hrm_ht tab  $launch_chord)
+  bkslLU (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
+  tabLM  (tap-hold-press $hrm_tt $hrm_ht tab  $launch_chord)
+  bkslLM (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
+)
+
+;; ===== Ctrl+H -> Backspace (OS sees ONLY bspc, not Ctrl+bspc) =====
+(defoverrides
+  ;; default layer: lctl+h
+  (lctl h) (bspc)
+
+  ;; majlayer/nums: your H key outputs "6", so cover that too
+  (lctl 6) (bspc)
+
+  ;; if you happen to have shift held at the same time:
+  (lctl lsft h) (bspc)
+  (lctl lsft 6) (bspc)
+)
+
+(deflayer default
+  esc
+  @lsft_caps @rsft_maj
+  @cap @nav
+
+  q @wch e r t y u i o p
+
+  @asft @salt @dmet @fch @gch h @jch @kmet @lalt @rsft @rctl
+
+  z x c b n m
+
+  , . /
+
+  @tabL @bkslL @spcN
+
+  bspc
+)
+
+(deflayer arrows
+  _
+  _ _
+  _ _
+
+  q w e r t y u i o p
+
+  lsft lalt lmet f g left down up rght rsft rctl
+
+  z x c b n m
+
+  , . /
+
+  tab bksl spc
+
+  bspc
+)
+
+(deflayer capslayer
+  (layer-switch default)
+  lsft rsft
+  @cap_exit @navC
+
+  S-q @wchU S-e S-r S-t S-y S-u S-i S-o S-p
+
+  @asftU @saltU @dmetU @fchU @gchU S-h @jchU @kmetU @laltU @rsftU @rctlU
+
+  S-z S-x S-c S-b S-n S-m
+
+  S-, S-. S-/
+
+  @tabLU @bkslLU @spcN
+
+  bspc
+)
+
+(deflayer majlayer
+  (layer-switch default)
+  lsft rsft
+  @cap_exit @navM
+
+  q @wchM e 4 1 y u i o 9
+
+  @asft @saltM @dmetM @fchM @gchM 6 @jchM @kmetM @laltM @rsft @rctl
+
+  0 x 7 9 2 3
+
+  , . /
+
+  @tabLM @bkslLM @spcN
+
+  bspc
+)
+
+(deflayer nums
+  esc
+  lsft rsft
+
+  @cap_exit 8
+
+  q @wchM e 4 1 y u i o 9
+
+  @asft @saltM @dmetM @fchM @gchM 6 @jchM @kmetM @laltM @rsft @rctl
+
+  0 x 7 9 2 3
+
+  , . /
+
+  @tabLM @bkslLM spc
+
+  bspc
+)
