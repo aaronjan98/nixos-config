@@ -37,6 +37,7 @@
   # services.xserver.desktopManager.plasma5.enable = true;
 
   # secrets and keys
+  system.activationScripts.users.deps = [ "setupSecrets" ];
   systemd.tmpfiles.rules = [ "d /run/sops-nix 0750 root root -" ];
   sops = {
     defaultSopsFile = ../../secrets/users.yaml;
