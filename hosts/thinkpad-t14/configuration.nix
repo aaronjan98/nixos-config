@@ -19,7 +19,7 @@
   # Remote access
   services.openssh.enable = true;
   networking.firewall.enable = true;
-  networking.firewall.allowedTCPPorts = [ 22 6969 ];
+  networking.firewall.allowedTCPPorts = [ 22 2222 6969 ];
 
   # Time zone and locale
   time.timeZone = "America/Los_Angeles";
