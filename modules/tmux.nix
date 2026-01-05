@@ -55,9 +55,9 @@ in
     terminal = "screen-256color";
 
     plugins = with pkgs.tmuxPlugins; [
-      tmux-sensible
-      tmux-resurrect
-      tmux-continuum
+      sensible
+      resurrect
+      continuum
       vim-tmux-navigator
     ];
 
