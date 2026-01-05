@@ -75,19 +75,22 @@
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
-    vim
-    neovim
-    git
-    wget
-    curl
-    htop
     btop
+    curl
     fastfetch
     firefox
-    tree
+    git
     gnupg
+    htop
+    neovim
     pass
     pinentry-curses
+    tmux
+    tree
+    vim
+    wget
+    wl-clipboard
+    xclip
   ];
 
   system.stateVersion = "25.11";
