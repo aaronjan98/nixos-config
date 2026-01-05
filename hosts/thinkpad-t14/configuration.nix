@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ../../modules/kanata.nix
     ../../modules/gpg.nix
+    ../../modules/tmux.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -85,12 +86,10 @@
     neovim
     pass
     pinentry-curses
-    tmux
     tree
+    tmux
     vim
     wget
-    wl-clipboard
-    xclip
   ];
 
   system.stateVersion = "25.11";
