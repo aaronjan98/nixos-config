@@ -71,10 +71,10 @@ in
 
       ##### Pane navigation layer: Ctrl+Shft + hjkl #####
       # tmux notation: C-S- = Ctrl + Shft
-      bind -n C-S-H select-pane -L
-      bind -n C-S-J select-pane -D
-      bind -n C-S-K select-pane -U
-      bind -n C-S-L select-pane -R
+      bind -n M-H select-pane -L
+      bind -n M-J select-pane -D
+      bind -n M-K select-pane -U
+      bind -n M-L select-pane -R
 
       ######################
       ### DESIGN CHANGES ###

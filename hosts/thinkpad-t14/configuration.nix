@@ -83,6 +83,7 @@
     git
     gnupg
     htop
+    kitty
     neovim
     pass
     pinentry-curses
