@@ -46,10 +46,14 @@ in
       ##### Reload config #####
       bind r source-file /etc/tmux.conf \; display-message "Reloaded tmux (/etc/tmux.conf)"
 
+      # Clear screen
+      unbind k
+      bind k send-keys C-l
+
       ##### Pane management #####
       setw -g aggressive-resize on
       bind-key R command-prompt -I "resize-pane -"
-      bind -r C-h resize-pane -L 5
+      bind -r BSpace resize-pane -L 5
       bind -r C-j resize-pane -D 5
       bind -r C-k resize-pane -U 5
       bind -r C-l resize-pane -R 5
@@ -60,19 +64,15 @@ in
       bind % split-window -h -c "#{pane_current_path}"
       bind '"' split-window -v -c "#{pane_current_path}"
 
-      # Clear screen
-      unbind k
-      bind k send-keys C-l
-
       # Marked pane switch
       bind Q switch-client -t'{marked}'
 
-      ##### Pane navigation layer: Ctrl+Alt + hjkl #####
-      # tmux notation: C-M- = Ctrl + Alt
-      bind -n C-M-h select-pane -L
-      bind -n C-M-j select-pane -D
-      bind -n C-M-k select-pane -U
-      bind -n C-M-l select-pane -R
+      ##### Pane navigation layer: Ctrl+Shft + hjkl #####
+      # tmux notation: C-S- = Ctrl + Shft
+      bind -n C-S-H select-pane -L
+      bind -n C-S-J select-pane -D
+      bind -n C-S-K select-pane -U
+      bind -n C-S-L select-pane -R
 
       ######################
       ### DESIGN CHANGES ###
