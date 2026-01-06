@@ -87,7 +87,6 @@
     pass
     pinentry-curses
     tree
-    tmux
     vim
     wget
   ];
