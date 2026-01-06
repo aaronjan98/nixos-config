@@ -1,6 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
+  theme = import ../themes/limerence.nix;
+
   tmuxBattery =
     pkgs.writeShellScriptBin "tmux-battery"
       (builtins.readFile ../scripts/tmux-battery.sh);
@@ -78,11 +80,11 @@ in
       ### DESIGN CHANGES ###
       ######################
 
-      DARKER_FG_COLOR=colour21
-      ACCENT_FG_COLOR=colour124
-      LIGHTER_FG_COLOR=purple
-      DEFAULT_BG_COLOR=default
-      BG_HIGHLIGHT_COLOR=#13040f
+      DARKER_FG_COLOR=${theme.tmux.darkerFg}
+      ACCENT_FG_COLOR=${theme.tmux.accentFg}
+      LIGHTER_FG_COLOR=${theme.tmux.lighterFg}
+      DEFAULT_BG_COLOR=${theme.tmux.defaultBg}
+      BG_HIGHLIGHT_COLOR=${theme.tmux.bgHighlight}
 
       set-option -g message-command-style bg=$DEFAULT_BG_COLOR,fg=$DARKER_FG_COLOR
       set-option -g message-style         bg=$DEFAULT_BG_COLOR,fg=$DARKER_FG_COLOR
