@@ -12,7 +12,7 @@
   spc_tt 200   spc_ht 200   ;; space -> nums layer while held
 
   ;; “special chord” modifiers (held together)
-  fj_chord     (multi rctl rsft)             ;; F/J:   Ctrl+Alt
+  fj_chord     (multi lalt lsft)             ;; F/J:   Alt+Shift
   w_chord      (multi rctl lmet)             ;; W:     Ctrl+Super
   g_chord      (multi rctl lalt lsft lmet)   ;; G:     Ctrl+Alt+Shift+Super
   launch_chord (multi lalt lmet)             ;; Tab+\: Alt+Super

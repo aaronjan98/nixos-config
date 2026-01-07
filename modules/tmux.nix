@@ -49,8 +49,8 @@ in
       bind r source-file /etc/tmux.conf \; display-message "Reloaded tmux (/etc/tmux.conf)"
 
       # Clear screen
-      unbind k
-      bind k send-keys C-l
+      unbind C-l
+      bind -n C-l send-keys C-l
 
       ##### Pane management #####
       setw -g aggressive-resize on
