@@ -80,7 +80,6 @@
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
   };
-  programs.niri.enable = true;
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
@@ -98,7 +97,6 @@
     tree
     vim
     wget
-    waybar
     fuzzel
     mako
     brightnessctl
