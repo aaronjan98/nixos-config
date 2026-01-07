@@ -17,6 +17,7 @@
   # Hostname and networking
   networking.hostName = "nixos";
   networking.networkmanager.enable = true;
+  programs.nm-applet.enable = true;
   # Remote access
   services.openssh.enable = true;
   programs.ssh.startAgent = true;
