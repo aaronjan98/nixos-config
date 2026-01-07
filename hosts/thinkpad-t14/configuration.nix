@@ -95,6 +95,9 @@
     tree
     vim
     wget
+    waybar
+    fuzzel
+    mako
   ];
 
   system.stateVersion = "25.11";
