@@ -100,6 +100,8 @@
     waybar
     fuzzel
     mako
+    brightnessctl
+    wireplumber
   ];
 
   system.stateVersion = "25.11";
