@@ -20,6 +20,7 @@
   # Remote access
   services.openssh.enable = true;
   programs.ssh.startAgent = true;
+  services.gnome.gcr-ssh-agent.enable = false;
   networking.firewall.enable = true;
   networking.firewall.allowedTCPPorts = [ 22 2222 6969 ];
 
