@@ -69,12 +69,13 @@ in
       # Marked pane switch
       bind Q switch-client -t'{marked}'
 
-      ##### Pane navigation layer: Ctrl+Shft + hjkl #####
-      # tmux notation: C-S- = Ctrl + Shft
-      bind -n M-H select-pane -L
-      bind -n M-J select-pane -D
-      bind -n M-K select-pane -U
-      bind -n M-L select-pane -R
+      ##### Pane navigation layer: Alt+Shift + hjkl (vim-aware) #####
+      is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(n?vim)$'"
+      
+      bind -n M-H if-shell "$is_vim" "send-keys M-H" "select-pane -L"
+      bind -n M-J if-shell "$is_vim" "send-keys M-J" "select-pane -D"
+      bind -n M-K if-shell "$is_vim" "send-keys M-K" "select-pane -U"
+      bind -n M-L if-shell "$is_vim" "send-keys M-L" "select-pane -R"
 
       ######################
       ### DESIGN CHANGES ###
