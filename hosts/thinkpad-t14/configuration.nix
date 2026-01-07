@@ -73,7 +73,11 @@
 
   # modules
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
-  environment.sessionVariables = { TERMINAL = "kitty"; };
+  environment.sessionVariables = {
+    TERMINAL = "kitty";
+    XCURSOR_THEME = "Adwaita";
+    XCURSOR_SIZE = "24";
+  };
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
