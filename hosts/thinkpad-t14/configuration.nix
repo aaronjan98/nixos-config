@@ -73,6 +73,7 @@
 
   # modules
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
+  environment.sessionVariables = { TERMINAL = "kitty"; };
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
