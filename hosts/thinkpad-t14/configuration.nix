@@ -71,13 +71,14 @@
     pulse.enable = true;
   };
 
-  # modules
+  # modules / packages
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
   environment.sessionVariables = {
     TERMINAL = "kitty";
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
   };
+  programs.niri.enable = true;
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
