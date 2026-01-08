@@ -85,6 +85,7 @@
   };
 
   # Basic system packages
+  systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
     btop
     curl
