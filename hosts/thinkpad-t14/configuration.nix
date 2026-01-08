@@ -14,16 +14,33 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Hostname and networking
-  networking.hostName = "nixos";
-  networking.networkmanager.enable = true;
-  programs.nm-applet.enable = true;
-  # Remote access
-  services.openssh.enable = true;
-  programs.ssh.startAgent = true;
-  services.gnome.gcr-ssh-agent.enable = false;
-  networking.firewall.enable = true;
-  networking.firewall.allowedTCPPorts = [ 22 2222 6969 ];
+  # Networking and Remote Access
+  networking = {
+    hostName = "nixos";
+    networkmanager = {
+      enable = true;
+      settings = {
+        connection = {
+	  "wifi.powersave" = 2;
+	};
+      };
+    };
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [ 22 2222 6969 ];
+    };
+  };
+  programs = {
+    nm-applet.enable = true;
+    ssh.startAgent = true;
+  };
+  services = {
+    openssh.enable = true;
+    gnome = {
+      gnome-keyring.enable = true;
+      gcr-ssh-agent.enable = false;
+    };
+  };
 
   # Time zone and locale
   time.timeZone = "America/Los_Angeles";
