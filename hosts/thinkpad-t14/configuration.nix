@@ -80,7 +80,10 @@
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
   };
-  programs.hyprland.enable = true;
+  programs.hyprland = {
+    enable = true;
+    xwayland.enable = true;
+  };
 
   # Basic system packages
   environment.systemPackages = with pkgs; [
