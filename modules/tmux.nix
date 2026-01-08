@@ -72,12 +72,11 @@ in
       ##### Pane navigation layer: Alt+Shift + hjkl (vim-aware + Hyprland fallback) #####
       is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(n?vim)$'"
       
-      bind -n M-H if-shell "$is_vim" "send-keys M-H" run-shell -b "~/.local/bin/tmux-or-hypr-left"
-      bind -n M-L if-shell "$is_vim" "send-keys M-L" run-shell -b "~/.local/bin/tmux-or-hypr-right"
-      bind -n M-K if-shell "$is_vim" "send-keys M-K" run-shell -b "~/.local/bin/tmux-or-hypr-up"
-      bind -n M-J if-shell "$is_vim" "send-keys M-J" run-shell -b "~/.local/bin/tmux-or-hypr-down"
-
-
+      bind -n M-H if-shell "$is_vim" "send-keys M-H" "select-pane -L"
+      bind -n M-J if-shell "$is_vim" "send-keys M-J" "select-pane -D"
+      bind -n M-K if-shell "$is_vim" "send-keys M-K" "select-pane -U"
+      bind -n M-L if-shell "$is_vim" "send-keys M-L" "select-pane -R"
+      
       ######################
       ### DESIGN CHANGES ###
       ######################
