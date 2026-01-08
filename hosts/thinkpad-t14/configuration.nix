@@ -58,9 +58,8 @@
 
   users.users.aj = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" ];
+    extraGroups = [ "wheel" "networkmanager" "input" ];
     shell = pkgs.bash;
-
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
   };
 
@@ -105,6 +104,7 @@
     mako
     brightnessctl
     wireplumber
+    libinput-gestures
   ];
 
   system.stateVersion = "25.11";
