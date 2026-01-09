@@ -11,8 +11,13 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # Bootloader
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  boot = {
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+    kernelParams = [ "pcie_aspm=off" ];
+  };
 
   # Networking and Remote Access
   networking = {
