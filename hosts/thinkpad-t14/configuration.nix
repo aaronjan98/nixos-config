@@ -123,6 +123,7 @@
     brightnessctl
     wireplumber
     libinput-gestures
+    iw
   ];
 
   system.stateVersion = "25.11";
