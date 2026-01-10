@@ -131,6 +131,8 @@
     wireplumber
     libinput-gestures
     iw
+    quickshell
+    jq
   ];
 
   system.stateVersion = "25.11";
