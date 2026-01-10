@@ -111,28 +111,55 @@
   # Basic system packages
   systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
-    btop
-    curl
-    fastfetch
-    firefox
-    git
-    gnupg
-    htop
+    # Terminal & Shell
     kitty
+    zoxide
+    fzf
+    
+    # Text Editors
     neovim
+    vim
+    
+    # System Monitoring
+    btop
+    htop
+    
+    # File & Text Tools
+    bat
+    ripgrep
+    tree
+    jq
+    
+    # Nix Development
+    nil
+    nixpkgs-fmt
+    
+    # Development Tools
+    nodejs
+    gcc
+    git
+    
+    # Networking
+    curl
+    wget
+    iw
+    
+    # Security & GPG
+    gnupg
     pass
     pinentry-curses
-    tree
-    vim
-    wget
+    
+    # Wayland/Desktop
     fuzzel
     mako
     brightnessctl
     wireplumber
     libinput-gestures
-    iw
     quickshell
-    jq
+    
+    # Applications
+    firefox
+    fastfetch
   ];
 
   system.stateVersion = "25.11";
