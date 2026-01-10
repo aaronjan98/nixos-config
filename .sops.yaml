@@ -2,7 +2,7 @@ keys:
   - &aj_age age160cjysjt7fvcpnc2l83y0plt3tkqzlq3stmaw2uewa6z52psdqrsvclgqn
 
 creation_rules:
-  - path_regex: secrets/.*\.yaml
+  - path_regex: ^secrets/
     key_groups:
       - age:
           - *aj_age
