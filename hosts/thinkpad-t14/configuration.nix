@@ -7,6 +7,7 @@
     ../../modules/gpg.nix
     ../../modules/tmux.nix
     ../../modules/networkmanager-profiles.nix
+    ../../modules/hypr-dispatch.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
