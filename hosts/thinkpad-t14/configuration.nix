@@ -6,6 +6,7 @@
     ../../modules/kanata.nix
     ../../modules/gpg.nix
     ../../modules/tmux.nix
+    ../../modules/networkmanager-profiles.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
