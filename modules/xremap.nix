@@ -39,8 +39,8 @@ in {
 
     systemd.user.services.xremap = {
       description = "xremap key remapping daemon";
-      wantedBy = [ "graphical-session.target" ];
-      partOf   = [ "graphical-session.target" ];
+      # wantedBy = [ "graphical-session.target" ];
+      # partOf   = [ "graphical-session.target" ];
       after    = [ "graphical-session.target" ];
 
       serviceConfig = {

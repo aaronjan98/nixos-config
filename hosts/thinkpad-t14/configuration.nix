@@ -8,7 +8,6 @@
     ../../modules/tmux.nix
     ../../modules/networkmanager-profiles.nix
     ../../modules/hypr-dispatch.nix
-    ../../modules/xremap.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -96,9 +95,6 @@
     alsa.support32Bit = true;
     pulse.enable = true;
   };
-
-  # Application services
-  programs.xremap.enable = true;
 
   # modules / packages
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
