@@ -98,7 +98,7 @@
   };
 
   # Application services
-  services.xremap.enable = true;
+  programs.xremap.enable = true;
 
   # modules / packages
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
