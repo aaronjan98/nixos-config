@@ -141,6 +141,18 @@
   ;; if you happen to have shift held at the same time:
   (lctl lsft h) (bspc)
   (lctl lsft 6) (bspc)
+
+  ;; Zoom In
+  (lalt =) (multi lctl =)
+  (ralt =) (multi lctl =)
+
+  ;; Zoom Out
+  (lalt -) (multi lctl -)
+  (ralt -) (multi lctl -)
+
+  ;; Reset Zoom
+  (lalt 0) (multi lctl 0)
+  (ralt 0) (multi lctl 0)
 )
 
 (deflayer default
