@@ -156,6 +156,7 @@
     wireplumber
     libinput-gestures
     quickshell
+    swww
     
     # Applications
     firefox
