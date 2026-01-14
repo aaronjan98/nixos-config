@@ -107,6 +107,11 @@
     enable = true;
     xwayland.enable = true;
   };
+  fonts.packages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.symbols-only
+  ];
+  fonts.fontconfig.enable = true;
 
   # Basic system packages
   systemd.packages = [ pkgs.libinput-gestures ];
