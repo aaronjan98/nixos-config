@@ -87,7 +87,7 @@
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
   };
 
-  # Audio (optional, but recommended)
+  # Audio
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -161,6 +161,8 @@
     mako
     brightnessctl
     wireplumber
+    pipewire
+    pulseaudio
     libinput-gestures
     quickshell
     swww
