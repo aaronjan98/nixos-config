@@ -95,6 +95,8 @@
     alsa.support32Bit = true;
     pulse.enable = true;
   };
+  hardware.bluetooth.enable = true;
+  services.blueman.enable = true; # GUI fallback
 
   # modules / packages
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
