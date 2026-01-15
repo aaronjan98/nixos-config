@@ -43,6 +43,9 @@
   ;; Row 7 (launcher keys + space)
   tab bksl spc
 
+  ;; Zoom-related keys
+  0 - =
+
   ;; Extra: we explicitly include bspc so it’s always “available” as an output
   bspc
 )
@@ -142,17 +145,14 @@
   (lctl lsft h) (bspc)
   (lctl lsft 6) (bspc)
 
-  ;; Zoom In
-  (lalt =) (multi lctl =)
-  (ralt =) (multi lctl =)
-
-  ;; Zoom Out
-  (lalt -) (multi lctl -)
-  (ralt -) (multi lctl -)
-
-  ;; Reset Zoom
-  (lalt 0) (multi lctl 0)
-  (ralt 0) (multi lctl 0)
+  ;; Zoom In: Meta + '='  -> Ctrl + '='
+  (lmet =) (macro lctl down = tap lctl up)
+  
+  ;; Zoom Out: Meta + '-' -> Ctrl + '-'
+  (lmet -) (macro lctl down - tap lctl up)
+  
+  ;; Reset Zoom: Meta + '0' -> Ctrl + '0'
+  (lmet 0) (macro lctl down 0 tap lctl up)
 )
 
 (deflayer default
@@ -169,6 +169,8 @@
   , . /
 
   @tabL @bkslL @spcN
+
+  _ _ _
 
   bspc
 )
@@ -187,6 +189,7 @@
   , . /
 
   tab bksl spc
+  _ _ _
 
   bspc
 )
@@ -206,6 +209,8 @@
 
   @tabLU @bkslLU @spcN
 
+  _ _ _
+
   bspc
 )
 
@@ -223,6 +228,8 @@
   , . /
 
   @tabLM @bkslLM @spcN
+
+  _ _ _
 
   bspc
 )
@@ -242,6 +249,8 @@
   , . /
 
   @tabLM @bkslLM spc
+
+  _ _ _
 
   bspc
 )
