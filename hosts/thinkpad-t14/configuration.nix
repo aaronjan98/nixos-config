@@ -168,6 +168,7 @@
     pipewire
     pulseaudio
     libinput-gestures
+    libnotify
     quickshell
     swww
     
