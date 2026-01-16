@@ -145,14 +145,10 @@
   (lctl lsft h) (bspc)
   (lctl lsft 6) (bspc)
 
-  ;; Zoom In: Meta + '='  -> Ctrl + '='
-  (lmet =) (macro lctl down = tap lctl up)
-  
-  ;; Zoom Out: Meta + '-' -> Ctrl + '-'
-  (lmet -) (macro lctl down - tap lctl up)
-  
-  ;; Reset Zoom: Meta + '0' -> Ctrl + '0'
-  (lmet 0) (macro lctl down 0 tap lctl up)
+  ;; Zoom keybinds with hyprland
+  (lmet =) (f13)
+  (lmet -) (f14)
+  (lmet 0) (f15)
 )
 
 (deflayer default
