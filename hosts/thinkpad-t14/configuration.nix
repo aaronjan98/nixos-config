@@ -163,6 +163,7 @@
     fuzzel
     mako
     brightnessctl
+    gammastep
     wireplumber
     pipewire
     pulseaudio
