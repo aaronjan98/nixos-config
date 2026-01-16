@@ -95,7 +95,10 @@
     alsa.support32Bit = true;
     pulse.enable = true;
   };
-  hardware.bluetooth.enable = true;
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = false;
+  };
   services.blueman.enable = true; # GUI fallback
 
   # modules / packages
