@@ -161,7 +161,6 @@
     
     # Wayland/Desktop
     fuzzel
-    mako
     brightnessctl
     hyprsunset
     wireplumber
