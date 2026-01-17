@@ -85,6 +85,7 @@
     extraGroups = [ "wheel" "networkmanager" "input" ];
     shell = pkgs.bash;
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
+    packages = with pkgs; [ vesktop ];
   };
 
   # Audio
@@ -107,6 +108,7 @@
     TERMINAL = "kitty";
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
+    ELECTRON_OZONE_PLATFORM_HINT = "wayland";
   };
   programs.hyprland = {
     enable = true;
@@ -117,6 +119,10 @@
     nerd-fonts.symbols-only
   ];
   fonts.fontconfig.enable = true;
+
+  # unfree packages
+  nixpkgs.config.allowUnfreePredicate = pkg:
+    builtins.elem (lib.getName pkg) [ "discord" "vesktop" ];
 
   # Basic system packages
   systemd.packages = [ pkgs.libinput-gestures ];
