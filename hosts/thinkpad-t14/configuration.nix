@@ -169,6 +169,7 @@
     pulseaudio
     libinput-gestures
     libnotify
+    wtype
     quickshell
     swww
     
