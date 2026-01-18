@@ -117,6 +117,13 @@
   services.blueman.enable = true; # GUI fallback
 
   # modules / packages
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-hyprland
+      xdg-desktop-portal-gtk
+    ];
+  };
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
   environment.sessionVariables = {
     TERMINAL = "kitty";
