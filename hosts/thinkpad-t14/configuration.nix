@@ -77,6 +77,15 @@
     "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
   };
 
+  # unfree packages
+  nixpkgs.config.allowUnfreePredicate = pkg:
+    builtins.elem (lib.getName pkg) [
+      "discord"
+      "vesktop"
+      "obsidian"
+      "protonvpn-gui"
+    ];
+
   # Users
   users.users.root.hashedPasswordFile = config.sops.secrets."passwords/root".path;
 
@@ -85,7 +94,12 @@
     extraGroups = [ "wheel" "networkmanager" "input" ];
     shell = pkgs.bash;
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
-    packages = with pkgs; [ vesktop ];
+    packages = with pkgs; [
+      vesktop
+      element-desktop
+      obsidian
+      protonvpn-gui
+    ];
   };
 
   # Audio
@@ -119,10 +133,6 @@
     nerd-fonts.symbols-only
   ];
   fonts.fontconfig.enable = true;
-
-  # unfree packages
-  nixpkgs.config.allowUnfreePredicate = pkg:
-    builtins.elem (lib.getName pkg) [ "discord" "vesktop" ];
 
   # Basic system packages
   systemd.packages = [ pkgs.libinput-gestures ];
