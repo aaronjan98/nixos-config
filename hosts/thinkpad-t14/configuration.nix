@@ -8,6 +8,7 @@
     ../../modules/tmux.nix
     ../../modules/networkmanager-profiles.nix
     ../../modules/hypr-dispatch.nix
+    ../../modules/hypr-idle-lock.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
