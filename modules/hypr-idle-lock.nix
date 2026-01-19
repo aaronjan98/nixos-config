@@ -61,40 +61,32 @@ in
     blackoutOff
   ];
 
-  # System-wide hypridle config (no home-manager)
+  # System-wide hypridle config
   environment.etc."xdg/hypr/hypridle.conf".text = ''
     general {
-      lock_cmd = hyprlock
-
-      # KEY FIX: restore brightness when you unlock (reliable),
-      # because on-resume may not fire while hyprlock is active.
+      lock_cmd = /run/current-system/sw/bin/hyprlock
       unlock_cmd = /run/current-system/sw/bin/screen-blackout-off
-
-      # Also restore after sleep
       after_sleep_cmd = /run/current-system/sw/bin/screen-blackout-off
     }
-
-    # Lock after 5 minutes idle
+  
     listener {
       timeout = 300
-      on-timeout = hyprlock
+      on-timeout = /run/current-system/sw/bin/hyprlock
     }
-
-    # Blackout shortly after locking (looks "off" but still wakes)
+  
     listener {
-      timeout = 310
+      timeout = 600
       on-timeout = /run/current-system/sw/bin/screen-blackout-on
       on-resume = /run/current-system/sw/bin/screen-blackout-off
     }
   '';
 
   # Start hypridle on login
-  # NOTE: In Hyprland sessions, systemd user targets can be flaky.
-  # We'll keep this, but also recommend exec-once in hyprland.conf below.
   systemd.user.services.hypridle = {
     description = "Hypridle idle daemon";
     wantedBy = [ "default.target" ];
     serviceConfig = {
+      Environment = [ "PATH=/run/current-system/sw/bin" ];
       ExecStart = "${pkgs.hypridle}/bin/hypridle";
       Restart = "on-failure";
       RestartSec = 1;
