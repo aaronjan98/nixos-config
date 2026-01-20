@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPOS_DIR="/srv/git/repos"
+
+# Use your user's key explicitly so it works even when run with sudo.
+# Adjust if you want to use ed25519 only.
+IDENTITY_FILE="/home/aj/.ssh/id_ed25519"
+if [[ ! -f "$IDENTITY_FILE" ]]; then
+  IDENTITY_FILE="/home/aj/.ssh/id_rsa"
+fi
+
+SSH_OPTS=(
+  -i "$IDENTITY_FILE"
+  -o IdentitiesOnly=yes
+  -o StrictHostKeyChecking=accept-new
+  -o UserKnownHostsFile=/var/lib/git-seed/known_hosts
+)
+
+REPOS=(
+  "arr-stack ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/arr-stack.git"
+  "cooking ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/cooking.git"
+  "dnsmasq-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/dnsmasq-config.git"
+  "dotfiles ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/dotfiles.git"
+  "infra-bootstrap ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/infra-bootstrap.git"
+  "mobius-anim ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/mobius-anim.git"
+  "nixos-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/nixos-config.git"
+  "nvim ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/nvim.git"
+  "password-store ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/password-store.git"
+  "shellscripts ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/shellscripts.git"
+  "tftp-netboot-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/tftp-netboot-config.git"
+  "tmux.conf ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/tmux.conf.git"
+  "zettelkasten ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/zettelkasten.git"
+)
+
+echo "==> Seeding git repos into $REPOS_DIR"
+
+# Create dirs as root, but keep ownership git:git
+sudo mkdir -p "$REPOS_DIR" /var/lib/git-seed
+sudo chmod 700 /var/lib/git-seed
+sudo chown -R git:git /srv/git || true
+sudo chmod 2775 "$REPOS_DIR" || true
+
+umask 002
+
+for entry in "${REPOS[@]}"; do
+  read -r name url <<<"$entry"
+  dest="$REPOS_DIR/$name.git"
+
+  if [[ -d "$dest" ]]; then
+    echo "--> Updating mirror: $name"
+    git --git-dir="$dest" remote set-url origin "$url" || true
+    GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
+      git --git-dir="$dest" remote update --prune
+  else
+    echo "--> Cloning mirror: $name"
+    # Clone as aj (so it can use aj's key), into a temp dir, then move into place with sudo
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+
+    GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
+      git clone --mirror "$url" "$tmp/$name.git"
+
+    sudo mv "$tmp/$name.git" "$dest"
+    trap - EXIT
+    rm -rf "$tmp"
+  fi
+
+  sudo chown -R git:git "$dest"
+  sudo chmod -R g+rwX "$dest"
+done
+
+echo "==> Done."
+

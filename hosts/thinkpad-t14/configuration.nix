@@ -9,6 +9,7 @@
     ../../modules/networkmanager-profiles.nix
     ../../modules/hypr-dispatch.nix
     ../../modules/hypr-idle-lock.nix
+    ../../modules/git-server.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -48,6 +49,14 @@
       gnome-keyring.enable = true;
       gcr-ssh-agent.enable = false;
     };
+  };
+  aj.gitServer = {
+    enable = true;
+    addAjToGitGroup = true;
+    authorizedKeys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"
+      "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDGb60AEnOZcVGE+gU1ogT8Hen4VKFj/t+Y+/8tKyldvEf3gDpsdQk0q0QQUrmSCIsXATwItxebzGw/LIwTLN0YyRD55dF34UkRvVTHFJNSBnCQnpvlozbr6Q3u1ZHtETzX43ypGbHp7SfSjYFZIxjYQGlP7oXJkiL0kUvrFqh7cslIZl62/FzCsZIxJLojlWlscHMnYIqxlgSs5EZZ02sVp4/q85YkfNqL+j00rzD634bLTE/AbsKrcr37jLQkvlWMZU25B2owOjPFg0zb7G0dOE7q7g688MqUkWl/my4L6giKo27pov7abLJWEuvRYvViMGMegcPbSA4IpoRtYUMiBV1G9jIUgPxjfovdZzIh5OkqoFjawa299VaY/G6ZPc9GYVuy8w+gLBF+LQZfyDojBEIKSlx/JtDOQd90iepr6eoQZrX6G6AsswhWOswtWY8vXOHohGVUuAjHujKLxv212c1G1LIhBYLGRtV5wxVnR4wMcEc9gUL9iVScwmM/Ohs= aaronjan98@gmail.com"
+    ];
   };
 
   # Time zone and locale
@@ -211,6 +220,11 @@
     # Applications
     firefox
     fastfetch
+
+    # System commands
+    (pkgs.writeShellScriptBin "seed-local-git-server"
+      (builtins.readFile ../../scripts/seed-local-git-server.sh)
+    )
   ];
 
   system.stateVersion = "25.11";
