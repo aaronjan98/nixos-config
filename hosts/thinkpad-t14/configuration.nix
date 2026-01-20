@@ -85,6 +85,8 @@
       "vesktop"
       "obsidian"
       "protonvpn-gui"
+      "zoom"
+      "slack"
     ];
 
   # Users
@@ -100,6 +102,8 @@
       element-desktop
       obsidian
       protonvpn-gui
+      zoom-us
+      slack
     ];
   };
 
@@ -131,6 +135,8 @@
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
+    QT_QPA_PLATFORM = "wayland";
+    QT_SCALE_FACTOR = "1";
   };
   programs.hyprland = {
     enable = true;

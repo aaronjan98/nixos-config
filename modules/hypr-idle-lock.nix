@@ -70,12 +70,12 @@ in
     }
   
     listener {
-      timeout = 300
+      timeout = 600
       on-timeout = /run/current-system/sw/bin/hyprlock
     }
   
     listener {
-      timeout = 600
+      timeout = 700
       on-timeout = /run/current-system/sw/bin/screen-blackout-on
       on-resume = /run/current-system/sw/bin/screen-blackout-off
     }
