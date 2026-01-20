@@ -85,7 +85,6 @@
       "vesktop"
       "obsidian"
       "protonvpn-gui"
-      "zoom"
       "slack"
     ];
 
@@ -102,7 +101,6 @@
       element-desktop
       obsidian
       protonvpn-gui
-      zoom-us
       slack
     ];
   };
@@ -148,7 +146,15 @@
   ];
   fonts.fontconfig.enable = true;
 
-  # Basic system packages
+  ### Basic system packages ###
+  services.flatpak.enable = true;
+  systemd.services.flatpak-repo = {
+    wantedBy = [ "multi-user.target" ];
+    path = [ pkgs.flatpak ];
+    script = ''
+      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    '';
+  };
   systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
     # Terminal & Shell
