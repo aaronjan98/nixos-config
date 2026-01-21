@@ -42,6 +42,7 @@
   programs = {
     nm-applet.enable = true;
     ssh.startAgent = true;
+    dconf.enable = true;
   };
   services = {
     openssh.enable = true;
@@ -149,6 +150,8 @@
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     QT_QPA_PLATFORM = "wayland";
     QT_SCALE_FACTOR = "1";
+    GSETTINGS_SCHEMA_DIR =
+      "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
   };
   programs.hyprland = {
     enable = true;
@@ -171,6 +174,10 @@
   };
   systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
+    # Gnome & System utilities
+    glib
+    gsettings-desktop-schemas
+
     # Terminal & Shell
     kitty
     zoxide
