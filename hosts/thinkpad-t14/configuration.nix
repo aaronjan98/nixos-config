@@ -95,6 +95,11 @@
       "obsidian"
       "protonvpn-gui"
       "slack"
+      "vscode-extension-MS-python-vscode-pylance"
+      "vscode-extension-ms-python-python"
+      "vscode-extension-ms-toolsai-jupyter"
+      "vscode-extension-ms-toolsai-jupyter-keymap"
+      "vscode-extension-ms-toolsai-jupyter-renderers"
     ];
 
   # Users
@@ -225,6 +230,28 @@
     (pkgs.writeShellScriptBin "seed-local-git-server"
       (builtins.readFile ../../scripts/seed-local-git-server.sh)
     )
+    # Dev environment
+    (vscode-with-extensions.override {
+      vscode = vscodium;
+      vscodeExtensions = with vscode-extensions; [
+        # Python support
+        ms-python.python
+        ms-python.vscode-pylance
+        
+        # Jupyter notebooks
+        ms-toolsai.jupyter
+        ms-toolsai.jupyter-keymap
+        ms-toolsai.jupyter-renderers
+        
+        # Additional helpful extensions
+        jnoortheen.nix-ide           # Nix language support
+        tamasfe.even-better-toml     # TOML support
+        
+        # Quality of life
+        eamodio.gitlens              # Git integration
+        usernamehw.errorlens         # Inline error messages
+      ];
+    })
   ];
 
   system.stateVersion = "25.11";

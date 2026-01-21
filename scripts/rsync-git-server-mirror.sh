@@ -8,7 +8,7 @@ REMOTE_PATH="/srv/git/repos/"
 LOCAL_PATH="/srv/git/repos/"
 
 # Pick a key explicitly so non-interactive SSH works reliably
-IDENTITY_FILE="/home/aj/.ssh/id_ed25519"
+IDENTITY_FILE="/home/aj/.ssh/thinkpad-t14"
 if [[ ! -f "$IDENTITY_FILE" ]]; then
   IDENTITY_FILE="/home/aj/.ssh/id_rsa"
 fi
