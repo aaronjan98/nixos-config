@@ -175,40 +175,40 @@
     kitty
     zoxide
     fzf
-    
+
     # Text Editors
     neovim
     vim
-    
+
     # System Monitoring
     btop
     htop
-    
+
     # File & Text Tools
     bat
     ripgrep
     tree
     jq
-    
+
     # Nix Development
     nil
     nixpkgs-fmt
-    
+
     # Development Tools
     nodejs
     gcc
     git
-    
+
     # Networking
     curl
     wget
     iw
-    
+
     # Security & GPG
     gnupg
     pass
     pinentry-curses
-    
+
     # Wayland/Desktop
     fuzzel
     brightnessctl
@@ -221,10 +221,11 @@
     wtype
     quickshell
     swww
-    
+
     # Applications
     firefox
     fastfetch
+    evince
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
@@ -237,22 +238,28 @@
         # Python support
         ms-python.python
         ms-python.vscode-pylance
-        
+
         # Jupyter notebooks
         ms-toolsai.jupyter
         ms-toolsai.jupyter-keymap
         ms-toolsai.jupyter-renderers
-        
+
         # Additional helpful extensions
         jnoortheen.nix-ide           # Nix language support
         tamasfe.even-better-toml     # TOML support
-        
+
         # Quality of life
         eamodio.gitlens              # Git integration
         usernamehw.errorlens         # Inline error messages
       ];
     })
   ];
+
+  # Add a system /etc/xdg/mimeapps.list so xdg-open and file managers prefer Evince for PDFs.
+  environment.etc."xdg/mimeapps.list".text = ''
+    [Default Applications]
+    application/pdf=org.gnome.Evince.desktop
+  '';
 
   system.stateVersion = "25.11";
 }
