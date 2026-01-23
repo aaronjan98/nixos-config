@@ -14,24 +14,19 @@
     let
       system = "x86_64-linux";
 
-      myOverlays = [
-        (final: prev: {
-          breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
-        })
-      ];
-
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = myOverlays;
-      };
+      myOverlay = (final: prev: {
+        breeze-hacked-cursor =
+          final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
+      });
     in
     {
-      nixosConfigurations.thinkpad-t14 = pkgs.lib.nixosSystem {
+      nixosConfigurations.thinkpad-t14 = nixpkgs.lib.nixosSystem {
         inherit system;
 
-        pkgs = pkgs;
-
         modules = [
+          # Apply your overlay the "normal" NixOS way:
+          ({ ... }: { nixpkgs.overlays = [ myOverlay ]; })
+
           ./hosts/thinkpad-t14/configuration.nix
           sops-nix.nixosModules.sops
         ];

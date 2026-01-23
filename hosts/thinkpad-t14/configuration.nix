@@ -234,6 +234,9 @@
     fastfetch
     evince
 
+    # Custom Overlays
+    pkgs.breeze-hacked-cursor
+
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
       (builtins.readFile ../../scripts/seed-local-git-server.sh)
