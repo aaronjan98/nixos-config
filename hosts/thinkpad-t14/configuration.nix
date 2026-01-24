@@ -233,6 +233,7 @@
     firefox
     fastfetch
     evince
+    libreoffice
 
     # Custom Overlays
     pkgs.breeze-hacked-cursor
