@@ -40,7 +40,9 @@ in
 lib.mkMerge (
   profiles ++ [
     {
-      # Make sure NM sees new/updated profiles after sops-nix writes them
+      ############################
+      # Activation script (rebuild-time)
+      ############################
       system.activationScripts.networkmanagerProfiles = ''
         if [ -d /etc/NetworkManager/system-connections ]; then
           # Ensure correct perms; NM will ignore profiles that aren't 0600 root:root
@@ -52,10 +54,50 @@ lib.mkMerge (
         fi
       '';
 
-      # Ensure NetworkManager doesn't come up before secrets exist (helps on boot)
+      ############################
+      # Boot-time helper service
+      ############################
+      systemd.services."nm-sops-profiles" = {
+        description = "Install NetworkManager profiles from sops-nix secrets (/run/secrets/nm)";
+        # make it start at boot
+        wantedBy = [ "multi-user.target" ];
+
+        # unit-level settings
+        unitConfig = {
+          # Ensure we run *before* NetworkManager so NM sees correct files
+          Before = "NetworkManager.service";
+          # If sops-nix exists, run after it; harmless if sops-nix is absent
+          After = "sops-nix.service";
+          # Only run when the secrets dir exists
+          ConditionPathExists = "/run/secrets/nm";
+        };
+
+        # service-level settings
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = "no";
+
+          # Use bash -c to run a small robust script (uses install for atomic write + perms)
+          ExecStart = "${pkgs.bash}/bin/bash -lc ''\
+            set -euo pipefail; \
+            if [ -d /run/secrets/nm ]; then \
+              for src in /run/secrets/nm/*; do \
+                [ -e \"$src\" ] || continue; \
+                dst=\"/etc/NetworkManager/system-connections/$(basename \"$src\")\"; \
+                ${pkgs.coreutils}/bin/install -m 0600 -o root -g root \"$src\" \"$dst\"; \
+              done; \
+              ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true; \
+            fi \
+          ''";
+        };
+      };
+
+      ############################
+      # NetworkManager unit tweaks
+      ############################
       systemd.services.NetworkManager = {
-        wants = [ "sops-nix.service" ];
-        after  = [ "sops-nix.service" ];
+        wants = [ "sops-nix.service" "nm-sops-profiles.service" ];
+        after = [ "sops-nix.service" "nm-sops-profiles.service" ];
       };
     }
   ]
