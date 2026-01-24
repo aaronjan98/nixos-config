@@ -10,6 +10,7 @@
     ../../modules/hypr-dispatch.nix
     ../../modules/hypr-idle-lock.nix
     ../../modules/git-server.nix
+    ../../modules/flatpak-repo.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -165,18 +166,12 @@
 
   ### Basic system packages ###
   services.flatpak.enable = true;
-  systemd.services.flatpak-repo = {
-    wantedBy = [ "multi-user.target" ];
-    path = [ pkgs.flatpak ];
-    script = ''
-      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    '';
-  };
   systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
     # Gnome & System utilities
     glib
     gsettings-desktop-schemas
+    flatpak
 
     # Terminal & Shell
     kitty
