@@ -11,6 +11,7 @@
     ../../modules/hypr-idle-lock.nix
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
+    ../../modules/screenshot-tools.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
