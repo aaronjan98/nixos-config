@@ -17,6 +17,7 @@
       myOverlay = (final: prev: {
         breeze-hacked-cursor =
           final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
+        pix2tex = final.callPackage ./pkgs/pix2tex { };
       });
     in
     {

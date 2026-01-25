@@ -233,7 +233,8 @@
     libreoffice
 
     # Custom Overlays
-    pkgs.breeze-hacked-cursor
+    breeze-hacked-cursor
+    pix2tex
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
