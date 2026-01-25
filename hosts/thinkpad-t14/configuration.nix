@@ -224,7 +224,7 @@
     wtype
     quickshell
     swww
-    imv
+    eog
 
     # Applications
     firefox
