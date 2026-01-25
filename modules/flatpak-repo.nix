@@ -1,35 +1,27 @@
-{ config, pkgs, lib, ... }:
+{ pkgs, ... }:
 
 let
-  flathubUrl = "https://flathub.org/repo/flathub.flatpakrepo";
+  flathubUrl = "https://dl.flathub.org/repo/flathub.flatpakrepo";
 in
 {
-  options = { };
+  systemd.services.flatpak-repo = {
+    description = "Ensure Flathub remote exists (flatpak)";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
 
-  config = {
-    # Do NOT modify environment.systemPackages here to avoid recursion.
-    # The unit will get flatpak via path below; if you want flatpak available
-    # in the system profile, add it in configuration.nix explicitly.
+    path = [ pkgs.flatpak ];
 
-    systemd.services.flatpak-repo = {
-      description = "Ensure Flathub remote exists (flatpak)";
+    serviceConfig = {
+      Type = "oneshot";
 
-      wantedBy = [ "multi-user.target" ];
+      # IMPORTANT:
+      # - --system ensures it's added system-wide
+      # - "bash -lc ... || true" ensures a transient network hiccup doesn't fail nixos-rebuild
+      ExecStart = "${pkgs.bash}/bin/bash -lc '${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub ${flathubUrl} || true'";
 
-      # Make the flatpak binary available when the unit runs.
-      path = [ pkgs.flatpak ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.flatpak}/bin/flatpak remote-add --if-not-exists flathub ${flathubUrl}";
-        Restart = "no";
-        RemainAfterExit = "no";
-      };
-
-      unitConfig = {
-        After = "network-online.target";
-        Wants = [ "network-online.target" ];
-      };
+      Restart = "no";
+      RemainAfterExit = "no";
     };
   };
 }
