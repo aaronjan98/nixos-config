@@ -1,105 +1,78 @@
 { config, pkgs, lib, ... }:
 
 let
-  # Helper to define one nmconnection secret
-  mkNmProfile = { secretName, file, targetName ? file }: {
-    sops.secrets.${secretName} = {
-      # This file is encrypted in git (sops format)
-      sopsFile = ../secrets/networkmanager/${file};
+  # Map decrypted secret files -> final NM profile filenames in /etc
+  nmProfiles = [
+    { secret = "connect-here"; target = "Connect here.nmconnection"; }
+    { secret = "hello-there";  target = "Hello There!.nmconnection"; }
+    { secret = "eduroam";      target = "eduroam.nmconnection"; }
+  ];
 
-      # nmconnection is INI-ish but treat it as binary so sops doesn't try to parse
+  # Generate sops secrets that land in /run/secrets/nm/<secret>
+  mkSopsSecret = { secret, ... }: {
+    name = "nm/${secret}";
+    value = {
+      sopsFile = ../secrets/networkmanager/${secret}.nmconnection;
       format = "binary";
-
       owner = "root";
       group = "root";
       mode = "0600";
 
-      # Where NetworkManager reads system-wide profiles
-      path = "/etc/NetworkManager/system-connections/${targetName}";
+      # IMPORTANT: decrypt to /run/secrets, NOT /etc
+      path = "/run/secrets/nm/${secret}";
     };
   };
 
-  profiles = [
-    (mkNmProfile {
-      secretName = "nm/connect-here";
-      file = "connect-here.nmconnection";
-      targetName = "Connect here.nmconnection";
-    })
-    (mkNmProfile {
-      secretName = "nm/hello-there";
-      file = "hello-there.nmconnection";
-      targetName = "Hello There!.nmconnection";
-    })
-    (mkNmProfile {
-      secretName = "nm/eduroam";
-      file = "eduroam.nmconnection";
-      targetName = "eduroam.nmconnection";
-    })
-  ];
+  copyScript = ''
+    set -euo pipefail
+
+    mkdir -p /etc/NetworkManager/system-connections
+    chmod 700 /etc/NetworkManager/system-connections
+
+    ${lib.concatStringsSep "\n" (map (p: ''
+      if [ -e "/run/secrets/nm/${p.secret}" ]; then
+        ${pkgs.coreutils}/bin/install -m 0600 -o root -g root \
+          "/run/secrets/nm/${p.secret}" \
+          "/etc/NetworkManager/system-connections/${p.target}"
+      fi
+    '') nmProfiles)}
+
+    # Reload profiles if NM is already up (safe if it isn't)
+    ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
+  '';
 in
-lib.mkMerge (
-  profiles ++ [
-    {
-      ############################
-      # Activation script (rebuild-time)
-      ############################
-      system.activationScripts.networkmanagerProfiles = ''
-        if [ -d /etc/NetworkManager/system-connections ]; then
-          # Ensure correct perms; NM will ignore profiles that aren't 0600 root:root
-          chmod 600 /etc/NetworkManager/system-connections/*.nmconnection 2>/dev/null || true
-          chown root:root /etc/NetworkManager/system-connections/*.nmconnection 2>/dev/null || true
+{
+  # Declare the sops secrets
+  sops.secrets = lib.listToAttrs (map mkSopsSecret nmProfiles);
 
-          # Reload profiles if NM is running
-          ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true
-        fi
-      '';
+  # Rebuild-time: ensure /etc gets real files (not symlinks) immediately on switch
+  system.activationScripts.networkmanagerProfiles = copyScript;
 
-      ############################
-      # Boot-time helper service
-      ############################
-      systemd.services."nm-sops-profiles" = {
-        description = "Install NetworkManager profiles from sops-nix secrets (/run/secrets/nm)";
-        # make it start at boot
-        wantedBy = [ "multi-user.target" ];
+  # Boot-time: copy secrets into /etc BEFORE NetworkManager starts
+  systemd.services.nm-sops-profiles = {
+    description = "Copy sops-decrypted NM profiles into /etc as real files";
+    wantedBy = [ "multi-user.target" ];
 
-        # unit-level settings
-        unitConfig = {
-          # Ensure we run *before* NetworkManager so NM sees correct files
-          Before = "NetworkManager.service";
-          # If sops-nix exists, run after it; harmless if sops-nix is absent
-          After = "sops-nix.service";
-          # Only run when the secrets dir exists
-          ConditionPathExists = "/run/secrets/nm";
-        };
+    # Run after secrets are installed, before NetworkManager
+    before = [ "NetworkManager.service" ];
+    after  = [ "sops-install-secrets.service" ];
 
-        # service-level settings
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = "no";
+    # Only run if secrets dir exists
+    unitConfig.ConditionPathExists = "/run/secrets/nm";
 
-          # Use bash -c to run a small robust script (uses install for atomic write + perms)
-          ExecStart = "${pkgs.bash}/bin/bash -lc ''\
-            set -euo pipefail; \
-            if [ -d /run/secrets/nm ]; then \
-              for src in /run/secrets/nm/*; do \
-                [ -e \"$src\" ] || continue; \
-                dst=\"/etc/NetworkManager/system-connections/$(basename \"$src\")\"; \
-                ${pkgs.coreutils}/bin/install -m 0600 -o root -g root \"$src\" \"$dst\"; \
-              done; \
-              ${pkgs.networkmanager}/bin/nmcli connection reload 2>/dev/null || true; \
-            fi \
-          ''";
-        };
-      };
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = false;
+    };
 
-      ############################
-      # NetworkManager unit tweaks
-      ############################
-      systemd.services.NetworkManager = {
-        wants = [ "sops-nix.service" "nm-sops-profiles.service" ];
-        after = [ "sops-nix.service" "nm-sops-profiles.service" ];
-      };
-    }
-  ]
-)
+    # Using `script` avoids systemd unit parsing/quoting problems
+    script = copyScript;
+  };
+
+  # Ensure NM doesn't start before our copy runs
+  systemd.services.NetworkManager = {
+    wants = [ "nm-sops-profiles.service" ];
+    after = [ "nm-sops-profiles.service" ];
+  };
+}
 
