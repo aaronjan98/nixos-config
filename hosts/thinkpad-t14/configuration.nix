@@ -12,6 +12,7 @@
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
+    ../../modules/imgview.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -224,7 +225,6 @@
     wtype
     quickshell
     swww
-    eog
 
     # Applications
     firefox
