@@ -1,24 +1,9 @@
 { lib
-, fetchFromGitHub
 , python3Packages
+, fetchFromGitHub
 , makeWrapper
 }:
 
-let
-  # pix2tex wants timm==0.5.4 specifically.
-  timm_054 = python3Packages.timm.overridePythonAttrs (_old: rec {
-    version = "0.5.4";
-    src = python3Packages.fetchPypi {
-      pname = "timm";
-      inherit version;
-      hash = "sha256-XXuS5mp2xDIAmrqQ1RXqeogqrlc0FafFJp42F9+QHB8=";
-    };
-
-    doCheck = false;
-    # Some nixpkgs python hooks try to run pytest if present; hard-disable.
-    pytestCheckPhase = "true";
-  });
-in
 python3Packages.buildPythonApplication rec {
   pname = "pix2tex";
   version = "0.1.4-git-5c1ac92";
@@ -32,7 +17,6 @@ python3Packages.buildPythonApplication rec {
 
   pyproject = true;
   build-system = with python3Packages; [ setuptools wheel ];
-
   doCheck = false;
 
   nativeBuildInputs = [ makeWrapper ];
@@ -50,18 +34,40 @@ python3Packages.buildPythonApplication rec {
     tokenizers
     transformers
     einops
-    x-transformers
-    albumentations
     opencv4
-    timm_054
+    timm
     pyperclip
+    albumentations
+    x-transformers
   ];
 
-  # Nix doesn’t match PyPI metadata names cleanly here; don’t fail the build.
   dontCheckRuntimeDeps = true;
   pythonRuntimeDepsCheck = [ ];
 
-  pythonImportsCheck = [ "pix2tex" "torch" "cv2" ];
+  postPatch = ''
+    ck="pix2tex/dataset/transforms.py"
+    if [ -f "$ck" ]; then
+      # 1) Fix GaussNoise arg for stricter validation
+      substituteInPlace "$ck" \
+        --replace-warn "alb.GaussNoise(10, p=.2)" \
+                       "alb.GaussNoise(var_limit=(10,10), p=.2)"
+
+      # 2) Fix albumentations>=2 ImageCompression signature:
+      #    old: alb.ImageCompression(95, p=.3)
+      #    new: alb.ImageCompression(compression_type='jpeg', quality_lower=95, quality_upper=95, p=.3)
+      substituteInPlace "$ck" \
+        --replace-warn "alb.ImageCompression(95, p=.3)" \
+                       "alb.ImageCompression(compression_type='jpeg', quality_lower=95, quality_upper=95, p=.3)"
+    fi
+
+    # 3) Make pix2tex write checkpoints into a cache path (avoid /nix/store)
+    ck2="pix2tex/model/checkpoints/get_latest_checkpoint.py"
+    if [ -f "$ck2" ]; then
+      substituteInPlace "$ck2" \
+        --replace-warn 'path = os.path.dirname(__file__)' \
+                      'path = os.path.join(os.path.expanduser(os.getenv("XDG_CACHE_HOME","~/.cache")), "pix2tex", "checkpoints"); os.makedirs(path, exist_ok=True)'
+    fi
+  '';
 
   postInstall = ''
     for b in "$out/bin/pix2tex" "$out/bin/latexocr"; do
@@ -72,11 +78,12 @@ python3Packages.buildPythonApplication rec {
     done
   '';
 
+  pythonImportsCheck = [ "pix2tex" ];
+
   meta = with lib; {
     description = "pix2tex (LaTeX-OCR): convert images of equations to LaTeX";
     homepage = "https://github.com/lukas-blecher/LaTeX-OCR";
-    license = licenses.mit;
-    mainProgram = "latexocr";
+    license = lib.licenses.mit;
   };
 }
 

@@ -14,9 +14,19 @@
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
     ../../modules/math-ocr.nix
+    ../../modules/cliphist.nix
   ];
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    max-jobs = 1;
+    cores = 12;
+    download-buffer-size = 268435456;
+  };
+  zramSwap = {
+    enable = true;
+    memoryPercent = 50;
+  };
 
   # Bootloader
   boot = {
@@ -236,7 +246,6 @@
     # Custom Overlays
     breeze-hacked-cursor
     pix2tex
-    math-ocr
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"

@@ -5,6 +5,10 @@
 , slurp
 , wl-clipboard
 , libnotify
+, file
+, coreutils
+, gnugrep
+, gnused
 }:
 
 writeShellApplication {
@@ -16,12 +20,18 @@ writeShellApplication {
     slurp
     wl-clipboard
     libnotify
+    file
+    coreutils
+    gnugrep
+    gnused
   ];
 
   text = builtins.readFile ../../scripts/math-ocr.sh;
 
-  # Disable shellcheck failures during build
-  checkPhase = "true";
+  # Shellcheck style warnings shouldn't fail the build
+  checkPhase = ''
+    echo "Skipping shellcheck"
+  '';
 
   meta = with lib; {
     description = "Wayland screenshot -> pix2tex -> clipboard + notification";
