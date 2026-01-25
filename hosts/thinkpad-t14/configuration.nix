@@ -13,6 +13,7 @@
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
+    ../../modules/math-ocr.nix
   ];
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -235,6 +236,7 @@
     # Custom Overlays
     breeze-hacked-cursor
     pix2tex
+    math-ocr
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
