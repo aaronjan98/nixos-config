@@ -26,8 +26,9 @@ fi
 
 cache_dir="$XDG_CACHE_HOME/math-ocr"
 work_dir="$cache_dir/work"
+ckpt_dir="$XDG_CACHE_HOME/pix2tex/checkpoints"
 
-mkdir -p "$cache_dir" "$work_dir"
+mkdir -p "$cache_dir" "$work_dir" "$ckpt_dir"
 
 img="$cache_dir/last.png"
 log="$cache_dir/last.log"
@@ -44,11 +45,6 @@ if [ -z "$OCR" ]; then
   exit 1
 fi
 
-# ---- Pinned model assets provided by Nix (exported by writeShellApplication) ----
-WEIGHTS_PTH="${WEIGHTS_PTH:-}"
-IMAGE_RESIZER_PTH="${IMAGE_RESIZER_PTH:-}"
-CONFIG_YAML="${CONFIG_YAML:-}"
-
 # ---- Debug header ----
 logln "== math-ocr debug =="
 logln "date: $(date -Is)"
@@ -57,24 +53,12 @@ logln "HOME: ${HOME:-}"
 logln "XDG_CACHE_HOME: ${XDG_CACHE_HOME:-}"
 logln "cache_dir: $cache_dir"
 logln "work_dir: $work_dir"
+logln "pix2tex ckpt_dir: $ckpt_dir"
+logln "WEIGHTS_PTH: ${WEIGHTS_PTH:-<unset>}"
+logln "IMAGE_RESIZER_PTH: ${IMAGE_RESIZER_PTH:-<unset>}"
 logln "which $OCR: $(command -v "$OCR" || true)"
-logln "weights: ${WEIGHTS_PTH:-<unset>}"
-logln "image_resizer: ${IMAGE_RESIZER_PTH:-<unset>}"
-logln "config: ${CONFIG_YAML:-<unset>}"
 logln "PATH: $PATH"
 logln ""
-
-if [ -z "${WEIGHTS_PTH:-}" ] || [ ! -f "$WEIGHTS_PTH" ]; then
-  logln "ERROR: WEIGHTS_PTH is missing or not a file: ${WEIGHTS_PTH:-<unset>}"
-  "$NOTIFY" -u critical "Math OCR failed" "Missing weights (WEIGHTS_PTH).\nLog: $log"
-  exit 1
-fi
-
-if [ -z "${CONFIG_YAML:-}" ] || [ ! -f "$CONFIG_YAML" ]; then
-  logln "ERROR: CONFIG_YAML is missing or not a file: ${CONFIG_YAML:-<unset>}"
-  "$NOTIFY" -u critical "Math OCR failed" "Missing config (CONFIG_YAML).\nLog: $log"
-  exit 1
-fi
 
 # ---- Region capture ----
 region="$("$SLURP" -b "1e000080" -c "e62600ff" -B "00000000" -w 2 -s "00000000")" || exit 0
@@ -86,8 +70,31 @@ logln "image info:"
 (file "$img" >>"$log" 2>&1) || true
 logln ""
 
-# ---- Run OCR ----
-cmd=( "$OCR" "$img" "-c" "$CONFIG_YAML" "-m" "$WEIGHTS_PTH" )
+# ---- Preseed checkpoints as REAL FILES (NOT symlinks) ----
+# pix2tex may try to overwrite them; symlinks into /nix/store will explode (read-only).
+seed_file() {
+  local src="$1"
+  local dst="$2"
+
+  [ -n "$src" ] || return 0
+  [ -f "$src" ] || return 0
+
+  rm -f "$dst"
+  cp -f "$src" "$dst"
+  chmod u+rw "$dst" || true
+}
+
+seed_file "${WEIGHTS_PTH:-}" "$ckpt_dir/weights.pth"
+seed_file "${IMAGE_RESIZER_PTH:-}" "$ckpt_dir/image_resizer.pth"
+
+logln "checkpoint dir listing:"
+(ls -lah "$ckpt_dir" >>"$log" 2>&1) || true
+logln ""
+
+# ---- Run OCR (force the checkpoint path explicitly) ----
+weights_path="$ckpt_dir/weights.pth"
+
+cmd=( "$OCR" "$img" -m "$weights_path" )
 
 logln "running: ${cmd[*]}"
 logln ""

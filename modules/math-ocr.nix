@@ -11,14 +11,16 @@ let
     sha256 = "0n44f69adbfx7cdmjwr0miv735rxq8jvp434a8mi9bc5k5jj0f0w";
   };
 
-  # Try to locate config.yaml in pix2tex across python versions
-  configYaml = "${pkgs.pix2tex}/lib/${pkgs.pix2tex.python.sitePackages}/pix2tex/model/settings/config.yaml";
+  # Run pix2tex from python311 to avoid the python3.13/nixpkgs pix2tex mismatch.
+  pix2texPy = pkgs.python311.withPackages (ps: [
+    ps.pix2tex
+  ]);
 
   math-ocr = pkgs.writeShellApplication {
     name = "math-ocr";
 
     runtimeInputs = [
-      pkgs.pix2tex
+      pix2texPy
       pkgs.grim
       pkgs.slurp
       pkgs.wl-clipboard
@@ -26,14 +28,12 @@ let
       pkgs.coreutils
       pkgs.gnused
       pkgs.gnugrep
+      pkgs.file
     ];
 
-    # Export pinned paths into the runtime environment
-    # so the script can read them without eval-time substitution.
     runtimeEnv = {
       WEIGHTS_PTH = weights;
       IMAGE_RESIZER_PTH = imageResizer;
-      CONFIG_YAML = configYaml;
     };
 
     text = builtins.readFile ../scripts/math-ocr.sh;
