@@ -13,7 +13,7 @@
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
-    ../../modules/math-ocr.nix
+    #../../modules/math-ocr.nix
     ../../modules/cliphist.nix
   ];
 
