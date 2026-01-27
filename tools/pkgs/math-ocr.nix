@@ -5,7 +5,7 @@ pkgs.writeShellApplication {
 
   # Put everything your script calls into PATH at runtime
   runtimeInputs = [
-    pkgs.pix2tex
+    #pkgs.pix2tex
     pkgs.grim
     pkgs.slurp
     pkgs.wl-clipboard

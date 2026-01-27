@@ -18,7 +18,7 @@
 
       myOverlay = (final: prev: {
         breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
-        pix2tex = final.callPackage ./pkgs/pix2tex { };
+        #pix2tex = final.callPackage ./pkgs/pix2tex { };
       });
     in
     {
@@ -39,7 +39,7 @@
       packages.x86_64-linux = let
         pkgsWithOverlay = import nixpkgs { inherit system; overlays = [ myOverlay ]; };
       in {
-        inherit (pkgsWithOverlay) pix2tex;
+        # inherit (pkgsWithOverlay) pix2tex;
       };
     };
 }

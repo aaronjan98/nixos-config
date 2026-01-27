@@ -245,7 +245,7 @@
 
     # Custom Overlays
     breeze-hacked-cursor
-    pix2tex
+    #pix2tex
     nix-tools.packages.${pkgs.system}.math-ocr
 
     # System commands
