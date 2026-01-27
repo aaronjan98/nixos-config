@@ -8,9 +8,11 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix-tools.url = "path:./tools";
   };
 
-  outputs = { self, nixpkgs, sops-nix, ... }:
+  outputs = { self, nixpkgs, sops-nix, nix-tools, ... }:
     let
       system = "x86_64-linux";
 
@@ -22,6 +24,8 @@
     {
       nixosConfigurations.thinkpad-t14 = nixpkgs.lib.nixosSystem {
         inherit system;
+
+        specialArgs = { inherit nix-tools; };
 
         modules = [
           ({ ... }: { nixpkgs.overlays = [ myOverlay ]; })

@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, nix-tools, ... }:
 
 {
   imports = [
@@ -13,7 +13,7 @@
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
-    #../../modules/math-ocr.nix
+    #../../modules/math-ocr.nix #broken currently
     ../../modules/cliphist.nix
   ];
 
@@ -246,6 +246,7 @@
     # Custom Overlays
     breeze-hacked-cursor
     pix2tex
+    nix-tools.packages.${pkgs.system}.math-ocr
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"

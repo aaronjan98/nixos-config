@@ -1,6 +1,54 @@
 {
   "nodes": {
+    "latex-ocr": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1635450473,
+        "narHash": "sha256-0zY3bMCfAF/JRFRFrC81Deb+bdX3EBKulbindIjMgzE=",
+        "owner": "lukas-blecher",
+        "repo": "LaTeX-OCR",
+        "rev": "5db9d25c5c4bc018a3159177ae05cf02ddcad3c3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lukas-blecher",
+        "ref": "v0.0.1",
+        "repo": "LaTeX-OCR",
+        "type": "github"
+      }
+    },
+    "nix-tools": {
+      "inputs": {
+        "latex-ocr": "latex-ocr",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "path": "./tools",
+        "type": "path"
+      },
+      "original": {
+        "path": "./tools",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nixpkgs": {
+      "locked": {
+        "lastModified": 1769170682,
+        "narHash": "sha256-oMmN1lVQU0F0W2k6OI3bgdzp2YOHWYUAw79qzDSjenU=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c5296fdd05cfa2c187990dd909864da9658df755",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1767325753,
         "narHash": "sha256-yA/CuWyqm+AQo2ivGy6PlYrjZBQm7jfbe461+4HF2fo=",
@@ -18,7 +66,8 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs",
+        "nix-tools": "nix-tools",
+        "nixpkgs": "nixpkgs_2",
         "sops-nix": "sops-nix"
       }
     },
