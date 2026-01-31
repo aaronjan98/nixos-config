@@ -75,9 +75,8 @@ in
       "d ${reposDir} 2775 git git - -"
     ];
 
-    # Ensure sshd is enabled (you already do this in host config; harmless duplication)
-    services.openssh.enable = true;
-
+    # Ensure sshd is enabled from main configuration file
+    services.openssh.enable = lib.mkDefault true;
     services.openssh.extraConfig = lib.mkIf cfg.lockDownSshForGitUser ''
       Match User git
         AllowTcpForwarding no

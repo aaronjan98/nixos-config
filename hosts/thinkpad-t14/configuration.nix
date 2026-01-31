@@ -50,7 +50,7 @@
     };
     firewall = {
       enable = true;
-      allowedTCPPorts = [ 22 2222 6969 ];
+      # allowedTCPPorts = [ 22 6969 ];
     };
   };
   programs = {
@@ -59,7 +59,13 @@
     dconf.enable = true;
   };
   services = {
-    openssh.enable = true;
+    openssh = {
+      enable = true;
+      listenAddresses = [
+        { addr = "127.0.0.1"; port = 22; }
+        { addr = "::1"; port = 22; }
+      ];
+    };
     gnome = {
       gnome-keyring.enable = true;
       gcr-ssh-agent.enable = false;
