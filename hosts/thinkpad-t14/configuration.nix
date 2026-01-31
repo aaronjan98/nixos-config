@@ -252,7 +252,7 @@
     # Custom Overlays
     breeze-hacked-cursor
     #pix2tex
-    nix-tools.packages.${pkgs.system}.math-ocr
+    nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
