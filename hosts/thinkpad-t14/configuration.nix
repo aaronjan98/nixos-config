@@ -210,6 +210,7 @@
     ripgrep
     tree
     jq
+    socat
 
     # Nix Development
     nil
