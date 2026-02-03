@@ -211,6 +211,8 @@
     tree
     jq
     socat
+    nautilus
+    gvfs
 
     # Nix Development
     nil
