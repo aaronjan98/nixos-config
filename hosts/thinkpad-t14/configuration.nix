@@ -139,6 +139,17 @@
       slack
     ];
   };
+  security.sudo.extraRules = [
+    {
+      users = [ "aj" ];
+      commands = [
+        { command = "/run/current-system/sw/bin/rsync"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/mkdir"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/chmod"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/install"; options = [ "NOPASSWD" ]; }
+      ];
+    }
+  ];
 
   # Audio
   security.rtkit.enable = true;
