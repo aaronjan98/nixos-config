@@ -212,6 +212,30 @@
     # Text Editors
     neovim
     vim
+    (vscode-with-extensions.override {
+      vscode = vscodium;
+      vscodeExtensions = with vscode-extensions; [
+        # Python support
+        ms-python.python
+        ms-python.vscode-pylance
+
+        # Jupyter notebooks
+        ms-toolsai.jupyter
+        ms-toolsai.jupyter-keymap
+        ms-toolsai.jupyter-renderers
+
+        # Additional helpful extensions
+        jnoortheen.nix-ide           # Nix language support
+        tamasfe.even-better-toml     # TOML support
+
+        # Quality of life
+        eamodio.gitlens              # Git integration
+        usernamehw.errorlens         # Inline error messages
+
+	# Math
+        leanprover.lean4
+      ];
+    })
 
     # System Monitoring
     btop
@@ -234,6 +258,8 @@
     nodejs
     gcc
     git
+    elan
+    lean4
 
     # Networking
     curl
@@ -263,39 +289,6 @@
     fastfetch
     evince
     libreoffice
-
-    # Custom Overlays
-    breeze-hacked-cursor
-    #pix2tex
-    nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
-
-    # System commands
-    (pkgs.writeShellScriptBin "seed-local-git-server"
-      (builtins.readFile ../../scripts/seed-local-git-server.sh)
-    )
-    # Dev environment
-    (vscode-with-extensions.override {
-      vscode = vscodium;
-      vscodeExtensions = with vscode-extensions; [
-        # Python support
-        ms-python.python
-        ms-python.vscode-pylance
-
-        # Jupyter notebooks
-        ms-toolsai.jupyter
-        ms-toolsai.jupyter-keymap
-        ms-toolsai.jupyter-renderers
-
-        # Additional helpful extensions
-        jnoortheen.nix-ide           # Nix language support
-        tamasfe.even-better-toml     # TOML support
-
-        # Quality of life
-        eamodio.gitlens              # Git integration
-        usernamehw.errorlens         # Inline error messages
-      ];
-    })
-
     (mathematica.override {
       source = pkgs.requireFile {
         name = "Wolfram_14.3.0_LIN_Bndl.sh";
@@ -309,6 +302,16 @@
         '';
       };
     })
+
+    # Custom Overlays
+    breeze-hacked-cursor
+    #pix2tex
+    nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
+
+    # System commands
+    (pkgs.writeShellScriptBin "seed-local-git-server"
+      (builtins.readFile ../../scripts/seed-local-git-server.sh)
+    )
   ];
 
   # Add a system /etc/xdg/mimeapps.list so xdg-open and file managers prefer Evince for PDFs.
