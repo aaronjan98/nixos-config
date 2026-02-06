@@ -15,7 +15,9 @@ SSH_OPTS=(
   -o ServerAliveCountMax=3
 )
 
-tmpdir="$(mktemp -d)"
+#tmpdir="$(mktemp -d)"
+tmpdir="/var/tmp/distfiles-staging"
+mkdir -p "$tmpdir"
 cleanup() { rm -rf "${tmpdir}"; }
 trap cleanup EXIT
 

@@ -116,6 +116,7 @@
       "obsidian"
       "protonvpn-gui"
       "slack"
+      "mathematica"
       "vscode-extension-MS-python-vscode-pylance"
       "vscode-extension-ms-python-python"
       "vscode-extension-ms-toolsai-jupyter"
@@ -293,6 +294,20 @@
         eamodio.gitlens              # Git integration
         usernamehw.errorlens         # Inline error messages
       ];
+    })
+
+    (mathematica.override {
+      source = pkgs.requireFile {
+        name = "Wolfram_14.3.0_LIN_Bndl.sh";
+        sha256 = "sha256-FvcXXijGOcuRA1UFyVvPIyR1YaK/qrkMpLxf+mz+A/c=";
+        message = ''
+          Wolfram installer missing.
+
+          Sync local distfiles stash from NAS, then add the installer to the Nix store:
+            sync-distfiles wolfram
+            nix store add-file /var/lib/distfiles/wolfram/Wolfram_14.3.0_LIN_Bndl.sh
+        '';
+      };
     })
   ];
 
