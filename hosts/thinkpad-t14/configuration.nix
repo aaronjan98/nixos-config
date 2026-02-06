@@ -51,6 +51,7 @@
     firewall = {
       enable = true;
       # allowedTCPPorts = [ 22 6969 ];
+      allowedUDPPorts = [ 41641 ];
     };
   };
   programs = {
@@ -70,6 +71,7 @@
       gnome-keyring.enable = true;
       gcr-ssh-agent.enable = false;
     };
+    tailscale.enable = true;
   };
   aj.gitServer = {
     enable = true;
@@ -265,6 +267,7 @@
     curl
     wget
     iw
+    tailscale
 
     # Security & GPG
     gnupg
