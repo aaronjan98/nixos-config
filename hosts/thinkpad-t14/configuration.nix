@@ -47,6 +47,7 @@
 	  "wifi.powersave" = 2;
 	};
       };
+      dns = "systemd-resolved";
     };
     firewall = {
       enable = true;
@@ -71,7 +72,11 @@
       gnome-keyring.enable = true;
       gcr-ssh-agent.enable = false;
     };
-    tailscale.enable = true;
+    tailscale = {
+      enable = true;
+      useRoutingFeatures = "client";
+    };
+    resolved.enable = true;
   };
   aj.gitServer = {
     enable = true;
