@@ -136,7 +136,7 @@
 
   users.users.aj = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "input" ];
+    extraGroups = [ "wheel" "networkmanager" "input" "video" ];
     shell = pkgs.bash;
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
     packages = with pkgs; [
@@ -172,6 +172,9 @@
     powerOnBoot = false;
   };
   services.blueman.enable = true; # GUI fallback
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="leds", KERNEL=="platform::micmute", RUN+="${pkgs.bash}/bin/bash -c 'chgrp video /sys/class/leds/platform::micmute/brightness && chmod g+w /sys/class/leds/platform::micmute/brightness'"
+  '';
 
   # modules / packages
   xdg.portal = {
