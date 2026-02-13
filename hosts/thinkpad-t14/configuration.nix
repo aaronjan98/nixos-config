@@ -15,7 +15,7 @@
     ../../modules/imgview.nix
     #../../modules/math-ocr.nix #broken currently
     ../../modules/cliphist.nix
-    ../../modules/obsidian-custom.nix
+    ../../modules/obsidian-ipc.nix
   ];
 
   nix.settings = {
