@@ -143,7 +143,6 @@
     packages = with pkgs; [
       vesktop
       element-desktop
-      obsidian
       protonvpn-gui
       slack
     ];
