@@ -17,6 +17,7 @@
     ../../modules/cliphist.nix
     ../../modules/obsidian-ipc.nix
     ../../modules/ollama.nix
+    ../../modules/caddy.nix
   ];
 
   nix.settings = {
