@@ -16,6 +16,7 @@
     #../../modules/math-ocr.nix #broken currently
     ../../modules/cliphist.nix
     ../../modules/obsidian-ipc.nix
+    ../../modules/ollama.nix
   ];
 
   nix.settings = {
@@ -125,6 +126,7 @@
       "protonvpn-gui"
       "slack"
       "mathematica"
+      "open-webui"
       "vscode-extension-MS-python-vscode-pylance"
       "vscode-extension-ms-python-python"
       "vscode-extension-ms-toolsai-jupyter"
