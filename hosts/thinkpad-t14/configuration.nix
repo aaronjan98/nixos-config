@@ -116,6 +116,7 @@
   sops.secrets = {
     "passwords/aj" = { key = "passwords_aj"; path = "/run/sops-nix/passwords_aj"; };
     "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
+    "hf_token" = { sopsFile = ../../secrets/hf-token.yaml; key = "hf_token"; };
   };
 
   # unfree packages
@@ -198,6 +199,9 @@
     GSETTINGS_SCHEMA_DIR =
       "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
   };
+  environment.extraInit = ''
+    export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
+  '';
   programs.hyprland = {
     enable = true;
     xwayland.enable = true;
@@ -274,6 +278,9 @@
     lazygit
     elan
     lean4
+
+    # AI specific
+    llama-cpp
 
     # Networking
     curl
