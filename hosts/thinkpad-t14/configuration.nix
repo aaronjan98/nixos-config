@@ -329,6 +329,7 @@
     breeze-hacked-cursor
     #pix2tex
     llmfit
+    models
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
 
     # System commands
