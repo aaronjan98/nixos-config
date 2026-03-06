@@ -271,6 +271,7 @@
     nodejs
     gcc
     git
+    lazygit
     elan
     lean4
 
