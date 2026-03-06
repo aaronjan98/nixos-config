@@ -321,6 +321,7 @@
     # Custom Overlays
     breeze-hacked-cursor
     #pix2tex
+    llmfit
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
 
     # System commands
