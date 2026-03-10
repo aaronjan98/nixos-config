@@ -1,0 +1,34 @@
+diff --git a/llmfit-core/src/providers.rs b/llmfit-core/src/providers.rs
+index f58f527..880c67c 100644
+--- a/llmfit-core/src/providers.rs
++++ b/llmfit-core/src/providers.rs
+@@ -600,11 +600,12 @@ impl LlamaCppProvider {
+     /// Returns a list of (repo_id, description) tuples.
+     pub fn search_hf_gguf(query: &str) -> Vec<(String, String)> {
+         let url = format!(
+-            "https://huggingface.co/api/models?library=gguf&search={}&sort=trending&limit=20",
++            "https://huggingface.co/api/models?library=gguf&search={}&limit=20",
+             urlencoding::encode(query)
+         );
+         let Ok(resp) = ureq::get(&url)
+             .config()
++            .accept_encoding("")
+             .timeout_global(Some(std::time::Duration::from_secs(15)))
+             .build()
+             .call()
+@@ -634,6 +635,7 @@ impl LlamaCppProvider {
+         let url = format!("https://huggingface.co/api/models/{}/tree/main", repo_id);
+         let Ok(resp) = ureq::get(&url)
+             .config()
++            .accept_encoding("")
+             .timeout_global(Some(std::time::Duration::from_secs(15)))
+             .build()
+             .call()
+@@ -1237,6 +1239,7 @@ pub fn hf_repo_exists(repo_id: &str) -> bool {
+     let url = format!("https://huggingface.co/api/models/{}", repo_id);
+     ureq::get(&url)
+         .config()
++        .accept_encoding("")
+         .timeout_global(Some(std::time::Duration::from_millis(1200)))
+         .build()
+         .call()
