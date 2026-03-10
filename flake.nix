@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -12,15 +13,27 @@
     nix-tools.url = "path:./tools";
   };
 
-  outputs = { self, nixpkgs, sops-nix, nix-tools, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, ... }:
     let
       system = "x86_64-linux";
+
+      pkgsUnstable = import nixpkgs-unstable {
+        inherit system;
+        config = {
+          allowUnfreePredicate = pkg:
+            builtins.elem (nixpkgs.lib.getName pkg) [
+              "open-webui"
+            ];
+        };
+      };
 
       myOverlay = (final: prev: {
         breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
         #pix2tex = final.callPackage ./pkgs/pix2tex { };
         llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
         models = final.callPackage ./pkgs/models/default.nix { };
+
+        open-webui = pkgsUnstable.open-webui;
       });
     in
     {
