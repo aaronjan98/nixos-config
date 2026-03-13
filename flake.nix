@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for aj";
+  description = "AJ's NixOS configuration";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -17,24 +17,32 @@
     let
       system = "x86_64-linux";
 
+      allowUnfreePredicate = pkg:
+        builtins.elem (nixpkgs.lib.getName pkg) [
+          "open-webui"
+        ];
+
+      localOverlay = (final: prev: {
+        breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
+        # pix2tex = final.callPackage ./pkgs/pix2tex { };
+        llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
+        models = final.callPackage ./pkgs/models/default.nix { };
+      });
+
       pkgsUnstable = import nixpkgs-unstable {
         inherit system;
         config = {
-          allowUnfreePredicate = pkg:
-            builtins.elem (nixpkgs.lib.getName pkg) [
-              "open-webui"
-            ];
+          inherit allowUnfreePredicate;
         };
+        overlays = [ localOverlay ];
       };
 
-      myOverlay = (final: prev: {
-        breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
-        #pix2tex = final.callPackage ./pkgs/pix2tex { };
-        llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
-        models = final.callPackage ./pkgs/models/default.nix { };
-
-        open-webui = pkgsUnstable.open-webui;
-      });
+      myOverlay = (final: prev:
+        (localOverlay final prev) // {
+          open-webui = pkgsUnstable.open-webui;
+          llmfit = pkgsUnstable.llmfit;
+          models = pkgsUnstable.models;
+        });
     in
     {
       nixosConfigurations.thinkpad-t14 = nixpkgs.lib.nixosSystem {
@@ -50,12 +58,14 @@
         ];
       };
 
-
-      packages.x86_64-linux = let
-        pkgsWithOverlay = import nixpkgs { inherit system; overlays = [ myOverlay ]; };
-      in {
-        # inherit (pkgsWithOverlay) pix2tex;
-      };
+      packages.x86_64-linux =
+        let
+          pkgsWithOverlay = import nixpkgs {
+            inherit system;
+            overlays = [ myOverlay ];
+          };
+        in {
+          # inherit (pkgsWithOverlay) pix2tex;
+        };
     };
 }
-

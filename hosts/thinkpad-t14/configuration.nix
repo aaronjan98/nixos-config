@@ -128,7 +128,6 @@
       "protonvpn-gui"
       "slack"
       "mathematica"
-      "open-webui"
       "vscode-extension-MS-python-vscode-pylance"
       "vscode-extension-ms-python-python"
       "vscode-extension-ms-toolsai-jupyter"
@@ -327,8 +326,6 @@
     # Custom Overlays
     breeze-hacked-cursor
     #pix2tex
-    llmfit
-    models
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
 
     # System commands
