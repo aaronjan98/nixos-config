@@ -1,4 +1,4 @@
-{ config, lib, pkgs, nix-tools, ... }:
+{ config, lib, pkgs, nix-tools, snippetsDir, ... }:
 
 {
   imports = [
@@ -134,7 +134,6 @@
       "vscode-extension-ms-toolsai-jupyter-keymap"
       "vscode-extension-ms-toolsai-jupyter-renderers"
       "cursor"
-      "cursor-with-extensions"
     ];
 
   # Users
@@ -255,12 +254,6 @@
       ];
     })
     code-cursor
-    (vscode-with-extensions.override {
-      vscode = code-cursor;
-      vscodeExtensions = with vscode-extensions; [
-        foam.foam-vscode
-      ];
-    })
   
     # System Monitoring
     btop
@@ -343,6 +336,35 @@
       (builtins.readFile ../../scripts/seed-local-git-server.sh)
     )
   ];
+
+  system.activationScripts.cursorExtensions = {
+    deps = [ "users" ];
+    text = let
+      extensions = [
+        pkgs.vscode-extensions.foam.foam-vscode
+      ];
+      extensionDir = ext: "${ext}/share/vscode/extensions";
+    in ''
+      # Extensions
+      mkdir -p /home/aj/.cursor/extensions
+      ${pkgs.lib.concatMapStrings (ext: ''
+        for extdir in ${extensionDir ext}/*/; do
+          name=$(basename "$extdir")
+          target="/home/aj/.cursor/extensions/$name"
+          if [ ! -e "$target" ]; then
+            ln -sf "$extdir" "$target"
+          fi
+        done
+      '') extensions}
+      chown -R aj:users /home/aj/.cursor/extensions
+  
+      # HyperSnips snippets
+      HSNIPS_DIR="/home/aj/.config/Cursor/User/globalStorage/draivin.hsnips/hsnips"
+      mkdir -p "$HSNIPS_DIR"
+      ln -sf ${snippetsDir}/markdown.hsnips "$HSNIPS_DIR/markdown.hsnips"
+      chown -R aj:users /home/aj/.config/Cursor/User/globalStorage/draivin.hsnips
+    '';
+  };
 
   # Add a system /etc/xdg/mimeapps.list so xdg-open and file managers prefer Evince for PDFs.
   environment.etc."xdg/mimeapps.list".text = ''
