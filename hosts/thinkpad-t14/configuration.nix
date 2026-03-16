@@ -252,6 +252,7 @@
         leanprover.lean4
       ];
     })
+    code-cursor
 
     # System Monitoring
     btop
