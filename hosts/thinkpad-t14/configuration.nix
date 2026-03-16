@@ -133,6 +133,8 @@
       "vscode-extension-ms-toolsai-jupyter"
       "vscode-extension-ms-toolsai-jupyter-keymap"
       "vscode-extension-ms-toolsai-jupyter-renderers"
+      "cursor"
+      "cursor-with-extensions"
     ];
 
   # Users
@@ -253,7 +255,13 @@
       ];
     })
     code-cursor
-
+    (vscode-with-extensions.override {
+      vscode = code-cursor;
+      vscodeExtensions = with vscode-extensions; [
+        foam.foam-vscode
+      ];
+    })
+  
     # System Monitoring
     btop
     htop
