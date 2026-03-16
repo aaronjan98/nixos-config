@@ -20,6 +20,7 @@
       allowUnfreePredicate = pkg:
         builtins.elem (nixpkgs.lib.getName pkg) [
           "open-webui"
+	  "cursor"
         ];
 
       localOverlay = (final: prev: {
@@ -42,6 +43,7 @@
           open-webui = pkgsUnstable.open-webui;
           llmfit = pkgsUnstable.llmfit;
           models = pkgsUnstable.models;
+          code-cursor = pkgsUnstable.code-cursor;
         });
     in
     {

@@ -323,6 +323,7 @@
         '';
       };
     })
+    obs-studio
 
     # Custom Overlays
     breeze-hacked-cursor
