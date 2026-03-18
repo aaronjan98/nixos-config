@@ -202,6 +202,7 @@
   environment.extraInit = ''
     export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
   '';
+  programs.nix-ld.enable = true;
   programs.hyprland = {
     enable = true;
     xwayland.enable = true;

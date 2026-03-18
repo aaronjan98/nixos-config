@@ -11,6 +11,9 @@ let
     name = "obsidian-renamed";
     paths = [ pkgs.obsidian ];
     postBuild = ''
+      # load the 'wrapProgram' function into the builder
+      source "${pkgs.makeWrapper}/nix-support/setup-hook"
+
       # Remove the symlink to the read-only desktop file
       rm $out/share/applications/obsidian.desktop
       
@@ -19,6 +22,10 @@ let
       
       # Use sed to replace 'Name=Obsidian' with your preferred name
       sed -i 's/^Name=Obsidian$/Name=Obsidian (Vault Picker)/' $out/share/applications/obsidian.desktop
+
+      # This wraps the binary so that whenever Obsidian runs, it has python3 and basic shell tools in its $PATH.
+      wrapProgram $out/bin/obsidian \
+        --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.python3 pkgs.bash pkgs.coreutils ]}
     '';
   };
 
