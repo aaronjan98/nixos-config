@@ -93,6 +93,17 @@ This document explains:
 - special chords
 - relationship to Hyprland
 
+### 8. `PACKAGES.md`
+Read this when you want to understand how packages are installed and organized.
+
+This document explains:
+- overlays
+- system packages
+- user packages
+- modules
+- script-based commands
+- how Claude Code fits into the system
+
 ---
 
 ## How these docs relate to the repo

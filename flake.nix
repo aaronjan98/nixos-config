@@ -21,6 +21,7 @@
         builtins.elem (nixpkgs.lib.getName pkg) [
           "open-webui"
 	  "cursor"
+	  "claude-code"
         ];
 
       localOverlay = (final: prev: {
@@ -44,6 +45,7 @@
           llmfit = pkgsUnstable.llmfit;
           models = pkgsUnstable.models;
           code-cursor = pkgsUnstable.code-cursor;
+          claude-code = pkgsUnstable.claude-code;
         });
     in
     {

@@ -17,6 +17,7 @@
     ../../modules/cliphist.nix
     ../../modules/obsidian-ipc.nix
     ../../modules/ollama.nix
+    ../../modules/claude-code.nix
     ../../modules/caddy.nix
   ];
 
@@ -255,7 +256,8 @@
       ];
     })
     code-cursor
-  
+    claude-code
+
     # System Monitoring
     btop
     htop

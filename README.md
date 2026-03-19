@@ -134,6 +134,7 @@ Important docs include:
 - `docs/SCRIPTS.md`
 - `docs/MULTI-MACHINE-SYNC.md`
 - `docs/KANATA.md`
+- `docs/PACKAGES.md`
 
 ---
 
