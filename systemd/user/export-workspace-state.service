@@ -1,0 +1,8 @@
+[Unit]
+Description=Export live workspace state into tracked workspace snapshot
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/aj/nixos-config/scripts/export-workspace-state.sh
+WorkingDirectory=/home/aj

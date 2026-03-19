@@ -1,0 +1,7 @@
+[Unit]
+Description=Process pending Obsidian clipping summaries
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/run/current-system/sw/bin/bash -lc 'cd "$HOME/Repositories/automation/video-summary" && nix develop --command ./process_clippings.sh'

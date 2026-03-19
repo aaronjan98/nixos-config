@@ -1,0 +1,10 @@
+[Unit]
+Description=Run export-workspace-state regularly
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

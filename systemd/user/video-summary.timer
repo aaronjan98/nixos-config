@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic catch-up for pending Obsidian clipping summaries
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=2m
+Unit=video-summary.service
+
+[Install]
+WantedBy=timers.target

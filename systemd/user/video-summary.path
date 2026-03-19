@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch Obsidian clippings for pending summaries
+
+[Path]
+PathExistsGlob=%h/Repositories/self-hosted/zettelkasten/Outside/Clippings/*.md
+PathModified=%h/Repositories/self-hosted/zettelkasten/Outside/Clippings
+Unit=video-summary.service
+
+[Install]
+WantedBy=default.target
