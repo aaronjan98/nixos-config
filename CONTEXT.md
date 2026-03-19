@@ -11,7 +11,7 @@ It includes:
 - operational scripts for setup and maintenance
 - tracked user systemd unit files
 - the tracked workspace snapshot for `~/Repositories`
-- documentation for machine bootstrap, secrets, and scripts
+- documentation for machine bootstrap, secrets, scripts, sync, and Kanata
 
 This repository should be treated as an operational control center for the machine.
 
@@ -21,6 +21,7 @@ This repository should be treated as an operational control center for the machi
 - tracked scripts have clear responsibilities
 - user systemd units are managed from tracked source files
 - workspace routing and repo placement remain reproducible across machines
+- documentation is useful to both humans and AI agents
 
 ## What to avoid
 - making broad changes without understanding the module or script boundary
@@ -28,6 +29,7 @@ This repository should be treated as an operational control center for the machi
 - duplicating responsibilities across scripts
 - storing secrets directly in the repo outside the intended secret management flow
 - editing tracked runtime-generated files when the source-of-truth file is elsewhere
+- folding dotfiles-managed personal environment concerns into this repo unnecessarily
 
 ## Important directories
 
@@ -47,6 +49,7 @@ Operational scripts for:
 - local git server setup
 - distfiles sync
 - machine bootstrap
+- secrets restoration
 - other utility workflows
 
 ### `systemd/user/`
@@ -74,7 +77,7 @@ Live AI runtime configuration:
 - skills
 - agent runtime directories
 
-This is separate from the workspace snapshot and separate from the NixOS repo itself.
+This is separate from the workspace snapshot and separate from this repo itself.
 
 ### `~/Repositories/`
 Live working tree for actual project repositories and agent-facing workspaces.
@@ -82,6 +85,22 @@ Live working tree for actual project repositories and agent-facing workspaces.
 ### `~/.config/systemd/user/`
 Active installed user systemd units.
 Tracked canonical copies live in `systemd/user/` inside this repo.
+
+### Dotfiles repo
+Personal environment configuration such as:
+- Hyprland
+- Quickshell
+- shell/editor/UI config
+
+should live in the separate dotfiles repository and be documented there, while this repo should reference that layer where needed.
+
+Known references:
+- `https://github.com/aaronjan98/dotfiles`
+- `https://github.com/aaronjan98/dotfiles/tree/main/.config/quickshell`
+
+## Key files to read first
+- `README.md`
+- `docs/README.md`
 
 ## Key scripts
 
@@ -110,6 +129,7 @@ Guided orchestrator for new machine setup.
 - When changing bootstrap behavior, update the documentation as well.
 - When changing systemd units, edit the tracked copies in `systemd/user/`, not only the active runtime copies.
 - When changing workspace structure assumptions, update both the tracked workspace snapshot and the scripts that depend on it.
+- When documenting user environment layers that live elsewhere, reference the external source of truth rather than duplicating it here unless a summary is useful.
 
 ## Routing guidance
 - If the task is about NixOS system configuration, inspect `hosts/` and `modules/`.
@@ -117,6 +137,7 @@ Guided orchestrator for new machine setup.
 - If the task is about user services, inspect `systemd/user/`.
 - If the task is about workspace reproducibility, inspect `tools/workspace/`.
 - If the task is about AI runtime behavior, inspect `~/.config/ai/` separately from this repo.
+- If the task is about Hyprland, Quickshell, or other personal environment layers, inspect the dotfiles repo separately.
 
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.

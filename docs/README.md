@@ -9,6 +9,8 @@ The docs are organized so that both humans and AI agents can understand:
 - how setup automation takes over
 - what the major scripts do
 - how this repo relates to the larger agentic workspace system
+- how multi-machine sync is intended to work
+- where input/custom environment layers fit
 
 ---
 
@@ -48,6 +50,7 @@ This document explains the full bring-up flow in phases:
 2. manual bootstrap
 3. scripted bootstrap
 4. final rebuild
+5. dotfiles/environment follow-up
 
 Use this when you want the big picture.
 
@@ -71,6 +74,24 @@ This document explains the purpose of each script in:
 - `~/nixos-config/scripts`
 
 Use this when you are debugging, extending, or orchestrating the scripted workflow.
+
+### 6. `MULTI-MACHINE-SYNC.md`
+Read this when you want to understand how the setup is intended to stay aligned across multiple laptops.
+
+This document covers:
+- tracked workspace snapshot flow
+- repo sync responsibilities
+- relationship between Nix config, workspace snapshot, repos, and dotfiles
+
+### 7. `KANATA.md`
+Read this when you want a human-readable explanation of the Kanata keybinding setup.
+
+This document explains:
+- layer behavior
+- home-row mods
+- navigation/number modes
+- special chords
+- relationship to Hyprland
 
 ---
 
@@ -122,6 +143,18 @@ Live working tree for actual project repositories and workspace routing.
 ### `~/.config/systemd/user/`
 Active installed user systemd units.
 
+### Dotfiles repo
+Personal environment layers such as:
+- Hyprland
+- Quickshell
+- shell/editor/UI config
+
+should be documented in and managed from the separate dotfiles repo.
+
+Known references:
+- `https://github.com/aaronjan98/dotfiles`
+- `https://github.com/aaronjan98/dotfiles/tree/main/.config/quickshell`
+
 ---
 
 ## Practical usage
@@ -141,15 +174,21 @@ Read:
 Read:
 1. `SCRIPTS.md`
 2. `NEW-MACHINE-SETUP.md`
+3. `MULTI-MACHINE-SYNC.md`
+
+### If you are working on keyboard/input behavior
+Read:
+1. `KANATA.md`
 
 ---
 
 ## Summary
 
-This documentation directory is the human-readable guide to how the machine is installed, trusted, bootstrapped, and maintained.
+This documentation directory is the human-readable guide to how the machine is installed, trusted, bootstrapped, synchronized, and maintained.
 
 It exists so that:
 - setup remains understandable
 - automation remains maintainable
 - trust/bootstrap steps remain explicit
+- multi-machine behavior is documented
 - the whole system can be reproduced across machines

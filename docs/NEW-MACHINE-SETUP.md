@@ -8,11 +8,12 @@ It intentionally points to more detailed documents for each phase.
 
 ## Overview
 
-The setup process is divided into three phases:
+The setup process is divided into four phases:
 
 1. base NixOS installation
 2. manual trust/bootstrap preparation
 3. scripted machine bootstrap and final rebuild
+4. dotfiles and personal environment setup
 
 ---
 
@@ -67,6 +68,32 @@ This should:
 
 ---
 
+## Phase 4 — Dotfiles and personal environment setup
+
+After the machine is bootstrapped and the main NixOS configuration is in place, clone and apply your dotfiles/environment setup.
+
+This is where layers such as:
+- Hyprland
+- Quickshell
+- shell/editor/UI config
+
+should be handled.
+
+These belong to the separate dotfiles repo rather than this repo.
+
+Known references:
+- `https://github.com/aaronjan98/dotfiles`
+- `https://github.com/aaronjan98/dotfiles/tree/main/.config/quickshell`
+
+This separation keeps:
+- machine bootstrap
+- OS/system configuration
+- personal environment configuration
+
+from collapsing into one repo.
+
+---
+
 ## Final rebuild
 
 After bootstrap, run:
@@ -86,5 +113,7 @@ if your shell environment already defines it.
 - `README.md`
 - `MANUAL-BOOTSTRAP.md`
 - `NIXOS-INSTALL.md`
-- `SCRIPTS.md`
 - `SECRETS.md`
+- `SCRIPTS.md`
+- `MULTI-MACHINE-SYNC.md`
+- `KANATA.md`
