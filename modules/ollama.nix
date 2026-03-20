@@ -1,11 +1,11 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, pkgsUnstable, ... }:
 
 {
   services.ollama = {
     enable = true;
     host = "127.0.0.1";
     port = 11434;
-    package = pkgs.ollama-vulkan;
+    package = pkgsUnstable.ollama-vulkan;
     loadModels = [ "qwen3:4b" "deepseek-r1:1.5b" ];
   };
 
@@ -20,4 +20,3 @@
     environment.OLLAMA_BASE_URL = "http://127.0.0.1:11434";
   };
 }
-

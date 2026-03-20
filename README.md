@@ -1,7 +1,8 @@
 # AJ's NixOS Configuration
 
-> This configuration is specific to AJ's machines, workflows, and preferences.
-> It is best used as inspiration, reference, or a source of ideas rather than something to copy directly without modification.
+> [!NOTE]
+> This configuration is specific to my machines, workflows, and preferences. \
+> I recommend the repo be an inspiration, reference, or a source of ideas rather than something to copy directly without modification.
 
 This repository is both:
 

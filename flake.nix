@@ -52,7 +52,7 @@
       nixosConfigurations.thinkpad-t14 = nixpkgs.lib.nixosSystem {
         inherit system;
 
-        specialArgs = { inherit nix-tools; snippetsDir = ./snippets; };
+        specialArgs = { inherit nix-tools pkgsUnstable; snippetsDir = ./snippets; };
 
         modules = [
           ({ ... }: { nixpkgs.overlays = [ myOverlay ]; })
