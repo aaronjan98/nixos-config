@@ -101,6 +101,7 @@ Known references:
 ## Key files to read first
 - `README.md`
 - `docs/README.md`
+- `docs/AGENT-WORKFLOW.md`
 
 ## Key scripts
 

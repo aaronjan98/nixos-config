@@ -75,7 +75,16 @@ This document explains the purpose of each script in:
 
 Use this when you are debugging, extending, or orchestrating the scripted workflow.
 
-### 6. `MULTI-MACHINE-SYNC.md`
+### 6. `AGENT-WORKFLOW.md`
+Read this to understand how AI agents are expected to operate within the system.
+
+This document explains:
+- how context is loaded
+- how routing works
+- how project boundaries are respected
+- how agents interact with the filesystem
+
+### 7. `MULTI-MACHINE-SYNC.md`
 Read this when you want to understand how the setup is intended to stay aligned across multiple laptops.
 
 This document covers:
@@ -83,7 +92,7 @@ This document covers:
 - repo sync responsibilities
 - relationship between Nix config, workspace snapshot, repos, and dotfiles
 
-### 7. `KANATA.md`
+### 8. `KANATA.md`
 Read this when you want a human-readable explanation of the Kanata keybinding setup.
 
 This document explains:
@@ -93,7 +102,7 @@ This document explains:
 - special chords
 - relationship to Hyprland
 
-### 8. `PACKAGES.md`
+### 9. `PACKAGES.md`
 Read this when you want to understand how packages are installed and organized.
 
 This document explains:
