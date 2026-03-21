@@ -177,28 +177,28 @@ Known references:
 
 ---
 
-## Practical usage
+## Practical usage (task-oriented entry points)
 
 ### If you are setting up a brand new machine
 Read in this order:
-1. `NIXOS-INSTALL.md`
-2. `MANUAL-BOOTSTRAP.md`
-3. `NEW-MACHINE-SETUP.md`
+1. [NIXOS-INSTALL.md](./NIXOS-INSTALL.md)         — base OS install (disk, LUKS, Btrfs, initial system)
+2. [MANUAL-BOOTSTRAP.md](./MANUAL-BOOTSTRAP.md)   — restore trust (GPG, pass, SSH, age key)
+3. [NEW-MACHINE-SETUP.md](./NEW-MACHINE-SETUP.md) — full bring-up flow (bootstrap → rebuild → dotfiles)
 
 ### If you are debugging secrets or trust issues
 Read:
-1. `SECRETS.md`
-2. `MANUAL-BOOTSTRAP.md`
+1. [SECRETS.md](./SECRETS.md)                     — how secrets and trust material are managed
+2. [MANUAL-BOOTSTRAP.md](./MANUAL-BOOTSTRAP.md)   — step-by-step trust restoration
 
 ### If you are changing or extending automation
 Read:
-1. `SCRIPTS.md`
-2. `NEW-MACHINE-SETUP.md`
-3. `MULTI-MACHINE-SYNC.md`
+1. [SCRIPTS.md](./SCRIPTS.md)                     — what each script does and when to use it
+2. [NEW-MACHINE-SETUP.md](./NEW-MACHINE-SETUP.md) — how scripts fit into machine bootstrap
+3. [MULTI-MACHINE-SYNC.md](./MULTI-MACHINE-SYNC.md) — how changes propagate across machines
 
 ### If you are working on keyboard/input behavior
 Read:
-1. `KANATA.md`
+1. [KANATA.md](./KANATA.md)                       — full explanation of Kanata layers and key behavior
 
 ---
 

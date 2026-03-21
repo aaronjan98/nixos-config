@@ -52,6 +52,26 @@ Typical use:
 - new laptop setup
 - first-time bring-up after cloning this repo
 
+## `ai-router.sh`
+Purpose:
+- choose how Claude Code is launched
+- support:
+  - cloud mode
+  - local mode
+  - auto mode
+
+Typical use:
+- normal interactive use should prefer cloud mode
+- local mode is currently experimental and kept mainly for future use or limited testing
+
+Behavior:
+- `--cloud` launches normal Claude
+- `--local` launches Claude with local backend environment overrides
+- `--auto` uses routing logic, but current policy should strongly prefer cloud unless local is explicitly requested
+
+Notes:
+- local backend support is wired up but is not currently part of the normal recommended workflow
+- bulk filesystem changes should still follow the script-first rule
 ## `rsync-git-server-mirror.sh`
 Purpose:
 - mirror the homelab git server into the local git server

@@ -129,16 +129,22 @@ Start with:
 
 - `docs/README.md`
 
-Important docs include:
-- `docs/NIXOS-INSTALL.md`
-- `docs/MANUAL-BOOTSTRAP.md`
-- `docs/NEW-MACHINE-SETUP.md`
-- `docs/SECRETS.md`
-- `docs/SCRIPTS.md`
-- `docs/MULTI-MACHINE-SYNC.md`
-- `docs/KANATA.md`
-- `docs/PACKAGES.md`
-- `docs/AGENT-WORKFLOW.md`
+### Important docs include:
+
+#### Setup
+- [docs/NIXOS-INSTALL.md](./docs/NIXOS-INSTALL.md)         — base OS installation (disk, LUKS, Btrfs, initial system setup)
+- [docs/MANUAL-BOOTSTRAP.md](./docs/MANUAL-BOOTSTRAP.md)   — manual trust bootstrap (GPG, pass, SSH, age key)
+- [docs/NEW-MACHINE-SETUP.md](./docs/NEW-MACHINE-SETUP.md) — high-level machine bring-up flow (install → bootstrap → rebuild → dotfiles)
+
+#### System
+- [docs/SECRETS.md](./docs/SECRETS.md)                     — how secrets and trust material are managed and restored
+- [docs/PACKAGES.md](./docs/PACKAGES.md)                   — how packages are installed (overlays, modules, system vs user)
+- [docs/KANATA.md](./docs/KANATA.md)                       — detailed explanation of the Kanata keybinding system and layers
+
+#### Operation
+- [docs/SCRIPTS.md](./docs/SCRIPTS.md)                     — operational tooling and scripts (including workspace + router logic)
+- [docs/MULTI-MACHINE-SYNC.md](./docs/MULTI-MACHINE-SYNC.md) — how the system stays consistent across multiple machines)
+- [docs/AGENT-WORKFLOW.md](./docs/AGENT-WORKFLOW.md)       — how agents operate across the filesystem (routing, memory, execution model)
 
 ---
 
@@ -153,8 +159,8 @@ This repo is intentionally documented and structured so that an AI agent can und
 - how this repo relates to the broader workspace and AI setup
 
 See also:
-- `CONTEXT.md`
-- `docs/README.md`
+- [CONTEXT.md](./CONTEXT.md)
+- [docs/README.md](./docs/README.md)
 
 ---
 
