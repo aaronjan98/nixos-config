@@ -95,8 +95,6 @@
 
   kmetU (tap-hold-press $hrm_tt $hrm_ht S-k     rmet)
   laltU (tap-hold-press $hrm_tt $hrm_ht S-l     ralt)
-  rsftU (tap-hold-press $hrm_tt $hrm_ht S-scln  rsft)  ;; ; -> :
-  rctlU (tap-hold-press $hrm_tt $hrm_ht S-apos  rctl)  ;; ' -> "
 
   ;; ===== majlayer / nums: digit-on-tap while preserving mods =====
   saltM (tap-hold-press $hrm_tt $hrm_ht 0 lalt)  ;; s -> 0
@@ -197,7 +195,7 @@
 
   S-q @wchU S-e S-r S-t S-y S-u S-i S-o S-p
 
-  @asftU @saltU @dmetU @fchU @gchU S-h @jchU @kmetU @laltU @rsftU @rctlU
+  @asftU @saltU @dmetU @fchU @gchU S-h @jchU @kmetU @laltU @rsft @rctl
 
   S-z S-x S-c S-b S-n S-m
 

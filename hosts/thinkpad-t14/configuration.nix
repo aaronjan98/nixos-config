@@ -256,6 +256,8 @@
       ];
     })
     code-cursor
+    llmfit
+    models
     claude-code
 
     # System Monitoring
