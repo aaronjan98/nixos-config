@@ -11,9 +11,11 @@
     };
 
     nix-tools.url = "path:./tools";
+
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, nix-flatpak, ... }:
     let
       system = "x86_64-linux";
 
@@ -59,6 +61,7 @@
 
           ./hosts/thinkpad-t14/configuration.nix
           sops-nix.nixosModules.sops
+          nix-flatpak.nixosModules.nix-flatpak
         ];
       };
 
