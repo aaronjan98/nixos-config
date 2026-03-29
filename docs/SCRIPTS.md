@@ -112,3 +112,16 @@ Purpose:
 ## `tmux-battery.sh`
 Purpose:
 - tmux helper/status script
+
+---
+
+## Planned / not yet implemented
+
+### `backup-secrets.sh`
+Intended as the inverse of `restore-secrets.sh`.
+Purpose:
+- read SSH material from `~/.ssh/`
+- store each file into `pass` under the hostname-derived prefix `laptop/<hostname>/ssh/<filename>`
+- prepare or refresh the password-store entries that `restore-secrets.sh` depends on
+
+See `CONTEXT.md` for the open design questions that must be resolved before this is written.

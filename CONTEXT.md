@@ -140,6 +140,21 @@ Guided orchestrator for new machine setup.
 - If the task is about AI runtime behavior, inspect `~/.config/ai/` separately from this repo.
 - If the task is about Hyprland, Quickshell, or other personal environment layers, inspect the dotfiles repo separately.
 
+## Future implementations
+
+### `scripts/backup-secrets.sh` (not yet implemented)
+This script is the intended inverse of `restore-secrets.sh`.
+It should read SSH material from `~/.ssh/` and store each file into `pass` under the hostname-derived prefix `laptop/<hostname>/ssh/<filename>`, mirroring the structure that `restore-secrets.sh` expects.
+
+Before implementing this script, an agent must ask the user to resolve the following design questions:
+
+1. **Scope**: Should the script store everything found in `~/.ssh/`, or only the known fixed list used by `restore-secrets.sh` (e.g. `config`, `authorized_keys`, `id_ed25519.*`, `known_hosts`, etc.)?
+2. **Overwrite behavior**: If a `pass` entry already exists for a file, should the script silently overwrite it, skip it, or prompt the user interactively?
+3. **Hostname**: Should the script derive the pass prefix from `$(hostname)` (matching `restore-secrets.sh` behavior), or accept a hostname argument to allow seeding entries for a different machine?
+4. **Auto-push**: Should the script run `pass git push` at the end to sync to the remote automatically, or leave that to the user?
+
+Do not implement this script without confirming these decisions with the user first.
+
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.
 An agent working here should preserve clarity, reproducibility, and separation of responsibilities.
