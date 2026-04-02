@@ -27,6 +27,16 @@ copy_if_exists() {
   fi
 }
 
+sync_dir_if_exists() {
+  local src="$1"
+  local dst="$2"
+
+  if [[ -d "$src" ]]; then
+    ensure_dir "$dst"
+    rsync -a --delete "$src/" "$dst/"
+  fi
+}
+
 get_remote_url() {
   local repo_dir="$1"
   local remote_name
@@ -70,9 +80,12 @@ discover_tree() {
     return
   fi
 
-  # Only mirror CONTEXT.md for non-root, non-repo directories
+  # Mirror agent files for non-root, non-repo directories
   if [[ -n "$rel_path" ]]; then
-    copy_if_exists "${current_dir}/CONTEXT.md" "${SNAPSHOT_ROOT}/${rel_path}/CONTEXT.md"
+    copy_if_exists "${current_dir}/CONTEXT.md"     "${SNAPSHOT_ROOT}/${rel_path}/CONTEXT.md"
+    copy_if_exists "${current_dir}/MEMORY.md"      "${SNAPSHOT_ROOT}/${rel_path}/MEMORY.md"
+    sync_dir_if_exists "${current_dir}/memory"         "${SNAPSHOT_ROOT}/${rel_path}/memory"
+    sync_dir_if_exists "${current_dir}/project-memory" "${SNAPSHOT_ROOT}/${rel_path}/project-memory"
   fi
 
   local child
@@ -108,8 +121,12 @@ main() {
   find "$SNAPSHOT_ROOT" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
   write_manifest_header
 
-  log "Copying top-level ROUTER.md"
-  copy_if_exists "${LIVE_ROOT}/ROUTER.md" "${SNAPSHOT_ROOT}/ROUTER.md"
+  log "Copying top-level agent files"
+  copy_if_exists "${LIVE_ROOT}/ROUTER.md"   "${SNAPSHOT_ROOT}/ROUTER.md"
+  copy_if_exists "${LIVE_ROOT}/CONTEXT.md"  "${SNAPSHOT_ROOT}/CONTEXT.md"
+  copy_if_exists "${LIVE_ROOT}/MEMORY.md"   "${SNAPSHOT_ROOT}/MEMORY.md"
+  sync_dir_if_exists "${LIVE_ROOT}/memory"         "${SNAPSHOT_ROOT}/memory"
+  sync_dir_if_exists "${LIVE_ROOT}/project-memory" "${SNAPSHOT_ROOT}/project-memory"
 
   log "Discovering live workspace structure"
   discover_tree "$LIVE_ROOT" ""
