@@ -25,8 +25,14 @@ Class-specific projects such as notebooks, assignments, and research papers.
 When the task is about coursework, mathematical work, scientific computing, or class writing, inspect this area first.
 
 ### self-hosted
-Locally run or actively maintained systems such as the zettelkasten and llmfit.
-This area may also contain useful knowledge systems, but do not inspect it unless a project indicates it is relevant.
+Locally run or self-hosted services such as the zettelkasten and llmfit.
+This area is for things AJ runs, not things he builds.
+Do not inspect unless a project indicates it is relevant.
+
+### projects
+Personal tools and applications that AJ builds for his own use.
+Each subdirectory is its own git-tracked repo with a CONTEXT.md.
+Inspect the relevant subdirectory's CONTEXT.md to orient.
 
 ## General routing rules
 - Start with the repository most directly related to the task.
