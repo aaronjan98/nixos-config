@@ -225,6 +225,8 @@
 
     # Terminal & Shell
     kitty
+    ghostty
+    neovide
     zoxide
     fzf
 
