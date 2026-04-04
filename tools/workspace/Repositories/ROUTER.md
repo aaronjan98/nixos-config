@@ -34,6 +34,30 @@ Personal tools and applications that AJ builds for his own use.
 Each subdirectory is its own git-tracked repo with a CONTEXT.md.
 Inspect the relevant subdirectory's CONTEXT.md to orient.
 
+## Directories outside ~/Repositories
+
+These are not repositories and are not routed through this file's area system.
+Go here only when a task explicitly requires it.
+
+### ~/nixos-config
+NixOS system configuration, dotfiles, and machine-level setup.
+Go here if the task involves system packages, services, Hyprland config, NixOS modules,
+or anything that requires a rebuild to take effect.
+
+### ~/Documents
+Primary storage for PDFs, papers, and reference material linked from zettelkasten notes.
+If a task involves finding a source, reading a paper, or locating a resource referenced
+in a zettelkasten note, look here first before searching elsewhere.
+
+### ~/Pictures
+Images and wallpapers. Wallpapers specifically live at ~/Pictures/Wallpapers/.
+Go here if the task involves finding, changing, or referencing visual assets.
+
+### ~/.config/ai
+Agent workspace: shared rules, skills, and per-agent bootstrap configs.
+Go here only if the task involves modifying agent behavior, skills, or orientation files.
+Do not read this directory speculatively.
+
 ## General routing rules
 - Start with the repository most directly related to the task.
 - Do not inspect unrelated repositories by default.

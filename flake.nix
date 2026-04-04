@@ -48,6 +48,7 @@
           models = pkgsUnstable.models;
           code-cursor = pkgsUnstable.code-cursor;
           claude-code = pkgsUnstable.claude-code;
+          gemini-cli = pkgsUnstable.gemini-cli;
         });
     in
     {
