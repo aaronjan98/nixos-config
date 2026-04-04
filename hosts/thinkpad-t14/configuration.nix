@@ -227,6 +227,7 @@
     kitty
     ghostty
     neovide
+    gemini-cli
     zoxide
     fzf
 
