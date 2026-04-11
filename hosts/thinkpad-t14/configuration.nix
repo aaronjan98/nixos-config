@@ -18,6 +18,7 @@
     ../../modules/obsidian-ipc.nix
     ../../modules/ollama.nix
     ../../modules/claude-code.nix
+    ../../modules/opencode.nix
     ../../modules/caddy.nix
   ];
 
