@@ -52,6 +52,9 @@ in
       unbind C-l
       bind -n C-l send-keys C-l
 
+      ##### Popups #####
+      bind -n C-t display-popup -E -w 80% -h 75% -y 31
+
       ##### Pane management #####
       setw -g aggressive-resize on
       bind-key R command-prompt -I "resize-pane -"
