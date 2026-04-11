@@ -34,6 +34,8 @@ in
       bind C-Space send-prefix
 
       set -g mouse on
+      set -g extended-keys on
+      set -g extended-keys-format csi-u
       set -s escape-time 50
       set -g display-time 2000
       set -g history-limit 100000

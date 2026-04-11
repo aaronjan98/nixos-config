@@ -19,6 +19,7 @@
     ../../modules/ollama.nix
     ../../modules/claude-code.nix
     ../../modules/opencode.nix
+    ../../modules/pi.nix
     ../../modules/caddy.nix
   ];
 
