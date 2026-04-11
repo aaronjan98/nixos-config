@@ -104,6 +104,7 @@
   services.xserver.enable = true;
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
+  environment.plasma6.excludePackages = [ pkgs.kdePackages.dolphin pkgs.kdePackages.dolphin-plugins ];
   # If this ever fails (option not found), fall back to:
   # services.xserver.desktopManager.plasma5.enable = true;
 
@@ -230,6 +231,7 @@
     gemini-cli
     zoxide
     fzf
+    yazi
 
     # Text Editors
     neovim
