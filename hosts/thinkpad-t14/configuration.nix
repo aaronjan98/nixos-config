@@ -195,6 +195,7 @@
     TERMINAL = "kitty";
     XCURSOR_THEME = "Adwaita";
     XCURSOR_SIZE = "24";
+    MOZ_ENABLE_WAYLAND = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     QT_QPA_PLATFORM = "wayland";
     QT_SCALE_FACTOR = "1";
