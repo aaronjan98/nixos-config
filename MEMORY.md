@@ -12,6 +12,18 @@ Always run `nrt` first to verify the configuration builds correctly before apply
 
 ---
 
+## Excluding KDE Plasma Packages
+
+To remove a package that ships with `services.desktopManager.plasma6`, use:
+
+```nix
+environment.plasma6.excludePackages = [ pkgs.kdePackages.<name> ];
+```
+
+Currently excluded: `dolphin`, `dolphin-plugins` (replaced by Nautilus for GUI file management).
+
+---
+
 ## Common Tasks
 
 ### Adding a Split DNS Entry
