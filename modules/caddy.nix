@@ -4,6 +4,7 @@
   networking.hosts."127.0.0.1" = [
     "ai.local"
     "movies.local"
+    "photos.local"
   ];
 
   services.caddy = {
@@ -22,6 +23,11 @@
       "movies.local:80".extraConfig = ''
         bind 127.0.0.1
         reverse_proxy http://qwerty:8096
+      '';
+
+      "photos.local:80".extraConfig = ''
+        bind 127.0.0.1
+        reverse_proxy http://qwerty:2283
       '';
     };
   };
