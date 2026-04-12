@@ -8,6 +8,7 @@
     ../../modules/tmux.nix
     ../../modules/networkmanager-profiles.nix
     ../../modules/hypr-dispatch.nix
+    ../../modules/wol-sauron.nix
     ../../modules/hypr-idle-lock.nix
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
