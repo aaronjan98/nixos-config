@@ -132,6 +132,17 @@ Guided orchestrator for new machine setup.
 - When changing workspace structure assumptions, update both the tracked workspace snapshot and the scripts that depend on it.
 - When documenting user environment layers that live elsewhere, reference the external source of truth rather than duplicating it here unless a summary is useful.
 
+## Adding a new global system command
+
+To add a reproducible command available system-wide (like `hypr-dispatch` or `wol-sauron`):
+
+1. Create `modules/<name>.nix` using `pkgs.writeShellScriptBin` — pin any dependencies via `pkgs.<dep>` rather than hardcoding paths.
+2. Add the import to `hosts/thinkpad-t14/configuration.nix` under the `imports` list.
+3. Add a one-line description of the module to the examples list in `docs/PACKAGES.md`.
+4. Run `nixos-rebuild switch` — the command will be on `$PATH` system-wide immediately.
+
+Do NOT place scripts in `~/.local/bin/` for anything that should be reproducible. That directory is for legacy or temporary one-offs only.
+
 ## Routing guidance
 - If the task is about NixOS system configuration, inspect `hosts/` and `modules/`.
 - If the task is about machine setup automation, inspect `scripts/` and `docs/`.

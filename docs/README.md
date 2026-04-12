@@ -113,6 +113,15 @@ This document explains:
 - script-based commands
 - how Claude Code fits into the system
 
+### 10. `SERVICES.md`
+Read this when you want an overview of what runs automatically and what must be triggered manually.
+
+This document covers:
+- active user systemd timers and what they do
+- directory sync overview (what is rsynced to the homelab and where)
+- manually-run scripts quick reference
+- globally available commands installed via Nix modules
+
 ---
 
 ## How these docs relate to the repo
@@ -193,8 +202,9 @@ Read:
 ### If you are changing or extending automation
 Read:
 1. [SCRIPTS.md](./SCRIPTS.md)                     — what each script does and when to use it
-2. [NEW-MACHINE-SETUP.md](./NEW-MACHINE-SETUP.md) — how scripts fit into machine bootstrap
-3. [MULTI-MACHINE-SYNC.md](./MULTI-MACHINE-SYNC.md) — how changes propagate across machines
+2. [SERVICES.md](./SERVICES.md)                   — what runs automatically (timers) vs. manually
+3. [NEW-MACHINE-SETUP.md](./NEW-MACHINE-SETUP.md) — how scripts fit into machine bootstrap
+4. [MULTI-MACHINE-SYNC.md](./MULTI-MACHINE-SYNC.md) — how changes propagate across machines
 
 ### If you are working on keyboard/input behavior
 Read:
