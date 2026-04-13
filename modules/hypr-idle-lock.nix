@@ -11,17 +11,21 @@ let
     mkdir -p "$state_dir"
 
     if command -v brightnessctl >/dev/null 2>&1; then
-      # brightnessctl -m output is usually:
-      # device,subsystem,driver,current,max,percent
+      # Screen brightness
       line="$(brightnessctl -m | head -n1 || true)"
       dev="$(printf '%s' "$line" | cut -d, -f1)"
       cur="$(printf '%s' "$line" | cut -d, -f4)"
 
       printf '%s\n' "$dev" > "$state_dir/device" || true
       printf '%s\n' "$cur" > "$state_dir/current" || true
-
-      # Go as dark as possible (some panels still glow slightly)
       brightnessctl -d "$dev" set 0% >/dev/null 2>&1 || true
+
+      # Keyboard backlight
+      if brightnessctl -d "tpacpi::kbd_backlight" g >/dev/null 2>&1; then
+        kbd_cur="$(brightnessctl -d "tpacpi::kbd_backlight" g)"
+        printf '%s\n' "$kbd_cur" > "$state_dir/kbd_current"
+        brightnessctl -d "tpacpi::kbd_backlight" s 0 >/dev/null 2>&1
+      fi
     fi
   '';
 
@@ -34,21 +38,22 @@ let
     state_dir="$runtime/screen-blackout"
 
     if command -v brightnessctl >/dev/null 2>&1; then
-      dev=""
-      cur=""
-
-      if [ -f "$state_dir/device" ]; then dev="$(cat "$state_dir/device" || true)"; fi
-      if [ -f "$state_dir/current" ]; then cur="$(cat "$state_dir/current" || true)"; fi
-
-      if [ -n "$dev" ] && [ -n "$cur" ]; then
-        # Restore absolute brightness value (not percent)
-        brightnessctl -d "$dev" set "$cur" >/dev/null 2>&1 || true
+      # Restore screen
+      if [ -f "$state_dir/device" ] && [ -f "$state_dir/current" ]; then
+        dev="$(cat "$state_dir/device")"
+        cur="$(cat "$state_dir/current")"
+        brightnessctl -d "$dev" set "$cur" >/dev/null 2>&1
       else
-        # Fallback
-        brightnessctl set 40% >/dev/null 2>&1 || true
+        brightnessctl set 40% >/dev/null 2>&1
       fi
 
-      rm -f "$state_dir/device" "$state_dir/current" >/dev/null 2>&1 || true
+      # Restore keyboard
+      if [ -f "$state_dir/kbd_current" ]; then
+        kbd_cur="$(cat "$state_dir/kbd_current")"
+        brightnessctl -d "tpacpi::kbd_backlight" s "$kbd_cur" >/dev/null 2>&1
+      fi
+
+      rm -rf "$state_dir" >/dev/null 2>&1
     fi
   '';
 in
