@@ -52,6 +52,23 @@ User has a quickshell symlink switcher and wants a live runtime theme switcher.
 **Recommended tool: `matugen`** — generates base16 palettes from wallpaper at runtime, pairs with symlink switcher.
 Pattern: matugen generates per-theme config files → symlink switcher points to active set → reload affected processes.
 
+## Hyprland & Locking
+
+### Hyprlock/Hypridle Implementation (2026-04-12)
+- **Config:** Managed in \`modules/hypr-idle-lock.nix\`.
+- **Auth:** Added \`security.pam.services.hyprlock = {}\` for password validation.
+- **Idle Progression:**
+    - 5 mins: Screen blackout via \`screen-blackout-on\` (screensaver mode).
+    - 10 mins: Screen lock via \`hyprlock\`.
+    - 15 mins: Display sleep via DPMS.
+- **Aesthetic:** Custom "Clockwork" theme using JetBrains Mono, blurred background (\`path = screenshot\`), and bezier fade-in animations.
+- **Note on Systemd:** If \`hypridle\` fails to start, check for broken symlinks in \`~/.config/systemd/user/\` that might be shadowing the NixOS-managed unit. Remove them and run \`systemctl --user daemon-reload\`.
+
+### Future: Qylock/Quickshell
+- **Animation Goal:** The "exact" high-fidelity animations from [Darkkal44/qylock](https://github.com/Darkkal44/qylock) are QML-based.
+- **Path:** Requires switching from \`hyprlock\` to \`quickshell\` as the lockscreen provider.
+- **Status:** Researched but not implemented to avoid significant architectural shift during this session.
+
 ---
 
 ## Common Tasks
