@@ -154,6 +154,7 @@
       element-desktop
       protonvpn-gui
       slack
+      motrix
     ];
   };
   security.sudo.extraRules = [
