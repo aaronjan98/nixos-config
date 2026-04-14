@@ -42,6 +42,8 @@ cannot be selectively excluded from transparency. Hard browser/Wayland protocol 
 
 **Obsidian**: Uses `snippets/theme-glass.css` (disable `true-black-bg`). Popups need explicit opaque
 backgrounds or text bleeds through. See session notes 2026-04-11 for full detail.
+**Obsidian WM class caveat**: Obsidian's WM class is `electron`, NOT `obsidian`. The windowrule must use
+`class:^(electron)$, title:.*Obsidian.*` to avoid matching all Electron apps.
 
 ---
 
