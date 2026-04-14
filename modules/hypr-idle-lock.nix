@@ -71,7 +71,7 @@ in
   environment.etc."xdg/hypr/hypridle.conf".text = ''
     general {
       lock_cmd = pidof hyprlock || /run/current-system/sw/bin/hyprlock
-      before_sleep_cmd = loginctl lock-session
+      before_sleep_cmd = /run/current-system/sw/bin/screen-blackout-on; loginctl lock-session
       after_sleep_cmd = hyprctl dispatch dpms on && /run/current-system/sw/bin/screen-blackout-off
     }
   
