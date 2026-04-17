@@ -340,6 +340,7 @@
       };
     })
     obs-studio
+    songrec
 
     # Custom Overlays
     breeze-hacked-cursor
