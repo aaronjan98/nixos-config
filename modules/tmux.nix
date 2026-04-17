@@ -119,6 +119,9 @@ in
       set-option -g window-status-current-format '#{window_index}#(echo ":")#{window_name}#[fg='$ACCENT_FG_COLOR']#{window_flags}'
       set-option -g window-status-format         '#{window_index}#(echo ":")#{window_name}#[fg='$ACCENT_FG_COLOR']#{window_flags}'
 
+      # Allow OSC passthrough to outer terminal (needed for OSC 9/777 notifications from panes)
+      set -g allow-passthrough on
+
       ##### Terminal color support #####
       set -g default-terminal "screen-256color"
       set -ga terminal-overrides ",screen-256color:Tc"
