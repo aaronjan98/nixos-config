@@ -95,6 +95,19 @@ Typical use:
 - before builds or installs that benefit from cached distfiles
 - during new-machine bootstrap
 
+When to use this pattern vs. a normal fetchzip/fetchurl derivation:
+- Use `requireFile` + NAS when Nix **cannot fetch the source automatically** — e.g. the download
+  requires a login, license acceptance, or has no stable public URL (Wolfram is the canonical example).
+- Use `fetchzip`/`fetchurl` directly when the source is publicly available at a stable URL
+  (npm packages, GitHub releases, etc.). The NAS is not needed for these.
+
+Workflow for a `requireFile`-backed package:
+1. Manually download the binary/installer and place it on the NAS under
+   `/mnt/storage/distfiles/<package-name>/`
+2. On the target machine: `sync-distfiles <package-name>`
+3. Add the file to the Nix store: `nix store add-file /var/lib/distfiles/<package-name>/<file>`
+4. The derivation's `requireFile` will now resolve and the build can proceed.
+
 ## `sync-workspace-repos.sh`
 Purpose:
 - keep workspace repos aligned with the root manifest

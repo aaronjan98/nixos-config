@@ -42,6 +42,11 @@ Reusable NixOS modules.
 ### `pkgs/`
 Custom package definitions and related package sources.
 
+When writing a new package derivation, choose the fetch strategy based on source availability:
+- **Public URL** (npm, GitHub releases, etc.): use `fetchzip` or `fetchurl` directly.
+- **Requires login / no public URL** (e.g. Wolfram): use `pkgs.requireFile` backed by the NAS
+  distfiles store. See `docs/SCRIPTS.md` → `sync-distfiles.sh` for the full workflow.
+
 ### `scripts/`
 Operational scripts for:
 - workspace export/bootstrap/sync

@@ -31,6 +31,7 @@
         # pix2tex = final.callPackage ./pkgs/pix2tex { };
         llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
         models = final.callPackage ./pkgs/models/default.nix { };
+        openai-codex = final.callPackage ./pkgs/openai-codex/default.nix { };
         pi = final.callPackage ./pkgs/pi/default.nix { };
       });
 
