@@ -33,3 +33,18 @@ Created a project tracker and drafted + sent the first contact email.
 
 - Does CSUN's CSU/OpenAI agreement include any API access, or is it strictly ChatGPT Edu?
 - Would the independent study with Dr. Abrego qualify for departmental API budget?
+
+---
+
+## Addendum — Codex CLI auth findings (same session)
+
+Attempted to sign in to Codex CLI while waiting for IT response.
+
+- **CSUN ChatGPT Edu SSO fails in CLI**: Error "No eligible ChatGPT account found. Authenticate
+  with SSO to access your available account." — CSUN uses SAML SSO which the CLI OAuth flow
+  does not support. Edu/Enterprise accounts are web-only.
+- **Personal free account also initially failed**: Error "Your account is not eligible to sign in
+  to Codex Local at this time." — root cause was account had never visited chatgpt.com/codex.
+  Fix: open chatgpt.com/codex in browser first to activate the feature, then CLI auth works.
+- **Outcome**: Codex CLI is now working via personal free ChatGPT account (aaronjan98@gmail.com).
+  Free tier has rate limits but is functional for trying it out.

@@ -16,5 +16,4 @@ Each subdirectory is its own git-tracked repository with its own CONTEXT.md.
 
 | Repo | Status | Description |
 |------|--------|-------------|
-| `claude-display/` | active | Local browser display panel for Claude Code conversations — LaTeX rendering via MathJax, MCP integration for automatic pushing |
-
+| `agent-display/` | active | Local conversation workspace for AI agents and chats — file-first thread storage, browser UI, Markdown import/export, future math-native and graph workflows |

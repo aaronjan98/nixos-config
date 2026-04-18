@@ -88,6 +88,7 @@ in
 
       DARKER_FG_COLOR=${theme.tmux.darkerFg}
       ACCENT_FG_COLOR=${theme.tmux.accentFg}
+      CURSOR_COLOR=${theme.tmux.cursor}
       LIGHTER_FG_COLOR=${theme.tmux.lighterFg}
       DEFAULT_BG_COLOR=${theme.tmux.defaultBg}
       BG_HIGHLIGHT_COLOR=${theme.tmux.bgHighlight}
@@ -95,6 +96,8 @@ in
       set-option -g message-command-style bg=$DEFAULT_BG_COLOR,fg=$DARKER_FG_COLOR
       set-option -g message-style         bg=$DEFAULT_BG_COLOR,fg=$DARKER_FG_COLOR
       set-option -g mode-style            bg=$BG_HIGHLIGHT_COLOR,fg=$DARKER_FG_COLOR
+      set-option -g cursor-colour         $CURSOR_COLOR
+      set-option -g prompt-cursor-colour  $CURSOR_COLOR
 
       set-option -g status-position bottom
       set-window-option -g automatic-rename on
@@ -125,6 +128,8 @@ in
       ##### Terminal color support #####
       set -g default-terminal "screen-256color"
       set -ga terminal-overrides ",screen-256color:Tc"
+      set -ga terminal-features ",xterm-ghostty:ccolour,cstyle"
+      set -ga terminal-features ",ghostty:ccolour,cstyle"
 
       ##### Resurrect / Continuum #####
       set -g @resurrect-dir '~/.config/tmux/resurrect'
@@ -135,4 +140,3 @@ in
     '';
   };
 }
-

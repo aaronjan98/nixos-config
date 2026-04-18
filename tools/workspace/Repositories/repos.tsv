@@ -1,7 +1,7 @@
 # relative_path	repo_name	remote_url
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
-projects/claude-display	claude-display	ssh://git@localhost/srv/git/repos/claude-display.git
+projects/agent-display	agent-display	ssh://git@localhost/srv/git/repos/claude-display.git
 school/differential_equations/directional_fields	directional_fields	
 school/Engineering_Course_Differential_Equations_and_Dynamical_Systems	Engineering_Course_Differential_Equations_and_Dynamical_Systems	ssh://git@localhost/srv/git/repos/diff_eqns_dyn_sys_jupyter_notebook.git
 school/published-real-analysis-notes	published-real-analysis-notes	ssh://git@localhost/srv/git/repos/Math-450A-Class-Notes.git
