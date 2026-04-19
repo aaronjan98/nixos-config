@@ -51,6 +51,7 @@ Reusable NixOS modules.
 
 ### `pkgs/`
 Custom packages and package-related sources.
+This includes locally pinned derivations such as `pi` and `openai-codex`, which are exposed through the overlay and then installed via modules or package lists.
 
 ### `scripts/`
 Operational scripts used for:
@@ -60,6 +61,7 @@ Operational scripts used for:
 - new machine setup
 - local git server setup
 - distfiles sync
+- pinned package update workflows (`pi`, `openai-codex`)
 
 ### `systemd/user/`
 Tracked source of truth for user systemd units.
@@ -71,7 +73,8 @@ Tracked skeletal snapshot of the live `~/Repositories` working tree.
 Human-readable documentation for installation, bootstrap, secrets, scripts, sync, and Kanata.
 
 ### `secrets/`
-Secrets-related configuration inputs used by the Nix setup.
+Encrypted SOPS inputs used by the Nix setup.
+These are distinct from bootstrap trust material stored in `pass`.
 
 ---
 
@@ -137,12 +140,12 @@ Start with:
 - [docs/NEW-MACHINE-SETUP.md](./docs/NEW-MACHINE-SETUP.md) — high-level machine bring-up flow (install → bootstrap → rebuild → dotfiles)
 
 #### System
-- [docs/SECRETS.md](./docs/SECRETS.md)                     — how secrets and trust material are managed and restored
-- [docs/PACKAGES.md](./docs/PACKAGES.md)                   — how packages are installed (overlays, modules, system vs user)
+- [docs/SECRETS.md](./docs/SECRETS.md)                     — how `pass`, SOPS, runtime secret files, and env exports fit together
+- [docs/PACKAGES.md](./docs/PACKAGES.md)                   — how packages are sourced and installed (stable, unstable, local `pkgs/`, modules, system vs user)
 - [docs/KANATA.md](./docs/KANATA.md)                       — detailed explanation of the Kanata keybinding system and layers
 
 #### Operation
-- [docs/SCRIPTS.md](./docs/SCRIPTS.md)                     — operational tooling and scripts (including workspace + router logic)
+- [docs/SCRIPTS.md](./docs/SCRIPTS.md)                     — operational tooling and scripts (including workspace, bootstrap, and pinned package update workflows)
 - [docs/MULTI-MACHINE-SYNC.md](./docs/MULTI-MACHINE-SYNC.md) — how the system stays consistent across multiple machines)
 - [docs/AGENT-WORKFLOW.md](./docs/AGENT-WORKFLOW.md)       — how agents operate across the filesystem (routing, memory, execution model)
 

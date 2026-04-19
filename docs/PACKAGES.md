@@ -4,7 +4,9 @@ This document explains how packages are installed in this NixOS configuration an
 
 This setup intentionally uses multiple layers:
 
+- direct references to packages from the main `pkgs` set
 - overlays (for package sources)
+- custom derivations in `pkgs/`
 - modules (for grouped features)
 - system packages (global tools)
 - user packages (user-specific apps)
@@ -16,16 +18,17 @@ Each layer has a different purpose.
 
 ## Overview
 
-There are four main ways packages enter the system:
+There are several intentional package paths in this repo:
 
 1. overlays in `flake.nix`
-2. `environment.systemPackages`
-3. `users.users.<name>.packages`
-4. dedicated modules in `modules/`
+2. custom derivations in `pkgs/`
+3. `environment.systemPackages`
+4. `users.users.<name>.packages`
+5. dedicated modules in `modules/`
 
-A fifth category exists for utility commands:
+An additional category exists for utility commands:
 
-5. `writeShellScriptBin`
+6. `writeShellScriptBin`
 
 ---
 
@@ -47,6 +50,13 @@ This means:
 - the package is sourced from unstable nixpkgs
 - it is made available as `pkgs.claude-code`
 
+The overlay is also where locally defined packages from `./pkgs` are exposed to the rest of the system as normal `pkgs.<name>` entries.
+
+Current examples include:
+
+    pi = final.callPackage ./pkgs/pi/default.nix { };
+    openai-codex = final.callPackage ./pkgs/openai-codex/default.nix { };
+
 ### When to use overlays
 
 Use overlays when:
@@ -54,6 +64,53 @@ Use overlays when:
 - you want a newer version from unstable
 - you are defining a custom package from `./pkgs`
 - you want to unify package access across the system
+
+---
+
+## Custom packages in `pkgs/`
+
+Location:
+- `pkgs/`
+
+Purpose:
+- pin packages that are not taken directly from nixpkgs
+- package upstream binaries or npm releases with repo-controlled hashes
+- add small wrapper behavior when needed
+
+Current examples:
+
+### `pkgs/pi/`
+- packages Pi from the npm release tarball using `buildNpmPackage`
+- keeps a checked-in `package-lock.json` for reproducible dependency resolution
+- adds `fd` to Pi's runtime `PATH`
+
+### `pkgs/openai-codex/`
+- packages the official prebuilt Codex binary tarball from npm
+- wraps it so `ripgrep` is available on `PATH`
+
+### When to use a local derivation
+
+Use `pkgs/<name>/default.nix` when:
+- the package is missing from nixpkgs
+- nixpkgs is not the update cadence you want
+- you need to pin an upstream npm/binary release directly
+- you need lightweight wrapping behavior around the upstream artifact
+
+### Updating pinned packages
+
+Pinned local packages should be updated through tracked repo workflows rather than ad-hoc global installers.
+
+Current examples:
+
+    ./scripts/update-pi.sh
+    ./scripts/update-openai-codex.sh
+
+These refresh the pinned local package version and hashes without switching away from the repo-managed derivation workflow.
+
+The exact update work differs by package type:
+
+- `pi` is built with `buildNpmPackage`, so updates refresh the version, source hash, checked-in `package-lock.json`, and `npmDepsHash`
+- `openai-codex` packages a prebuilt upstream tarball, so updates only need a new version and source hash
 
 ---
 
@@ -69,6 +126,8 @@ Example categories:
 - CLI tools
 - development tools
 - system utilities
+- stable nixpkgs packages used directly from `pkgs`
+- overlay-exposed packages such as unstable tools or local derivations
 
 Example:
 
@@ -85,6 +144,7 @@ Use this for:
 - CLI utilities
 - development tools
 - system-wide capabilities
+- globally available AI/agent CLIs once their package source has already been decided elsewhere
 
 ---
 
@@ -150,6 +210,12 @@ Use a module when:
 
 Claude Code is implemented this way.
 
+Other agentic CLIs follow the same pattern:
+- `modules/claude-code.nix`
+- `modules/openai-codex.nix`
+- `modules/opencode.nix`
+- `modules/pi.nix`
+
 ---
 
 ## 5. Script-wrapped tools (`writeShellScriptBin`)
@@ -194,6 +260,28 @@ This gives:
 - clear documentation boundary
 - easy future extension
 
+## How the other coding agents fit into this system
+
+### OpenCode
+- source: `pkgsUnstable.opencode`
+- installation boundary: `modules/opencode.nix`
+
+### Gemini CLI
+- source: `pkgsUnstable.gemini-cli`
+- installed directly in `environment.systemPackages`
+
+### OpenAI Codex
+- source: local derivation in `pkgs/openai-codex/`
+- exposed through the overlay as `pkgs.openai-codex`
+- installation boundary: `modules/openai-codex.nix`
+- update workflow: `scripts/update-openai-codex.sh`
+
+### Pi
+- source: local derivation in `pkgs/pi/`
+- exposed through the overlay as `pkgs.pi`
+- installation boundary: `modules/pi.nix`
+- update workflow: `scripts/update-pi.sh`
+
 ---
 
 ## Decision guide
@@ -202,6 +290,9 @@ When adding a new package, ask:
 
 ### Is it from unstable or custom?
 → add to overlay
+
+### Does it need its own pinned derivation or wrapper?
+→ package it under `pkgs/` and expose it through the overlay
 
 ### Is it a system-wide CLI tool?
 → add to `environment.systemPackages`
@@ -232,6 +323,7 @@ When adding a new package, ask:
 Package management in this repo is layered intentionally:
 
 - overlays define where packages come from
+- local derivations in `pkgs/` pin packages that live outside nixpkgs
 - modules define features
 - systemPackages provide global tools
 - user packages provide per-user apps

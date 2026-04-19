@@ -2,18 +2,20 @@
 
 buildNpmPackage (finalAttrs: {
   pname = "pi";
-  version = "0.66.1";
+  version = "0.67.68";
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@mariozechner/pi-coding-agent/-/pi-coding-agent-${finalAttrs.version}.tgz";
-    hash = "sha256-zEHnHOQXvDzMvhUNXB0k6d5ivyncOapUQCXiXKeMSl8=";
+    hash = "sha256-s9mqbi9LmqhdUrRCjf+tpnsX8x1C4Kz4sJYNV1vpk/A=";
   };
 
-  npmDepsHash = "sha256-mki5UrBhH5v01Z1dR3V0PIwz40XkqeiQHw4OsrrXUAQ=";
+  npmDepsHash = "sha256-S9f+6kB1yVHBb7y20YqCpHf1FMTj0NuUf4ioJ5gfmLo=";
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
   '';
+
+  npmFlags = [ "--legacy-peer-deps" ];
 
   dontNpmBuild = true;
 

@@ -38,6 +38,10 @@ Purpose:
 - restore the SOPS age key from `pass`
 - prepare the machine for private repo access and secret-backed Nix usage
 
+Notes:
+- this is the bootstrap bridge between `pass` and `sops-nix`
+- once the age key is restored and a rebuild succeeds, repo-tracked SOPS secrets can be materialized under `/run/...`
+
 Typical use:
 - early in new-machine setup, after GPG and `pass` are functional
 
@@ -125,6 +129,33 @@ Purpose:
 ## `tmux-battery.sh`
 Purpose:
 - tmux helper/status script
+
+## `update-pi.sh`
+Purpose:
+- update the pinned `pkgs/pi` package from the upstream npm release
+- regenerate `pkgs/pi/package-lock.json`
+- refresh the source hash and npm dependency hash in `pkgs/pi/default.nix`
+- optionally verify the result with a Nix build
+
+Notes:
+- Pi is packaged as a local `buildNpmPackage` derivation, so this script handles both the upstream source tarball pin and the npm dependency pin
+
+Typical use:
+- when Pi reports a new upstream release and the machine should stay on the reproducible Nix-managed install path
+- when refreshing the pinned local derivation instead of using `npm install -g`
+
+## `update-openai-codex.sh`
+Purpose:
+- update the pinned `pkgs/openai-codex` package from the upstream npm release
+- refresh the version and source hash in `pkgs/openai-codex/default.nix`
+- optionally verify the result with a Nix build
+
+Notes:
+- Codex is packaged from a prebuilt upstream tarball, so this script is simpler than the Pi updater and does not manage an npm lockfile
+
+Typical use:
+- when Codex CLI reports a new upstream release and the machine should stay on the reproducible Nix-managed install path
+- when refreshing the pinned local derivation instead of replacing it with a global installer
 
 ---
 

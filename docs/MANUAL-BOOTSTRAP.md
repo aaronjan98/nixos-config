@@ -164,3 +164,5 @@ The new machine must first gain access to:
 - SOPS age key
 
 Only after that should the scripted bootstrap take over.
+
+After the first successful rebuild, `sops-nix` takes over normal declarative runtime secret delivery from the encrypted files in `secrets/*.yaml`.

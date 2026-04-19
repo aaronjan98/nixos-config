@@ -42,6 +42,10 @@ Reusable NixOS modules.
 ### `pkgs/`
 Custom package definitions and related package sources.
 
+Notable current patterns:
+- locally pinned derivations in `pkgs/` for tools not taken directly from nixpkgs (for example `pi` and `openai-codex`)
+- overlay exposure in `flake.nix` so those packages can be consumed as normal `pkgs.<name>` entries
+
 When writing a new package derivation, choose the fetch strategy based on source availability:
 - **Public URL** (npm, GitHub releases, etc.): use `fetchzip` or `fetchurl` directly.
 - **Requires login / no public URL** (e.g. Wolfram): use `pkgs.requireFile` backed by the NAS
@@ -71,7 +75,11 @@ This stores:
 Human-readable setup and maintenance documentation.
 
 ### `secrets/`
-Secret-related configuration inputs used by the Nix setup.
+Encrypted SOPS inputs used by the Nix setup.
+
+Important distinction:
+- bootstrap trust material (SSH files and the SOPS age key) lives in `pass`
+- declarative runtime secrets live encrypted in `secrets/*.yaml` and are materialized under `/run/...` by `sops-nix`
 
 ## Related external locations
 
@@ -128,6 +136,12 @@ Restores SSH material and the SOPS age key from `pass`.
 ### `scripts/bootstrap-new-machine.sh`
 Guided orchestrator for new machine setup.
 
+### `scripts/update-pi.sh`
+Refreshes the pinned `pkgs/pi` package from npm, regenerates its lockfile and hashes, and optionally verifies the system build.
+
+### `scripts/update-openai-codex.sh`
+Refreshes the pinned `pkgs/openai-codex` package from npm, updates its source hash, and optionally verifies the system build.
+
 ## How to work in this repo
 - Start with the smallest relevant file or directory for the task.
 - Prefer understanding before editing.
@@ -150,6 +164,7 @@ Do NOT place scripts in `~/.local/bin/` for anything that should be reproducible
 
 ## Routing guidance
 - If the task is about NixOS system configuration, inspect `hosts/` and `modules/`.
+- If the task is about how a package is sourced or updated, inspect `flake.nix`, `pkgs/`, `modules/`, and the relevant update script in `scripts/`.
 - If the task is about machine setup automation, inspect `scripts/` and `docs/`.
 - If the task is about user services, inspect `systemd/user/`.
 - If the task is about workspace reproducibility, inspect `tools/workspace/`.

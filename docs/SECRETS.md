@@ -10,9 +10,20 @@ Needed to decrypt and use `pass`.
 Without working GPG secret keys, the password store cannot be used to restore other material.
 
 ### Password store
-The password store contains important machine bootstrap material, including:
+The password store contains bootstrap trust material, including:
 - SSH files
 - SOPS age key material
+
+This is primarily for the manual/new-machine trust phase, not for every runtime secret the system uses.
+
+### SOPS-encrypted repo secrets
+The `secrets/*.yaml` files in this repo hold encrypted declarative secrets consumed by `sops-nix`.
+
+Examples currently include:
+- user password hashes
+- Hugging Face token material
+- OpenCode Zen API key material
+- Obsidian local API key material
 
 Known password-store remotes may include:
 - `ssh://git@localhost/srv/git/repos/password-store.git`
@@ -34,6 +45,74 @@ The SOPS age key is stored in `pass` at:
 It is restored to:
 
 - `/var/lib/sops-nix/key.txt`
+
+---
+
+## Two secret layers
+
+This setup intentionally uses two different secret systems for two different jobs.
+
+### 1. `pass` handles bootstrap trust material
+
+Use `pass` for the secrets needed to make a fresh machine trusted enough to continue:
+- SSH keys/config
+- the SOPS age key
+
+Why this exists:
+- a new machine cannot use repo-encrypted SOPS secrets until it already has the age key
+- the age key itself therefore has to come from outside the repo during bootstrap
+
+### 2. `sops-nix` handles declarative runtime secrets
+
+Once the age key is restored and a rebuild runs, `sops-nix` decrypts tracked repo secrets into runtime files under `/run/...`.
+
+This is the normal pattern for ongoing system operation.
+
+---
+
+## How repo-encrypted secrets appear at runtime
+
+After `nixos-rebuild switch` with a working age key:
+
+- secrets without a custom path typically appear under `/run/secrets/<name>`
+- secrets with an explicit `path = ...` appear exactly where configured
+
+Current examples:
+- `passwords/aj` → `/run/sops-nix/passwords_aj`
+- `passwords/root` → `/run/sops-nix/passwords_root`
+- `hf_token` → `/run/secrets/hf_token`
+- `opencode_zen_api_key` → `/run/secrets/opencode_zen_api_key`
+
+---
+
+## How secrets are consumed on this system
+
+There are multiple valid runtime consumption patterns in this repo.
+
+### Direct file use
+
+Some settings point directly at the decrypted runtime file path.
+
+Examples:
+- user password hashes via `hashedPasswordFile`
+- scripts like the Obsidian IPC helper reading `config.sops.secrets.<name>.path`
+
+### Export into environment variables
+
+Some secrets are read from their runtime file in `environment.extraInit` and exported for tools that expect env vars.
+
+Current examples:
+- `HUGGING_FACE_HUB_TOKEN`
+- `OPENCODE_ZEN_API_KEY`
+
+### External tools reading `/run/...` directly
+
+Tracked or external config outside this repo can read the `sops-nix` runtime file directly without storing the secret in that config.
+
+Example pattern:
+- Pi config in dotfiles can use `!cat /run/secrets/opencode_zen_api_key`
+
+This keeps the secret out of tracked dotfiles while still using declarative Nix-managed secret material.
 
 ---
 
@@ -99,6 +178,18 @@ Verify afterwards:
 
     ls -la ~/.ssh
     sudo ls -l /var/lib/sops-nix/key.txt
+
+---
+
+## After the first rebuild
+
+Once the SOPS age key is restored and the system rebuild succeeds, the repo-managed secrets become available through `sops-nix` runtime files.
+
+At that point:
+- `pass` is still the source of truth for bootstrap trust material
+- SOPS becomes the normal source of truth for tracked runtime secrets used by the system and related tools
+
+This is why both systems exist: one bootstraps trust, the other manages ongoing declarative secret delivery.
 
 ---
 

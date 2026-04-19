@@ -100,6 +100,8 @@ After bootstrap, run:
 
     sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14
 
+This is the point where repo-tracked SOPS secrets become available at runtime under `/run/...` (or other configured secret paths), because the age key restored from `pass` can finally be used by `sops-nix`.
+
 Alias reminder:
 
     nrs

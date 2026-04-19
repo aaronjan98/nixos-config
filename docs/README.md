@@ -60,6 +60,9 @@ Read this whenever you need to understand trust material and secret restoration.
 This document covers:
 - GPG keys
 - `pass`
+- SOPS-encrypted repo secrets
+- runtime secret files under `/run/...`
+- env-var exports vs direct file reads
 - SSH material
 - the SOPS age key
 - manual trust bootstrap expectations
@@ -74,6 +77,7 @@ This document explains the purpose of each script in:
 - `~/nixos-config/scripts`
 
 Use this when you are debugging, extending, or orchestrating the scripted workflow.
+This includes the tracked update workflows for locally packaged tools like Pi and Codex.
 
 ### 6. `AGENT-WORKFLOW.md`
 Read this to understand how AI agents are expected to operate within the system.
@@ -107,11 +111,14 @@ Read this when you want to understand how packages are installed and organized.
 
 This document explains:
 - overlays
+- direct stable `pkgs` references
+- local derivations in `pkgs/`
+- update scripts for pinned local packages
 - system packages
 - user packages
 - modules
 - script-based commands
-- how Claude Code fits into the system
+- how AI coding agents like Claude Code, OpenCode, Codex, and Pi fit into the system
 
 ### 10. `SERVICES.md`
 Read this when you want an overview of what runs automatically and what must be triggered manually.
