@@ -123,6 +123,11 @@
     "passwords/aj" = { key = "passwords_aj"; path = "/run/sops-nix/passwords_aj"; };
     "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
     "hf_token" = { sopsFile = ../../secrets/hf-token.yaml; key = "hf_token"; };
+    "opencode_zen_api_key" = {
+      sopsFile = ../../secrets/opencode.yaml;
+      key = "opencode_zen_api_key";
+      owner = "aj";
+    };
   };
 
   # unfree packages
@@ -209,6 +214,7 @@
   };
   environment.extraInit = ''
     export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
+    export OPENCODE_ZEN_API_KEY="$(cat ${config.sops.secrets."opencode_zen_api_key".path})"
   '';
   programs.nix-ld.enable = true;
   programs.hyprland = {
