@@ -55,7 +55,7 @@ in
       bind -n C-l send-keys C-l
 
       ##### Popups #####
-      bind -n C-t display-popup -E -w 80% -h 75% -y 31
+      bind -n Alt+t display-popup -E -w 80% -h 75% -y 33
 
       ##### Pane management #####
       setw -g aggressive-resize on
