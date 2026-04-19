@@ -123,6 +123,11 @@
     "passwords/aj" = { key = "passwords_aj"; path = "/run/sops-nix/passwords_aj"; };
     "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
     "hf_token" = { sopsFile = ../../secrets/hf-token.yaml; key = "hf_token"; };
+    "context7_api_key" = {
+      sopsFile = ../../secrets/context7.yaml;
+      key = "context7-secret-key";
+      owner = "aj";
+    };
     "opencode_zen_api_key" = {
       sopsFile = ../../secrets/opencode.yaml;
       key = "opencode_zen_api_key";
@@ -214,6 +219,7 @@
   };
   environment.extraInit = ''
     export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
+    export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7_api_key".path})"
     export OPENCODE_ZEN_API_KEY="$(cat ${config.sops.secrets."opencode_zen_api_key".path})"
   '';
   programs.nix-ld.enable = true;
@@ -397,4 +403,3 @@
 
   system.stateVersion = "25.11";
 }
-

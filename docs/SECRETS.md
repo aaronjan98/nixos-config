@@ -22,6 +22,7 @@ The `secrets/*.yaml` files in this repo hold encrypted declarative secrets consu
 Examples currently include:
 - user password hashes
 - Hugging Face token material
+- Context7 API key material
 - OpenCode Zen API key material
 - Obsidian local API key material
 
@@ -80,6 +81,7 @@ After `nixos-rebuild switch` with a working age key:
 Current examples:
 - `passwords/aj` → `/run/sops-nix/passwords_aj`
 - `passwords/root` → `/run/sops-nix/passwords_root`
+- `context7_api_key` → `/run/secrets/context7_api_key`
 - `hf_token` → `/run/secrets/hf_token`
 - `opencode_zen_api_key` → `/run/secrets/opencode_zen_api_key`
 
@@ -102,8 +104,42 @@ Examples:
 Some secrets are read from their runtime file in `environment.extraInit` and exported for tools that expect env vars.
 
 Current examples:
+- `CONTEXT7_API_KEY`
 - `HUGGING_FACE_HUB_TOKEN`
 - `OPENCODE_ZEN_API_KEY`
+
+### Refreshing exported secret env vars in the current shell
+
+After `nixos-rebuild switch`, an already-running shell session may still have the old environment.
+
+To reload the NixOS exported environment variables in the current shell, run:
+
+    unset __NIXOS_SET_ENVIRONMENT_DONE
+    . /etc/set-environment
+
+Then verify, for example:
+
+    test -n "$CONTEXT7_API_KEY" && echo "Context7 key is set"
+
+Notes:
+- logging out and back in also works
+- `/etc/set-environment` may print permission errors for unrelated secrets if the current user cannot read one of the exported source files
+- in this setup, `hf_token` may produce `cat: /run/secrets/hf_token: Permission denied` while other readable exports like `CONTEXT7_API_KEY` and `OPENCODE_ZEN_API_KEY` still refresh correctly
+
+---
+
+## Editing encrypted repo secrets
+
+When editing an existing encrypted SOPS file in this repo, use `sops edit`.
+
+Typical workflow from the repo root:
+
+    export SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt
+    sops edit secrets/context7.yaml
+
+Notes:
+- The encrypted file already contains the metadata SOPS needs for decryption and re-encryption.
+- For new files under `secrets/`, run the command from the repo root so `.sops.yaml` is found.
 
 ### External tools reading `/run/...` directly
 

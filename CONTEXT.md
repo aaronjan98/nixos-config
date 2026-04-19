@@ -80,6 +80,7 @@ Encrypted SOPS inputs used by the Nix setup.
 Important distinction:
 - bootstrap trust material (SSH files and the SOPS age key) lives in `pass`
 - declarative runtime secrets live encrypted in `secrets/*.yaml` and are materialized under `/run/...` by `sops-nix`
+- shell-visible env vars exported from those runtime secret files may require reloading with `unset __NIXOS_SET_ENVIRONMENT_DONE; . /etc/set-environment` after a rebuild when testing in an already-open shell
 
 ## Related external locations
 
