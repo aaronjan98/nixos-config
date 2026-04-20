@@ -142,6 +142,8 @@ Start with:
 #### System
 - [docs/SECRETS.md](./docs/SECRETS.md)                     — how `pass`, SOPS, runtime secret files, and env exports fit together
 - [docs/PACKAGES.md](./docs/PACKAGES.md)                   — how packages are sourced and installed (stable, unstable, local `pkgs/`, modules, system vs user)
+- [docs/NIXOS-MAINTENANCE.md](./docs/NIXOS-MAINTENANCE.md) — quick reference for generations, garbage collection, and boot-entry cleanup
+- [docs/ROADMAP.md](./docs/ROADMAP.md)                     — deferred issues, planned features, and other durable future work
 - [docs/KANATA.md](./docs/KANATA.md)                       — detailed explanation of the Kanata keybinding system and layers
 
 #### Operation

@@ -129,6 +129,24 @@ This document covers:
 - manually-run scripts quick reference
 - globally available commands installed via Nix modules
 
+### 11. `NIXOS-MAINTENANCE.md`
+Read this when you want a quick reference for routine NixOS upkeep.
+
+This document covers:
+- listing system generations
+- pruning old system generations
+- running garbage collection
+- the difference between boot menu limits and store cleanup
+
+### 12. `ROADMAP.md`
+Read this when you want the durable backlog for known issues and planned future work.
+
+This document covers:
+- deferred bugs
+- future features
+- lower-priority improvements
+- where durable future work should live versus `MEMORY.md` and `memory/`
+
 ---
 
 ## How these docs relate to the repo
@@ -212,6 +230,14 @@ Read:
 2. [SERVICES.md](./SERVICES.md)                   — what runs automatically (timers) vs. manually
 3. [NEW-MACHINE-SETUP.md](./NEW-MACHINE-SETUP.md) — how scripts fit into machine bootstrap
 4. [MULTI-MACHINE-SYNC.md](./MULTI-MACHINE-SYNC.md) — how changes propagate across machines
+
+### If you are doing routine NixOS maintenance
+Read:
+1. [NIXOS-MAINTENANCE.md](./NIXOS-MAINTENANCE.md) — generations, garbage collection, and boot-entry cleanup
+
+### If you are deciding what to work on next
+Read:
+1. [ROADMAP.md](./ROADMAP.md) — deferred issues, planned features, and candidate improvements
 
 ### If you are working on keyboard/input behavior
 Read:

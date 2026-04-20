@@ -174,6 +174,9 @@ Do NOT place scripts in `~/.local/bin/` for anything that should be reproducible
 
 ## Future implementations
 
+Broader deferred bugs and future feature planning now live in `docs/ROADMAP.md`.
+Use the roadmap for durable backlog items; keep this section for implementation stubs that need concrete design constraints captured close to repo orientation.
+
 ### `scripts/backup-secrets.sh` (not yet implemented)
 This script is the intended inverse of `restore-secrets.sh`.
 It should read SSH material from `~/.ssh/` and store each file into `pass` under the hostname-derived prefix `laptop/<hostname>/ssh/<filename>`, mirroring the structure that `restore-secrets.sh` expects.
