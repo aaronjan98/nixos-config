@@ -74,6 +74,36 @@ See `docs/SCRIPTS.md` for full descriptions. Quick reference:
 
 ---
 
+## Printing (CUPS)
+
+Enabled via `services.printing.enable = true` and `services.avahi` in `hosts/thinkpad-t14/configuration.nix`.
+
+**Add or manage printers:** `http://localhost:631/`
+
+**Check printer status:**
+```
+lpstat -p
+```
+
+**List queued jobs:**
+```
+lpstat -o
+```
+
+**Cancel a job:**
+```
+lprm <job-id>
+```
+
+Printer discovery on the local network is handled by avahi (mDNS). If a network printer is not appearing in CUPS, confirm avahi-daemon is running:
+```
+systemctl status avahi-daemon
+```
+
+If a driver is missing, add `pkgs.gutenprint` (generic) or a vendor package (e.g. `pkgs.hplip` for HP) to `environment.systemPackages` and rebuild.
+
+---
+
 ## Global commands (Nix modules)
 
 These are installed system-wide via `environment.systemPackages` and available in any terminal after `nixos-rebuild switch`.
