@@ -37,4 +37,5 @@ what has been completed, and what is still pending.
 - For the implementation plan and current progress: `project-memory/homelab-codification.md`
 - For authoritative machine documentation: `docs/`
 - For session notes: `memory/`
+- For deferred bugs and future features: `ROADMAP.md`
 - For learning logs, experiments, and historical notes: zettelkasten `Inside/Projects/Homelab/`
