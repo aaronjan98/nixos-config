@@ -73,6 +73,20 @@ Pattern: matugen generates per-theme config files → symlink switcher points to
 
 ---
 
+## NixOS Firewall (iptables)
+
+When opening ports manually (e.g. for a temporary sshd), do **not** append to the `INPUT` chain — it won't work. NixOS inserts its own chain (`nixos-fw`) near the top of `INPUT`, and that chain ends with a REJECT. Rules appended to `INPUT` land below it and are never reached.
+
+Always insert into `nixos-fw` directly:
+
+```bash
+sudo iptables -I nixos-fw -p tcp --dport <port> -j nixos-fw-accept
+```
+
+These rules are temporary — they do not survive reboot or `nixos-rebuild`.
+
+---
+
 ## Common Tasks
 
 ### Adding a Split DNS Entry

@@ -37,6 +37,10 @@
       mkdir -p "$dir"
 
       file="$dir/$(date +%Y-%m-%d_%H-%M-%S)_full.png"
+
+      # Same fuzzel-dismiss race as shot-region-save: wait for the menu to fully leave the compositor.
+      sleep 0.08
+
       grim "$file"
 
       echo "Saved: $file"
@@ -59,6 +63,10 @@
       fi
 
       file="$dir/$(date +%Y-%m-%d_%H-%M-%S)_$mon.png"
+
+      # Same fuzzel-dismiss race as shot-region-save: wait for the menu to fully leave the compositor.
+      sleep 0.08
+
       grim -o "$mon" "$file"
 
       echo "Saved: $file"

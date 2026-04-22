@@ -6,6 +6,23 @@ This file tracks deferred fixes, design ideas, and future feature work for this 
 
 ## Ongoing issues
 
+### Fn+F4 mic mute key does not toggle microphone (ThinkPad)
+Status: confirmed, undiagnosed
+
+Problem:
+- F4 LED is lit at boot (indicating mic is muted by default)
+- Pressing Fn+F4 should toggle mic mute but does not work
+- The `XF86AudioMicMute` keysym is already bound in `~/.config/hypr/conf.d/20-binds.conf` → `wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle`
+
+Possible causes (not yet investigated):
+- `thinkpad_acpi` kernel module is intercepting Fn+F4 at the hardware level before it reaches the OS as `XF86AudioMicMute` — may need `options thinkpad_acpi hotkey_mask=...` or similar to pass the event through
+- The key is generating a different keycode than `XF86AudioMicMute` on this model — worth checking with `wev` or `xev` to see what event is actually emitted
+- The default muted state at boot is set by something outside wpctl and may not correspond to the `@DEFAULT_AUDIO_SOURCE@` sink wpctl targets
+
+Relevant files:
+- `~/.config/hypr/conf.d/20-binds.conf` — existing binding
+- `hosts/thinkpad-t14/configuration.nix` — may need `boot.extraModprobeConfig` for thinkpad_acpi options
+
 ### Keyboard backlight not restored after lid close/open
 Status: confirmed
 
@@ -21,6 +38,24 @@ Relevant file: `modules/hypr-idle-lock.nix`
 ---
 
 ## Future features
+
+### NAS sync: refactor to systemd template service when adding more directories
+
+Current state: `~/Documents` and `~/Pictures` each have their own `sync-*.service` / `sync-*.timer` pair (Option A, chosen for simplicity with two directories).
+
+If a third directory is added (e.g. `~/Music`, `~/Videos`), refactor all sync units to a single systemd template service:
+
+- Rename to `sync-nas@.service` / `sync-nas@.timer` (using the `%i` instance specifier for the directory name)
+- Delete the individual `sync-documents.*` and `sync-pictures.*` units
+- Enable instances: `sync-nas@Documents`, `sync-nas@Pictures`, `sync-nas@Music`, etc.
+
+This keeps unit files DRY and avoids accumulating near-duplicate pairs for every new directory.
+
+Relevant files:
+- `systemd/user/sync-documents.service` / `sync-documents.timer`
+- `systemd/user/sync-pictures.service` / `sync-pictures.timer`
+
+---
 
 ### math-ocr / pix2tex: reimplement using venv runtime model
 
@@ -159,6 +194,11 @@ How this works in Hyprland:
 - keybindings needed: one to toggle group membership, one for `Ctrl+Tab` → `changegroupactive f`
 
 Open question: whether grouping is the right primitive here or whether `cyclenext` / `focuscurrentorlast` is sufficient for floating windows
+
+### Switch firewall management from iptables to nft
+
+Goal:
+- replace any ad-hoc `iptables` commands with `nft` equivalents once nft is available on the system
 
 ### Framework 13 AMD support
 Goal:
