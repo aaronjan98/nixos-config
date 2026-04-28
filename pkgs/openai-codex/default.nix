@@ -1,12 +1,12 @@
-{ lib, stdenv, fetchzip, makeWrapper, ripgrep }:
+{ lib, stdenv, fetchzip, makeWrapper, ripgrep, bubblewrap }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "openai-codex";
-  version = "0.121.0";
+  version = "0.125.0";
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@openai/codex/-/codex-${finalAttrs.version}-linux-x64.tgz";
-    hash = "sha256-rLFmv7lAO1+0COs0ff6D5y7+gmRqrCH3M4ypTrbTHOo=";
+    hash = "sha256-W0+Iy93irv9EG02gN5oS8ytZ4salwubLd4cTXjBFGHM=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
@@ -15,7 +15,7 @@ stdenv.mkDerivation (finalAttrs: {
     runHook preInstall
     install -Dm755 vendor/x86_64-unknown-linux-musl/codex/codex $out/bin/.codex-unwrapped
     makeWrapper $out/bin/.codex-unwrapped $out/bin/codex \
-      --prefix PATH : ${lib.makeBinPath [ ripgrep ]}
+      --prefix PATH : ${lib.makeBinPath [ ripgrep bubblewrap ]}
     runHook postInstall
   '';
 
