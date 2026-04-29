@@ -190,6 +190,7 @@ Examples:
 - `claude-code.nix`
 - `hypr-dispatch.nix` — wraps `hyprctl dispatch` with auto-detection of the Hyprland instance signature
 - `wol-sauron.nix` — sends a Wake-on-LAN magic packet to sauron (192.168.1.255, MAC 3C:52:82:74:03:F5)
+- `podman.nix` — rootless container runtime with podman-compose and Docker-compatible socket for devcontainer CLI
 
 Example:
 

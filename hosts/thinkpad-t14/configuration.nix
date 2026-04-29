@@ -23,6 +23,7 @@
     ../../modules/opencode.nix
     ../../modules/pi.nix
     ../../modules/caddy.nix
+    ../../modules/podman.nix
   ];
 
   nix.settings = {
