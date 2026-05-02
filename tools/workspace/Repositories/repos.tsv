@@ -1,6 +1,7 @@
 # relative_path	repo_name	remote_url
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
+experiment/vulnlab	vulnlab	
 projects/agent-display	agent-display	ssh://git@localhost/srv/git/repos/claude-display.git
 school/differential_equations/directional_fields	directional_fields	
 school/egt-graph-cooperation	egt-graph-cooperation	ssh://git@localhost/srv/git/repos/egt-graph-cooperation.git

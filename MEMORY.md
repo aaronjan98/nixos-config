@@ -1,5 +1,15 @@
 # MEMORY.md
 
+## Temporary Fixes
+
+### nixpkgs-unstable pinned (as of 2026-05-02)
+`flake.nix` has `nixpkgs-unstable` pinned to `01fbdeef22b76df85ea168fbfe1bfd9e63681b30` (2026-04-23).
+**Reason:** new unstable rev (`c6d65881`) hard-errors on `primp`'s deprecated `pytestFlagsArray`, breaking `open-webui` build.
+**To unpin:** revert to `github:NixOS/nixpkgs/nixpkgs-unstable`, then run `nix flake update nixpkgs-unstable` once the fix lands upstream.
+See `memory/2026-05-02 nixpkgs-unstable primp pin.md` for full detail.
+
+---
+
 ## Agent Procedures
 
 ### Rebuilding and Testing
