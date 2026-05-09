@@ -161,7 +161,7 @@
 
   users.users.aj = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "input" "video" ];
+    extraGroups = [ "wheel" "networkmanager" "input" "video" "scanner" "lp" ];
     shell = pkgs.bash;
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
     packages = with pkgs; [
@@ -191,6 +191,10 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+  # Scanning (ET-2850 via eSCL/AirScan)
+  hardware.sane.enable = true;
+  hardware.sane.extraBackends = [ pkgs.sane-airscan ];
+
   # Audio
   security.rtkit.enable = true;
   services.pipewire = {
