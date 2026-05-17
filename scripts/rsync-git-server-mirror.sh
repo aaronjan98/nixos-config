@@ -7,10 +7,11 @@ REMOTE_USER="aj"
 REMOTE_PATH="/srv/git/repos/"
 LOCAL_PATH="/srv/git/repos/"
 
-# Pick a key explicitly so non-interactive SSH works reliably
-IDENTITY_FILE="/home/aj/.ssh/thinkpad-t14"
+# thinkpad-t14 is authorized for the git user only (git-shell).
+# Rsync connects as aj, which uses id_rsa.
+IDENTITY_FILE="/home/aj/.ssh/id_rsa"
 if [[ ! -f "$IDENTITY_FILE" ]]; then
-  IDENTITY_FILE="/home/aj/.ssh/id_rsa"
+  IDENTITY_FILE="/home/aj/.ssh/thinkpad-t14"
 fi
 
 echo "==> Rsync mirror from ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH} -> ${LOCAL_PATH}"
