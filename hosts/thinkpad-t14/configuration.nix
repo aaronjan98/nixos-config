@@ -170,6 +170,7 @@
       protonvpn-gui
       slack
       motrix
+      mpv
     ];
   };
   security.sudo.extraRules = [
