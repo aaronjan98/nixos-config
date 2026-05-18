@@ -68,3 +68,16 @@ Result: dotfiles, password-store, raymer-homelab-docs had new commits; rest "Eve
 - `~/Repositories/automation/video-summary/README.md` — new client-side docs
 - `sauron-clipper-summary` repo — README.md + synced app.py patches
 - `Raymer/project-memory/forgejo-sync.md` — ssh -n bug, initial sync recipe, tea --login fix
+
+## Life agent system + roadmap additions
+
+Created two new zettelkasten files to support holistic life prioritization by agents:
+- `Inside/Life Priorities.md` — explicit priority stack: school/research (1) > career (2) > homelab (3) > music (4) > automation (supporting)
+- `Inside/CONTEXT.md` — replaced shell-output artifact with proper agent orientation file linking all domain indexes
+
+Added to `Index (Projects).md` back-burner:
+- usenet provider lifetime deal watcher
+- automated personal deal/travel scrapers (flights, etc.)
+
+Added to `Raymer/ROADMAP.md` under "Future / other-location builds":
+- Usenet client for arr stack (deferred until lifetime/Black Friday deal)
