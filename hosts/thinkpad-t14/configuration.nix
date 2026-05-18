@@ -376,6 +376,7 @@
     })
     obs-studio
     songrec
+    zotero
 
     # Custom Overlays
     breeze-hacked-cursor
