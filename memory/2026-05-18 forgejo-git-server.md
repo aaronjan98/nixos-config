@@ -36,6 +36,11 @@ Added `new-homelab-repo`, `install-forgejo-hooks`, and `tea` as system commands 
 
 ## Open questions / next steps
 
-- Run `nixos-rebuild switch` after any SCRIPTS.md / SERVICES.md / CONTEXT.md doc changes
+- Run `nixos-rebuild switch` after any SCRIPTS.md / SERVICES.md / CONTEXT.md doc changes to pick up the `ssh -n` fix in the system `install-forgejo-hooks` command
 - The `local` remote in `~/Repositories/automation/video-summary` still points to the old name `clipper-video-summary` — update if that remote is ever used
 - `install-forgejo-hooks` only installs on repos with a matching Forgejo counterpart; any new repos created outside `new-homelab-repo` need manual hook installation
+
+## Resolved: initial Forgejo sync for all repos
+
+Completed using `git -c safe.directory='*' push --mirror ...` as `aj` user. All 28 repos
+successfully mirrored. See `2026-05-18 video-summary-fix.md` for the full command.
