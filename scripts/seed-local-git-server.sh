@@ -23,6 +23,7 @@ REPOS=(
   "dnsmasq-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/dnsmasq-config.git"
   "dotfiles ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/dotfiles.git"
   "infra-bootstrap ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/infra-bootstrap.git"
+  "oreos-wireguard-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/oreos-wireguard-config.git"
   "mobius-anim ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/mobius-anim.git"
   "nixos-config ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/nixos-config.git"
   "nvim ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/nvim.git"
