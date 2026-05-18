@@ -26,7 +26,7 @@ while IFS= read -r repo_dir; do
         continue
     fi
 
-    current_link=$(ssh sweetpea "readlink ${repo_dir}/hooks/post-receive 2>/dev/null || true")
+    current_link=$(ssh -n sweetpea "readlink ${repo_dir}/hooks/post-receive 2>/dev/null || true")
     if [[ "$current_link" == "$HOOK_TARGET" ]]; then
         echo "    OK   $name (hook already installed)"
         continue
