@@ -76,6 +76,30 @@ Behavior:
 Notes:
 - local backend support is wired up but is not currently part of the normal recommended workflow
 - bulk filesystem changes should still follow the script-first rule
+## `new-homelab-repo.sh`
+Purpose:
+- create a new bare repo on sweetpea as the `git` user
+- create a matching private (or public) Forgejo repo at `git.aaronjanovitch.com`
+- install the `/srv/git/hooks/forgejo-sync` post-receive hook so every push auto-mirrors to Forgejo
+
+Typical use:
+- starting a new project that should live on the homelab git server and appear in Forgejo
+
+Usage: `new-homelab-repo <name>` (private by default) or `new-homelab-repo <name> --public`
+
+Requires: `$FORGEJO_TOKEN` in the environment (exported from `~/.bashrc` via `/run/secrets/forgejo_token`)
+
+## `install-forgejo-hooks.sh`
+Purpose:
+- install the forgejo-sync post-receive hook on all sweetpea bare repos that already have a matching Forgejo repo
+- safe to re-run; skips repos that are already wired up or have no Forgejo counterpart
+
+Typical use:
+- after adding Forgejo repos that correspond to existing bare repos
+- one-time backfill when bringing a new machine up to date
+
+Requires: `$FORGEJO_TOKEN` in the environment
+
 ## `rsync-git-server-mirror.sh`
 Purpose:
 - mirror the homelab git server into the local git server

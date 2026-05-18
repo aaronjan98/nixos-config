@@ -80,7 +80,7 @@ Encrypted SOPS inputs used by the Nix setup.
 Important distinction:
 - bootstrap trust material (SSH files and the SOPS age key) lives in `pass`
 - declarative runtime secrets live encrypted in `secrets/*.yaml` and are materialized under `/run/...` by `sops-nix`
-- shell-visible env vars exported from those runtime secret files may require reloading with `unset __NIXOS_SET_ENVIRONMENT_DONE; . /etc/set-environment` after a rebuild when testing in an already-open shell
+- shell-visible env vars exported from those runtime secret files may require reloading with `unset __NIXOS_SET_ENVIRONMENT_DONE; . /etc/set-environment` after a rebuild when testing in an already-open shell. NOTE: this approach does NOT work for dynamic secrets using `$(cat ...)` command substitution — PAM sets `__NIXOS_SET_ENVIRONMENT_DONE=1` before any shell starts, so the NixOS guard in `/etc/profile` skips re-sourcing. For those, export directly in `~/.bashrc` instead (e.g. `export FORGEJO_TOKEN="$(cat /run/secrets/forgejo_token 2>/dev/null)"`)
 
 ## Related external locations
 
@@ -163,6 +163,16 @@ To add a reproducible command available system-wide (like `hypr-dispatch` or `wo
 
 Do NOT place scripts in `~/.local/bin/` for anything that should be reproducible. That directory is for legacy or temporary one-offs only.
 
+## Forgejo git server
+
+Forgejo at `https://git.aaronjanovitch.com` is a web UI mirror of the bare repos on sweetpea
+at `/srv/git/repos/`. The bare repos are the source of truth; Forgejo is kept in sync via
+post-receive hooks. See `docs/SERVICES.md` for workflow and architecture details.
+
+Key scripts: `new-homelab-repo` (create repo end-to-end), `install-forgejo-hooks` (backfill hooks), `tea` (Forgejo CLI).
+
+Architecture doc: `~/Repositories/self-hosted/homelab/Raymer/project-memory/forgejo-sync.md`
+
 ## Routing guidance
 - If the task is about NixOS system configuration, inspect `hosts/` and `modules/`.
 - If the task is about how a package is sourced or updated, inspect `flake.nix`, `pkgs/`, `modules/`, and the relevant update script in `scripts/`.
@@ -171,6 +181,7 @@ Do NOT place scripts in `~/.local/bin/` for anything that should be reproducible
 - If the task is about workspace reproducibility, inspect `tools/workspace/`.
 - If the task is about AI runtime behavior, inspect `~/.config/ai/` separately from this repo.
 - If the task is about Hyprland, Quickshell, or other personal environment layers, inspect the dotfiles repo separately.
+- If the task is about the homelab git server or Forgejo, inspect `scripts/new-homelab-repo.sh`, `scripts/install-forgejo-hooks.sh`, and `docs/SERVICES.md`.
 
 ## Future implementations
 

@@ -112,5 +112,38 @@ These are installed system-wide via `environment.systemPackages` and available i
 |---------|-------------|
 | `hypr-dispatch` | Runs `hyprctl dispatch` with auto-detection of Hyprland instance signature |
 | `wol-sauron` | Sends a Wake-on-LAN magic packet to sauron (192.168.1.255, MAC 3C:52:82:74:03:F5) |
+| `new-homelab-repo` | Creates a bare repo on sweetpea + Forgejo repo + post-receive hook in one command |
+| `install-forgejo-hooks` | Installs forgejo-sync hook on all sweetpea repos with a matching Forgejo counterpart |
+| `tea` | Forgejo CLI; pre-configured login `home` pointing to `git.aaronjanovitch.com` as user `aj` |
 
 See `docs/PACKAGES.md` and `CONTEXT.md` for how to add new commands.
+
+---
+
+## Forgejo git server
+
+Forgejo runs on sweetpea at `https://git.aaronjanovitch.com` as a web UI mirror of the
+bare repos at `/srv/git/repos/`. The bare repos are the source of truth — Forgejo is kept
+in sync automatically via post-receive hooks.
+
+**Workflow for a new repo:**
+```bash
+new-homelab-repo my-project           # private (default)
+new-homelab-repo my-project --public  # public
+cd my-project && git init
+git remote add home git@sweetpea-git:/srv/git/repos/my-project.git
+git push home main
+# Forgejo mirrors automatically via hook
+```
+
+**Day-to-day:** `git push home main` — hook fires, Forgejo updates. Never push to Forgejo directly.
+
+**`$FORGEJO_TOKEN`:** Exported in `~/.bashrc` from `/run/secrets/forgejo_token` (SOPS secret).
+`environment.extraInit` does NOT work for this — PAM sets `__NIXOS_SET_ENVIRONMENT_DONE=1`
+before shell init, which causes the NixOS guard to skip `/etc/set-environment` in interactive shells.
+
+**SSH alias:** Git remotes use `git@sweetpea-git:` (not `git@sweetpea:`). The `sweetpea-git`
+entry in `~/.ssh/config` encodes `User git` and `Port 2222` — necessary because the short
+SCP-style git URL syntax cannot encode a non-default port.
+
+**Architecture doc:** `~/Repositories/self-hosted/homelab/Raymer/project-memory/forgejo-sync.md`
