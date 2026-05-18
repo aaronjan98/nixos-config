@@ -137,6 +137,11 @@
       key = "opencode_zen_api_key";
       owner = "aj";
     };
+    "forgejo_token" = {
+      sopsFile = ../../secrets/forgejo.yaml;
+      key = "forgejo_token";
+      owner = "aj";
+    };
   };
 
   # unfree packages
@@ -237,6 +242,7 @@
     export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
     export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7_api_key".path})"
     export OPENCODE_ZEN_API_KEY="$(cat ${config.sops.secrets."opencode_zen_api_key".path})"
+    export FORGEJO_TOKEN="$(cat ${config.sops.secrets."forgejo_token".path})"
   '';
   programs.nix-ld.enable = true;
   programs.hyprland = {
@@ -380,6 +386,13 @@
     (pkgs.writeShellScriptBin "seed-local-git-server"
       (builtins.readFile ../../scripts/seed-local-git-server.sh)
     )
+    (pkgs.writeShellScriptBin "new-homelab-repo"
+      (builtins.readFile ../../scripts/new-homelab-repo.sh)
+    )
+    (pkgs.writeShellScriptBin "install-forgejo-hooks"
+      (builtins.readFile ../../scripts/install-forgejo-hooks.sh)
+    )
+    pkgs.tea
   ];
 
   system.activationScripts.cursorExtensions = {
