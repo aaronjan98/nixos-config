@@ -13,25 +13,41 @@ FORGEJO_USER="aj"
 echo "==> Fetching existing Forgejo repos for ${FORGEJO_USER}..."
 FORGEJO_REPOS=$(curl -s \
     -H "Authorization: token ${FORGEJO_TOKEN}" \
-    "${FORGEJO_URL}/api/v1/repos/search?limit=50&token=${FORGEJO_TOKEN}" \
+    "${FORGEJO_URL}/api/v1/repos/search?limit=50" \
     | grep -o '"name":"[^"]*"' | sed 's/"name":"//;s/"//')
 
-for repo_path in "$REPOS_DIR"/*.git; do
-    name="$(basename "$repo_path" .git)"
-    hook="$repo_path/hooks/post-receive"
+# Build list of repos that need hooks installed
+TO_INSTALL=()
+while IFS= read -r repo_dir; do
+    name="$(basename "$repo_dir" .git)"
 
     if ! echo "$FORGEJO_REPOS" | grep -qx "$name"; then
         echo "    SKIP $name (no matching Forgejo repo)"
         continue
     fi
 
-    if [[ -L "$hook" && "$(readlink "$hook")" == "$HOOK_TARGET" ]]; then
+    current_link=$(ssh sweetpea "readlink ${repo_dir}/hooks/post-receive 2>/dev/null || true")
+    if [[ "$current_link" == "$HOOK_TARGET" ]]; then
         echo "    OK   $name (hook already installed)"
         continue
     fi
 
-    echo "    INSTALL $name"
-    ssh sweetpea "sudo ln -sf ${HOOK_TARGET} ${repo_path}/hooks/post-receive"
+    echo "    QUEUE $name"
+    TO_INSTALL+=("$repo_dir")
+done < <(ssh sweetpea "ls -d ${REPOS_DIR}/*.git")
+
+if [[ ${#TO_INSTALL[@]} -eq 0 ]]; then
+    echo "==> Nothing to install."
+    exit 0
+fi
+
+echo "==> Installing hooks (one sudo prompt)..."
+CMDS=""
+for repo_dir in "${TO_INSTALL[@]}"; do
+    CMDS+="sudo ln -sf ${HOOK_TARGET} ${repo_dir}/hooks/post-receive && "
 done
+CMDS="${CMDS% && }"
+
+ssh -t sweetpea "$CMDS"
 
 echo "==> Done."
