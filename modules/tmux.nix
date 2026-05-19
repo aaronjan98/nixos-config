@@ -116,8 +116,10 @@ in
 
       set -g renumber-windows on
 
-      # Right side status: date/time + battery from Nix script
-      set-option -g status-right '#(date "+%H:%M %a %d.%m.%y") #(${tmuxBattery}/bin/tmux-battery)'
+      # Right side status: continuum auto-save trigger + date/time + battery
+      # continuum.tmux adds its own interpolation during init, but extraConfig runs
+      # after plugins and overwrites status-right — so we include it explicitly here.
+      set-option -g status-right '#(${pkgs.tmuxPlugins.continuum}/share/tmux-plugins/continuum/scripts/continuum_save.sh) #(date "+%H:%M %a %d.%m.%y") #(${tmuxBattery}/bin/tmux-battery)'
 
       set-option -g window-status-current-format '#{window_index}#(echo ":")#{window_name}#[fg='$ACCENT_FG_COLOR']#{window_flags}'
       set-option -g window-status-format         '#{window_index}#(echo ":")#{window_name}#[fg='$ACCENT_FG_COLOR']#{window_flags}'
