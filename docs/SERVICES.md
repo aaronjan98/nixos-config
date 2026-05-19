@@ -104,6 +104,37 @@ If a driver is missing, add `pkgs.gutenprint` (generic) or a vendor package (e.g
 
 ---
 
+## Research tools
+
+### Zotero
+
+Reference manager for academic papers. Installed from `pkgsUnstable` (Zotero 9) via overlay
+in `flake.nix` — the stable nixpkgs version (7.x) is incompatible with Better BibTeX 9.x.
+
+**Plugins installed:**
+- Better BibTeX (BBT) — stable cite keys and BibTeX/CSL export for LaTeX/Pandoc
+
+**Sync setup:**
+- Metadata: Zotero account (free tier, cloud) — handles titles, authors, tags, collections
+- PDF attachments: Nextcloud WebDAV at `https://cloud.janovitch.com/remote.php/dav/files/aj/zotero`
+- App password for WebDAV is stored in `pass` under the Zotero entry
+
+**Where PDFs actually live:**
+Attachments sync to Nextcloud → stored on qwerty NAS at
+`/mnt/storage/nextcloud/data/aj/files/zotero/`. Not inside the Docker container.
+
+**Workflow:**
+- Capture papers from the browser using the Zotero Connector (Firefox extension)
+- Organize into Collections per project
+- BBT assigns stable cite keys (e.g. `nowak1992`) for use in LaTeX `\cite{}`
+- Export BibTeX: right-click collection → Export Collection → Better BibTeX
+
+**LibreOffice plugin note:**
+Zotero's LibreOffice plugin installer fails on NixOS (looks for `/opt`, which doesn't exist).
+Use BBT + BibTeX export instead — works with LaTeX and Pandoc.
+
+---
+
 ## Global commands (Nix modules)
 
 These are installed system-wide via `environment.systemPackages` and available in any terminal after `nixos-rebuild switch`.

@@ -52,6 +52,7 @@
           claude-code = pkgsUnstable.claude-code;
           opencode = pkgsUnstable.opencode;
           gemini-cli = pkgsUnstable.gemini-cli;
+          zotero = pkgsUnstable.zotero;
         });
     in
     {
