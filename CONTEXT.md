@@ -201,6 +201,12 @@ Before implementing this script, an agent must ask the user to resolve the follo
 
 Do not implement this script without confirming these decisions with the user first.
 
+## Active project specs
+
+Long-running, multi-session work items with design decisions and progress checklists live in `project-memory/`. Read the relevant spec before starting work on a tracked initiative.
+
+- `project-memory/multi-host-refactor-spec.md` — multi-host refactor (ThinkPad + Framework 13 AMD), shared base extraction, pentest module, branch: `multi-host`
+
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.
 An agent working here should preserve clarity, reproducibility, and separation of responsibilities.
