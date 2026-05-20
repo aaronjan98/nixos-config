@@ -13,9 +13,11 @@
     nix-tools.url = "path:./tools";
 
     nix-flatpak.url = "github:gmodena/nix-flatpak";
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, nix-flatpak, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, nix-flatpak, nixos-hardware, ... }:
     let
       system = "x86_64-linux";
 
@@ -67,6 +69,21 @@
           ./hosts/thinkpad-t14/configuration.nix
           sops-nix.nixosModules.sops
           nix-flatpak.nixosModules.nix-flatpak
+        ];
+      };
+
+      nixosConfigurations.framework-13 = nixpkgs.lib.nixosSystem {
+        inherit system;
+
+        specialArgs = { inherit nix-tools pkgsUnstable; snippetsDir = ./snippets; };
+
+        modules = [
+          ({ ... }: { nixpkgs.overlays = [ myOverlay ]; })
+
+          ./hosts/framework-13/configuration.nix
+          sops-nix.nixosModules.sops
+          nix-flatpak.nixosModules.nix-flatpak
+          nixos-hardware.nixosModules.framework-13-7040-amd
         ];
       };
 

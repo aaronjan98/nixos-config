@@ -131,13 +131,13 @@ Candidate packages (fill in as needed):
 ## Progress checklist
 
 - [x] Step 1 — Create `multi-host` branch
-- [ ] Step 2 — Extract `hosts/common/default.nix` from ThinkPad config
-- [ ] Step 3 — Slim `hosts/thinkpad-t14/configuration.nix` to overrides only
-- [ ] Step 4 — Verify ThinkPad: `nrt` then `nrs`
-- [ ] Step 5 — Create `hosts/framework-13/` skeleton (placeholder hardware config)
-- [ ] Step 6 — Create `modules/pentest.nix` stub
-- [ ] Step 7 — Add `nixos-hardware` input and `framework-13` nixosConfiguration to `flake.nix`
-- [ ] Step 8 — Evaluate Framework config without building: `nix eval .#nixosConfigurations.framework-13.config.system.build.toplevel`
+- [x] Step 2 — Extract `hosts/common/default.nix` from ThinkPad config
+- [x] Step 3 — Slim `hosts/thinkpad-t14/configuration.nix` to overrides only
+- [x] Step 4 — Verify ThinkPad: `nrt` then `nrs` (identical derivation confirmed)
+- [x] Step 5 — Create `hosts/framework-13/` skeleton (placeholder hardware config)
+- [x] Step 6 — Create `modules/pentest.nix` stub
+- [x] Step 7 — Add `nixos-hardware` input and `framework-13` nixosConfiguration to `flake.nix`
+- [x] Step 8 — Evaluate Framework config without building: clean derivation confirmed
 - [ ] Step 9 — Merge `multi-host` → `main`
 - [ ] Step 10 — Flash Framework, generate real hardware config, pull repo, `nixos-rebuild switch --flake ~/nixos-config#framework-13`
 
