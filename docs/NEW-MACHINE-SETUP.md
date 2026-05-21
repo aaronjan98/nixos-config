@@ -1,121 +1,59 @@
 # New Machine Setup
 
-This document is the high-level guide for bringing up a new machine.
-
-It intentionally points to more detailed documents for each phase.
+High-level guide for bringing up a new machine. Each phase points to a
+detailed document.
 
 ---
 
 ## Overview
 
-The setup process is divided into four phases:
-
-1. base NixOS installation
-2. manual trust/bootstrap preparation
-3. scripted machine bootstrap and final rebuild
-4. dotfiles and personal environment setup
-
----
-
-## Phase 1 — Install base NixOS
-
-Follow:
-
-- `NIXOS-INSTALL.md`
-
-This phase covers:
-- installer USB creation
-- disk wipe and partitioning
-- LUKS setup
-- Btrfs subvolumes
-- `nixos-install`
+| Phase | What | Where |
+|-------|------|--------|
+| 1 | Base NixOS install | `NIXOS-INSTALL.md` |
+| 2 | Root bootstrap (GPG, pass, age key, first rebuild) | `MANUAL-BOOTSTRAP.md` — Phase 1 |
+| 3 | AJ setup (dotfiles, remotes, SSH key, Tailscale) | `MANUAL-BOOTSTRAP.md` — Phase 2 |
 
 ---
 
-## Phase 2 — Manual bootstrap
+## Phase 1 — Base NixOS install
 
-Follow:
+Follow `NIXOS-INSTALL.md`.
 
-- `MANUAL-BOOTSTRAP.md`
-
-This phase covers:
-- cloning `nixos-config`
-- restoring GPG keys
-- getting `pass` working
-- restoring SSH files
-- restoring the SOPS age key
-
-This phase exists because a new machine does not initially have the trust material needed for full automation.
+Covers: USB creation, disk wipe, LUKS, Btrfs subvolumes, `nixos-install`,
+and committing the generated `hardware-configuration.nix` to this repo.
 
 ---
 
-## Phase 3 — Scripted machine bootstrap
+## Phase 2 — Root bootstrap
 
-Once the manual prerequisites are complete, use the scripts in `~/nixos-config/scripts/`.
+Follow `MANUAL-BOOTSTRAP.md` — Phase 1.
 
-Main orchestrator:
+Two commands start it:
 
-- `~/nixos-config/scripts/bootstrap-new-machine.sh`
+    nix-shell -p git --run \
+      "git clone https://github.com/aaronjan98/nixos-config /root/nixos-config"
+    nix-shell -p gnupg pass git netcat-gnu pinentry-curses age
+    bash /root/nixos-config/scripts/bootstrap-root.sh <flake-hostname>
 
-This should:
-1. optionally run `restore-secrets.sh`
-2. install tracked user systemd units
-3. seed the local git server
-4. sync distfiles
-5. bootstrap workspace layout
-6. sync workspace repos
-7. print the final rebuild command
+On ThinkPad when prompted:
+
+    bash ~/nixos-config/scripts/send-secrets-to-new-machine.sh <new-machine-ip>
 
 ---
 
-## Phase 4 — Dotfiles and personal environment setup
+## Phase 3 — AJ setup
 
-After the machine is bootstrapped and the main NixOS configuration is in place, clone and apply your dotfiles/environment setup.
+Follow `MANUAL-BOOTSTRAP.md` — Phase 2.
 
-This is where layers such as:
-- Hyprland
-- Quickshell
-- shell/editor/UI config
+Two commands start it:
 
-should be handled.
-
-These belong to the separate dotfiles repo rather than this repo.
-
-Known references:
-- `https://github.com/aaronjan98/dotfiles`
-- `https://github.com/aaronjan98/dotfiles/tree/main/.config/quickshell`
-
-This separation keeps:
-- machine bootstrap
-- OS/system configuration
-- personal environment configuration
-
-from collapsing into one repo.
+    git clone https://github.com/aaronjan98/nixos-config ~/nixos-config
+    bash ~/nixos-config/scripts/post-rebuild-setup.sh
 
 ---
 
-## Final rebuild
+## After setup
 
-After bootstrap, run:
-
-    sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14
-
-This is the point where repo-tracked SOPS secrets become available at runtime under `/run/...` (or other configured secret paths), because the age key restored from `pass` can finally be used by `sops-nix`.
-
-Alias reminder:
-
-    nrs
-
-if your shell environment already defines it.
-
----
-
-## Supporting docs
-
-- `README.md`
-- `MANUAL-BOOTSTRAP.md`
-- `NIXOS-INSTALL.md`
-- `SECRETS.md`
-- `SCRIPTS.md`
-- `MULTI-MACHINE-SYNC.md`
-- `KANATA.md`
+- Run `nrs` to rebuild after any config change
+- Run `g pushall` / `dot pushall` to sync both repos to all remotes
+- See `MULTI-MACHINE-SYNC.md` for the ongoing multi-laptop sync workflow

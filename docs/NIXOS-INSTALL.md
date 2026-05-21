@@ -205,7 +205,30 @@ This creates:
 
 ---
 
-## 12. Install NixOS
+## 12. Commit hardware-configuration.nix to nixos-config
+
+The generated hardware config must be in the repo before the post-boot
+rebuild can use the flake. Transfer it to ThinkPad now (new machine listens,
+ThinkPad connects — no ThinkPad firewall issue this way):
+
+On the **new machine** (live ISO):
+
+    nc -l 9999 < /mnt/etc/nixos/hardware-configuration.nix
+
+On **ThinkPad**:
+
+    nc -N <new-machine-ip> 9999 > ~/nixos-config/hosts/<hostname>/hardware-configuration.nix
+    cd ~/nixos-config
+    git add hosts/<hostname>/hardware-configuration.nix
+    git commit -m "hosts/<hostname>: add generated hardware configuration"
+    g pushall
+
+Then on the new machine, pull the repo before rebooting (if already cloned)
+or simply proceed — `bootstrap-root.sh` will pull latest after first boot.
+
+---
+
+## 13. Install NixOS
 
 Once mounts and config are correct:
 

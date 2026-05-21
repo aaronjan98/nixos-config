@@ -45,16 +45,51 @@ Notes:
 Typical use:
 - early in new-machine setup, after GPG and `pass` are functional
 
-## `bootstrap-new-machine.sh`
+## `bootstrap-root.sh`
 Purpose:
-- orchestrate the safe, guided machine setup sequence
-- check prerequisites
-- run the smaller scripts in the correct order
-- print next steps
+- full root-phase bootstrap for a new machine
+- configures pinentry, receives SSH + GPG keys from ThinkPad via netcat,
+  imports GPG, clones pass, runs `restore-secrets.sh`, handles missing age
+  key (generates + stores + pauses for ThinkPad action), syncs distfiles,
+  runs `nixos-rebuild switch`
 
 Typical use:
-- new laptop setup
-- first-time bring-up after cloning this repo
+- first thing to run on a new machine after cloning nixos-config as root
+
+Usage: `bash bootstrap-root.sh <flake-hostname>`
+
+Requires: run inside `nix-shell -p gnupg pass git netcat-gnu pinentry-curses age`
+
+## `send-secrets-to-new-machine.sh`
+Purpose:
+- bundle SSH key + GPG keys and send to a new machine via netcat
+- run on ThinkPad when `bootstrap-root.sh` pauses and prompts for it
+
+Typical use:
+- called once per new machine bootstrap
+
+Usage: `send-secrets-to-new-machine.sh <new-machine-ip> [port]`
+
+## `post-rebuild-setup.sh`
+Purpose:
+- aj-phase setup after the first successful `nixos-rebuild switch`
+- sets GPG trust, adds git remotes to nixos-config and dotfiles,
+  checks out dotfiles, generates ed25519 SSH key, authenticates Tailscale,
+  runs `bootstrap-new-machine.sh`
+
+Typical use:
+- run as aj immediately after logging in post-first-rebuild
+
+Usage: `bash ~/nixos-config/scripts/post-rebuild-setup.sh`
+
+## `bootstrap-new-machine.sh`
+Purpose:
+- orchestrate the workspace-level setup sequence (called by `post-rebuild-setup.sh`)
+- install user systemd units, seed local git server, sync distfiles,
+  bootstrap workspace, sync workspace repos
+
+Typical use:
+- called automatically by `post-rebuild-setup.sh`; can also be run standalone
 
 ## `ai-router.sh`
 Purpose:

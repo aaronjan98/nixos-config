@@ -1,168 +1,155 @@
 # Manual Bootstrap
 
-This document covers the intentionally manual steps required before the scripted new-machine bootstrap can take over.
+This document covers the complete process for bringing a new machine from a
+fresh NixOS base install to a fully configured system.
 
-These steps are needed because a new machine does not initially have the trust material required to:
-- decrypt the password store
-- restore SSH files
-- restore the SOPS age key
+The process has two phases that run on different users:
 
-Once these manual prerequisites are complete, the scripted bootstrap flow can proceed.
-
----
-
-## Overview
-
-The manual bootstrap phase is:
-
-1. install base NixOS
-2. log into the new machine
-3. clone `nixos-config`
-4. restore GPG secret keys used for `pass`
-5. verify `pass` works
-6. restore SSH files and SOPS age key
-7. hand off to the scripted bootstrap
+- **Root phase** — automated via `bootstrap-root.sh`, handles trust material
+  (GPG, SSH, pass, age key) and the first `nixos-rebuild switch`
+- **AJ phase** — automated via `post-rebuild-setup.sh`, handles dotfiles,
+  git remotes, SSH key generation, and workspace setup
 
 ---
 
-## Clone `nixos-config`
+## Before you start — on ThinkPad
 
-Clone the config repo into the expected location:
+Make sure `send-secrets-to-new-machine.sh` is available and your GPG key is
+accessible. You'll run this when `bootstrap-root.sh` pauses and waits for it.
+
+---
+
+## Phase 1 — Root bootstrap (on new machine, as root)
+
+### 1. Connect to Wi-Fi
+
+    nmcli device wifi connect "SSID" password "PASS"
+
+### 2. Clone nixos-config
+
+The bootstrap script lives in the repo, so clone it first:
+
+    nix-shell -p git --run \
+      "git clone https://github.com/aaronjan98/nixos-config /root/nixos-config"
+
+### 3. Enter nix-shell with required tools
+
+    nix-shell -p gnupg pass git netcat-gnu pinentry-curses age
+
+### 4. Run the bootstrap script
+
+    bash /root/nixos-config/scripts/bootstrap-root.sh <flake-hostname>
+
+Replace `<flake-hostname>` with the machine's flake attribute name,
+e.g. `framework-13`.
+
+The script handles everything in order:
+
+1. Configures `pinentry-curses` for GPG
+2. Opens a netcat listener and prints the command to run on ThinkPad
+3. Receives the secrets bundle (SSH key + GPG keys) from ThinkPad
+4. Imports GPG keys — **passphrase prompt will appear here**
+5. Sets GPG trust to ultimate
+6. Clones the password store from the homelab git server
+7. Runs `restore-secrets.sh` (SSH files + SOPS age key from pass)
+8. If the age key is missing (new machine): generates one, stores it in pass,
+   and **pauses with instructions** to add it to `secrets/*.yaml` on ThinkPad
+9. Optionally syncs Wolfram distfiles from the NAS
+10. Runs `nixos-rebuild switch --flake /root/nixos-config#<hostname>`
+
+### 5. On ThinkPad — send secrets when prompted
+
+When the script is listening, run in a ThinkPad terminal:
+
+    bash ~/nixos-config/scripts/send-secrets-to-new-machine.sh <new-machine-ip>
+
+This bundles `~/.ssh/id_rsa`, GPG public key, and GPG private key, and sends
+them via netcat. The new machine receives and unpacks automatically.
+
+### 6. If a new age key was generated
+
+The script will pause and print something like:
+
+    On ThinkPad, run:
+      sops --rotate --add-age <pubkey> \
+        secrets/users.yaml secrets/hf-token.yaml \
+        secrets/context7.yaml secrets/opencode.yaml \
+        secrets/forgejo.yaml
+      g ci -am 'secrets: add <hostname> age key'
+      g pushall
+
+Do this on ThinkPad, then press Enter on the new machine to continue.
+
+---
+
+## Phase 2 — AJ setup (on new machine, as aj)
+
+After `nixos-rebuild switch` succeeds, log out of root and log in as `aj`.
+
+### 1. Clone nixos-config as aj
 
     git clone https://github.com/aaronjan98/nixos-config ~/nixos-config
-    cd ~/nixos-config
 
----
+### 2. Run post-rebuild setup
 
-## Restore GPG keys for `pass`
+    bash ~/nixos-config/scripts/post-rebuild-setup.sh
 
-The new machine must have the secret GPG keys needed to decrypt the password store.
+The script handles:
 
-For now, the recommended method is to transfer them from an existing trusted machine.
+1. Sets GPG key trust to ultimate
+2. Adds `home`, `hub`, `local` remotes to `~/nixos-config`
+3. Clones the dotfiles bare repo if missing and checks out into `$HOME`
+   (backs up any conflicting files automatically)
+4. Generates an `ed25519` SSH key for this machine and prints the public key
+5. Authenticates Tailscale (`sudo tailscale up`)
+6. Runs `bootstrap-new-machine.sh` (workspace setup, git server seeding, etc.)
 
-### Transfer key files using password auth
+### 3. Add the new ed25519 key to NixOS config
 
-    scp -o IdentitiesOnly=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no \
-      pass-gpg-private.asc pass-gpg-public.asc \
-      aj@192.168.1.XXX:/home/aj/
+The script prints the public key. Add it to
+`hosts/<hostname>/configuration.nix`:
 
-### Or transfer using an existing SSH key already trusted by the new machine
+    aj.gitServer.authorizedKeys = [
+      "ssh-ed25519 AAAA... aj@<hostname>"
+      "ssh-rsa AAAA... aaronjan98@gmail.com"   # keep the existing RSA key
+    ];
 
-    scp -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519.fedora \
-      pass-gpg-private.asc pass-gpg-public.asc \
-      aj@192.168.1.XXX:/home/aj/
+Then commit, push, and rebuild:
 
-### Import the GPG keys on the new machine
-
-    gpg --import ~/pass-gpg-public.asc
-    gpg --import ~/pass-gpg-private.asc
-    rm -f ~/pass-gpg-public.asc ~/pass-gpg-private.asc
-    gpg --list-secret-keys --keyid-format=long
-
-Verify that your expected secret key is listed.
-
----
-
-## Ensure `pass` is available and usable
-
-If `pass` is not installed yet, install it using your preferred method for the temporary environment or after the first rebuild if already available.
-
-Then verify `pass` works:
-
-    pass ls
-
-If your password store itself is a git repo and is not already present locally, restore or clone it first.
-
-Known remotes may include:
-
-- `ssh://git@localhost/srv/git/repos/password-store.git`
-- `ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/password-store.git`
-
-If needed, clone it to the default password-store location:
-
-    git clone ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/password-store.git ~/.password-store
-
-Then test again:
-
-    pass ls
-
----
-
-## Restore SSH files and SOPS age key
-
-Once GPG and `pass` are working, run:
-
-    ~/nixos-config/scripts/restore-secrets.sh
-
-This should:
-- restore SSH files from `pass` under `laptop/<hostname>/ssh`
-- restore the SOPS age key from `pass` entry `laptop/thinkpad-t14-nixos/sops/age`
-- write the age key to `/var/lib/sops-nix/key.txt`
-
-After that, verify:
-
-    ls -la ~/.ssh
-    sudo ls -l /var/lib/sops-nix/key.txt
-
----
-
-## Install tracked user systemd units
-
-Run:
-
-    ~/nixos-config/scripts/install-user-systemd-units.sh
-
-This installs tracked user units into:
-
-- `~/.config/systemd/user/`
-
-and enables:
-
-- `export-workspace-state.timer`
-
-It leaves `video-summary` disabled by default.
-
----
-
-## Run the guided machine bootstrap
-
-Now hand off to the orchestrator:
-
-    ~/nixos-config/scripts/bootstrap-new-machine.sh
-
-This script will:
-- optionally offer to run `restore-secrets.sh` again
-- install user systemd units
-- seed the local git server
-- sync distfiles
-- bootstrap the workspace
-- sync workspace repos
-- print the final rebuild command
-
----
-
-## Final rebuild
-
-After bootstrap is complete, run:
-
-    sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14
-
-Or use an alias if already set up:
-
+    g ci -am 'hosts/<hostname>: add ed25519 SSH key'
+    g pushall
     nrs
 
 ---
 
-## Summary
+## What requires human intervention
 
-Manual bootstrap exists to solve the trust problem honestly.
+| Step | Why it can't be automated |
+|------|--------------------------|
+| GPG passphrase during import | Security — private key decryption |
+| Age key update on ThinkPad | Requires access to ThinkPad secrets |
+| Tailscale auth | Requires browser login or pre-generated auth key |
+| Adding ed25519 key to NixOS config | Needs commit + push + rebuild cycle |
 
-The new machine must first gain access to:
-- GPG secret keys
-- `pass`
-- SSH files
-- SOPS age key
+---
 
-Only after that should the scripted bootstrap take over.
+## Troubleshooting
 
-After the first successful rebuild, `sops-nix` takes over normal declarative runtime secret delivery from the encrypted files in `secrets/*.yaml`.
+**`nrs` applies the wrong host config** — the `nrs` alias uses `$(hostname)`
+to pick the flake attribute. Do not run `nrs` until after the first successful
+rebuild sets the correct hostname. Use the full explicit command instead:
+
+    sudo nixos-rebuild switch --flake ~/nixos-config#<hostname>
+
+**SOPS activation fails on first rebuild** — fixed in the config via
+`neededForUsers = true` on password secrets. If you still see a "failed to
+lookup user aj" error, log into a TTY as root and run `passwd aj` to set the
+password manually, then log in as aj and proceed with Phase 2.
+
+**Wolfram build fails** — the Wolfram installer must be in the Nix store
+before the build. Run:
+
+    bash ~/nixos-config/scripts/sync-distfiles.sh wolfram
+    nix --extra-experimental-features 'nix-command' store add-file \
+      /var/lib/distfiles/wolfram/Wolfram_14.3.0_LIN_Bndl.sh
+    nrs
