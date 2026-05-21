@@ -18,6 +18,10 @@
   # Framework 13 AMD does not need pcie_aspm=off (ThinkPad-specific).
   # Add Framework-specific kernel params here if needed after install.
 
+  # Quickshell UI scale — compensates for higher DPI at Hyprland scale=1.
+  # ThinkPad uses the QML fallback (1.25); adjust this value to taste.
+  environment.sessionVariables.QS_UI_SCALE = "1.75";
+
   # Kanata layout — identical to ThinkPad for now; diverge here as needed.
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
 
