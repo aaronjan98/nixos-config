@@ -41,13 +41,14 @@ REPOS=(
 
 echo "==> Seeding git repos into $REPOS_DIR"
 
-# Create dirs as root, but keep ownership git:git
 sudo mkdir -p "$REPOS_DIR" /var/lib/git-seed
 sudo chmod 700 /var/lib/git-seed
 sudo chown -R git:git /srv/git || true
 sudo chmod 2775 "$REPOS_DIR" || true
 
 umask 002
+
+failed=()
 
 for entry in "${REPOS[@]}"; do
   read -r name url <<<"$entry"
@@ -56,19 +57,25 @@ for entry in "${REPOS[@]}"; do
   if [[ -d "$dest" ]]; then
     echo "--> Updating mirror: $name"
     git --git-dir="$dest" remote set-url origin "$url" || true
-    GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
-      git --git-dir="$dest" remote update --prune
+    if ! GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
+        git --git-dir="$dest" remote update --prune; then
+      echo "WARN: failed to update $name — skipping."
+      failed+=("$name")
+      continue
+    fi
   else
     echo "--> Cloning mirror: $name"
-    # Clone as aj (so it can use aj's key), into a temp dir, then move into place with sudo
     tmp="$(mktemp -d)"
-    trap 'rm -rf "$tmp"' EXIT
 
-    GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
-      git clone --mirror "$url" "$tmp/$name.git"
+    if ! GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
+        git clone --mirror "$url" "$tmp/$name.git"; then
+      echo "WARN: failed to clone $name — skipping."
+      rm -rf "$tmp"
+      failed+=("$name")
+      continue
+    fi
 
     sudo mv "$tmp/$name.git" "$dest"
-    trap - EXIT
     rm -rf "$tmp"
   fi
 
@@ -76,5 +83,12 @@ for entry in "${REPOS[@]}"; do
   sudo chmod -R g+rwX "$dest"
 done
 
-echo "==> Done."
+if [[ ${#failed[@]} -gt 0 ]]; then
+  echo ""
+  echo "WARN: The following repos could not be mirrored (fix on homelab and rerun):"
+  for r in "${failed[@]}"; do
+    echo "  - $r"
+  done
+fi
 
+echo "==> Done."
