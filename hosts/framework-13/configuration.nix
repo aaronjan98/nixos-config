@@ -20,7 +20,14 @@
 
   # Quickshell UI scale — compensates for higher DPI at Hyprland scale=1.
   # ThinkPad uses the QML fallback (1.25); adjust this value to taste.
-  environment.sessionVariables.QS_UI_SCALE = "1.75";
+  environment.sessionVariables.QS_UI_SCALE = "1.5";
+
+  # Hyprland per-host overrides — loaded last (99-) so they win over dotfiles defaults.
+  # Cursor size bumped from 35→40 to compensate for higher DPI at scale=1.
+  environment.etc."hypr/conf.d/99-host.conf".text = ''
+    env = XCURSOR_SIZE,40
+    exec-once = hyprctl setcursor Breeze_Hacked 40
+  '';
 
   # Kanata layout — identical to ThinkPad for now; diverge here as needed.
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
