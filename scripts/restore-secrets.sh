@@ -3,7 +3,15 @@ set -euo pipefail
 
 HOSTNAME_SHORT="$(hostname)"
 PASS_SSH_PREFIX="laptop/${HOSTNAME_SHORT}/ssh"
-PASS_AGE_ENTRY="laptop/thinkpad-t14-nixos/sops/age"
+
+# Map system hostname → pass entry slug (ThinkPad uses legacy "nixos" hostname).
+_pass_machine_slug() {
+    case "$(hostname)" in
+        nixos) echo "thinkpad-t14-nixos" ;;
+        *)     echo "$(hostname)" ;;
+    esac
+}
+PASS_AGE_ENTRY="laptop/$(_pass_machine_slug)/sops/age"
 
 SSH_DIR="${HOME}/.ssh"
 AGE_TARGET_DIR="/var/lib/sops-nix"

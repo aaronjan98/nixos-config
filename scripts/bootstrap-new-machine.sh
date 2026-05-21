@@ -10,7 +10,9 @@ SYNC_DISTFILES="${SCRIPTS_DIR}/sync-distfiles.sh"
 BOOTSTRAP_WORKSPACE="${SCRIPTS_DIR}/bootstrap-workspace.sh"
 SYNC_WORKSPACE="${SCRIPTS_DIR}/sync-workspace-repos.sh"
 
-NIXOS_REBUILD_CMD="sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14"
+# Map system hostname → flake attribute (same logic as _nix_host in .bash_aliases).
+_nix_host() { case "$(hostname)" in nixos) echo "thinkpad-t14" ;; *) echo "$(hostname)" ;; esac; }
+NIXOS_REBUILD_CMD="sudo nixos-rebuild switch --flake ~/nixos-config#$(_nix_host)"
 
 log() {
   printf '==> %s\n' "$*"
@@ -86,8 +88,7 @@ main() {
   printf 'Next step:\n'
   printf '  %s\n' "$NIXOS_REBUILD_CMD"
   printf '\n'
-  printf "Alias reminder:\n"
-  printf "  nrs='sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14'\n"
+  printf "Alias reminder: nrs is now hostname-aware — just run: nrs\n"
 }
 
 main "$@"
