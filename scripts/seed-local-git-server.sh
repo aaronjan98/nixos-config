@@ -3,11 +3,11 @@ set -euo pipefail
 
 REPOS_DIR="/srv/git/repos"
 
-# Use your user's key explicitly so it works even when run with sudo.
-# Adjust if you want to use ed25519 only.
-IDENTITY_FILE="/home/aj/.ssh/id_ed25519"
+# Use id_rsa (personal key, shared across machines) for homelab access.
+# id_ed25519 is machine-specific and may not be authorized on the homelab yet.
+IDENTITY_FILE="/home/aj/.ssh/id_rsa"
 if [[ ! -f "$IDENTITY_FILE" ]]; then
-  IDENTITY_FILE="/home/aj/.ssh/id_rsa"
+  IDENTITY_FILE="/home/aj/.ssh/id_ed25519"
 fi
 
 SSH_OPTS=(
