@@ -116,30 +116,47 @@
 
   # Secrets and keys — ../../secrets/ resolves to the repo root from any
   # hosts/<name>/ depth, so this path is correct here too.
-  system.activationScripts.users.deps = [ "setupSecrets" ];
+  #
+  # Ordering note: neededForUsers=true on the password secrets tells sops-nix
+  # to decrypt those files before the users activation script runs, so
+  # hashedPasswordFile works on first boot without a manual dep override.
+  # API key secrets use group=users/mode=0640 instead of owner=aj so that
+  # the chgrp succeeds even before the aj user exists (the users group is
+  # always present early in activation).
   systemd.tmpfiles.rules = [ "d /run/sops-nix 0750 root root -" ];
   sops = {
     defaultSopsFile = ../../secrets/users.yaml;
     age.keyFile = "/var/lib/sops-nix/key.txt";
   };
   sops.secrets = {
-    "passwords/aj" = { key = "passwords_aj"; path = "/run/sops-nix/passwords_aj"; };
-    "passwords/root" = { key = "passwords_root"; path = "/run/sops-nix/passwords_root"; };
+    "passwords/aj" = {
+      key = "passwords_aj";
+      path = "/run/sops-nix/passwords_aj";
+      neededForUsers = true;
+    };
+    "passwords/root" = {
+      key = "passwords_root";
+      path = "/run/sops-nix/passwords_root";
+      neededForUsers = true;
+    };
     "hf_token" = { sopsFile = ../../secrets/hf-token.yaml; key = "hf_token"; };
     "context7_api_key" = {
       sopsFile = ../../secrets/context7.yaml;
       key = "context7-secret-key";
-      owner = "aj";
+      group = "users";
+      mode = "0640";
     };
     "opencode_zen_api_key" = {
       sopsFile = ../../secrets/opencode.yaml;
       key = "opencode_zen_api_key";
-      owner = "aj";
+      group = "users";
+      mode = "0640";
     };
     "forgejo_token" = {
       sopsFile = ../../secrets/forgejo.yaml;
       key = "forgejo_token";
-      owner = "aj";
+      group = "users";
+      mode = "0640";
     };
   };
 
