@@ -4,6 +4,8 @@ set -euo pipefail
 SNAPSHOT_ROOT="${HOME}/nixos-config/tools/workspace/Repositories"
 LIVE_ROOT="${HOME}/Repositories"
 MANIFEST_PATH="${SNAPSHOT_ROOT}/repos.tsv"
+HOME_BASE="ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos"
+LOCAL_PREFIX="ssh://git@localhost"
 
 log() {
   printf '==> %s\n' "$*"
@@ -28,20 +30,53 @@ copy_if_exists() {
   fi
 }
 
-restore_routing_files() {
-  log "Restoring top-level ROUTER.md"
-  copy_if_exists "${SNAPSHOT_ROOT}/ROUTER.md" "${LIVE_ROOT}/ROUTER.md"
+sync_dir_if_exists() {
+  local src="$1"
+  local dst="$2"
 
-  log "Restoring area-level CONTEXT.md files"
-  local area_dir
+  if [[ -d "$src" ]]; then
+    ensure_dir "$dst"
+    rsync -a "$src/" "$dst/"
+  fi
+}
+
+restore_routing_files() {
+  log "Restoring top-level routing files"
+  copy_if_exists "${SNAPSHOT_ROOT}/ROUTER.md"  "${LIVE_ROOT}/ROUTER.md"
+  copy_if_exists "${SNAPSHOT_ROOT}/CONTEXT.md" "${LIVE_ROOT}/CONTEXT.md"
+  copy_if_exists "${SNAPSHOT_ROOT}/MEMORY.md"  "${LIVE_ROOT}/MEMORY.md"
+  sync_dir_if_exists "${SNAPSHOT_ROOT}/memory"         "${LIVE_ROOT}/memory"
+  sync_dir_if_exists "${SNAPSHOT_ROOT}/project-memory" "${LIVE_ROOT}/project-memory"
+
+  log "Restoring area-level routing files"
+  local area_dir area_name
   shopt -s nullglob
-  for area_dir in "${SNAPSHOT_ROOT}"/*; do
+  for area_dir in "${SNAPSHOT_ROOT}"/*/; do
     [[ -d "$area_dir" ]] || continue
-    local area_name
     area_name="$(basename "$area_dir")"
     copy_if_exists "${area_dir}/CONTEXT.md" "${LIVE_ROOT}/${area_name}/CONTEXT.md"
+    copy_if_exists "${area_dir}/MEMORY.md"  "${LIVE_ROOT}/${area_name}/MEMORY.md"
+    sync_dir_if_exists "${area_dir}/memory"         "${LIVE_ROOT}/${area_name}/memory"
+    sync_dir_if_exists "${area_dir}/project-memory" "${LIVE_ROOT}/${area_name}/project-memory"
   done
   shopt -u nullglob
+}
+
+# After cloning, rename origin to local/hub and add home remote as appropriate.
+# - localhost URL: origin → local, add home (homelab)
+# - GitHub URL:    origin → hub
+setup_remotes() {
+  local target_dir="$1"
+  local remote_url="$2"
+
+  if [[ "$remote_url" == "${LOCAL_PREFIX}"* ]]; then
+    git -C "$target_dir" remote rename origin local
+    local repo_file
+    repo_file="$(basename "$remote_url")"
+    git -C "$target_dir" remote add home "${HOME_BASE}/${repo_file}"
+  elif [[ "$remote_url" == *"github.com"* ]]; then
+    git -C "$target_dir" remote rename origin hub
+  fi
 }
 
 clone_missing_repos() {
@@ -78,6 +113,7 @@ clone_missing_repos() {
 
     log "Cloning ${remote_url} -> ${target_dir}"
     git clone "$remote_url" "$target_dir"
+    setup_remotes "$target_dir" "$remote_url"
   done < "$MANIFEST_PATH"
 }
 
