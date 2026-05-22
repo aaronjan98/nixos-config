@@ -29,6 +29,7 @@ REPOS=(
   "clipper-video-summary-client ${BASE}/clipper-video-summary-client.git"
   "cooking ${BASE}/cooking.git"
   "diff_eqns_dyn_sys_jupyter_notebook ${BASE}/diff_eqns_dyn_sys_jupyter_notebook.git"
+  "directional_fields ${BASE}/directional_fields.git"
   "dnsmasq-config ${BASE}/dnsmasq-config.git"
   "dotfiles ${BASE}/dotfiles.git"
   "ds_home ${BASE}/ds_home.git"
@@ -39,6 +40,7 @@ REPOS=(
   "nvim ${BASE}/nvim.git"
   "oreos-wireguard-config ${BASE}/oreos-wireguard-config.git"
   "password-store ${BASE}/password-store.git"
+  "phase_portraits ${BASE}/phase_portraits.git"
   "qwerty-services ${BASE}/qwerty-services.git"
   "raymer-homelab-docs ${BASE}/raymer-homelab-docs.git"
   "sauron-clipper-summary ${BASE}/sauron-clipper-summary.git"
@@ -49,6 +51,7 @@ REPOS=(
   "tftp-netboot-config ${BASE}/tftp-netboot-config.git"
   "tmux.conf ${BASE}/tmux.conf.git"
   "trad-mus-research-paper ${BASE}/trad-mus-research-paper.git"
+  "vulnlab ${BASE}/vulnlab.git"
   "zettelkasten ${BASE}/zettelkasten.git"
 )
 

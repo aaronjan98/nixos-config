@@ -2,8 +2,14 @@
 automation/video-summary	home	git@sweetpea-git:/srv/git/repos/clipper-video-summary-client.git
 automation/video-summary	local	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
 experiment/claw-code-parity	hub	git@github.com:ultraworkers/claw-code-parity.git
+experiment/vulnlab	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/vulnlab.git
+experiment/vulnlab	local	ssh://git@localhost/srv/git/repos/vulnlab.git
 projects/agent-display	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/claude-display.git
 projects/agent-display	local	ssh://git@localhost/srv/git/repos/claude-display.git
+school/differential_equations/directional_fields	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/directional_fields.git
+school/differential_equations/directional_fields	local	ssh://git@localhost/srv/git/repos/directional_fields.git
+school/differential_equations/phase_portraits	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/phase_portraits.git
+school/differential_equations/phase_portraits	local	ssh://git@localhost/srv/git/repos/phase_portraits.git
 school/egt-graph-cooperation	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/egt-graph-cooperation.git
 school/egt-graph-cooperation	local	ssh://git@localhost/srv/git/repos/egt-graph-cooperation.git
 school/Engineering_Course_Differential_Equations_and_Dynamical_Systems	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/diff_eqns_dyn_sys_jupyter_notebook.git
