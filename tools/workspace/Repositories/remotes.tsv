@@ -1,0 +1,27 @@
+# relative_path	remote_name	remote_url
+automation/video-summary	home	git@sweetpea-git:/srv/git/repos/clipper-video-summary-client.git
+automation/video-summary	local	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
+experiment/claw-code-parity	hub	git@github.com:ultraworkers/claw-code-parity.git
+projects/agent-display	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/claude-display.git
+projects/agent-display	local	ssh://git@localhost/srv/git/repos/claude-display.git
+school/egt-graph-cooperation	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/egt-graph-cooperation.git
+school/egt-graph-cooperation	local	ssh://git@localhost/srv/git/repos/egt-graph-cooperation.git
+school/Engineering_Course_Differential_Equations_and_Dynamical_Systems	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/diff_eqns_dyn_sys_jupyter_notebook.git
+school/Engineering_Course_Differential_Equations_and_Dynamical_Systems	local	ssh://git@localhost/srv/git/repos/diff_eqns_dyn_sys_jupyter_notebook.git
+school/published-real-analysis-notes	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/Math-450A-Class-Notes.git
+school/published-real-analysis-notes	hub	git@github.com:aaronjan98/Math-450A-Class-Notes.git
+school/published-real-analysis-notes	local	ssh://git@localhost/srv/git/repos/Math-450A-Class-Notes.git
+school/published-stats-notes	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/Prob-Stats-Notes.git
+school/published-stats-notes	hub	git@github.com:aaronjan98/Prob-Stats-Notes.git
+school/published-stats-notes	local	ssh://git@localhost/srv/git/repos/Prob-Stats-Notes.git
+school/scientific_computing	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/scientific_computing.git
+school/scientific_computing	local	ssh://git@localhost:/srv/git/repos/scientific_computing.git
+school/trad-mus-research-paper	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/trad-mus-research-paper.git
+school/trad-mus-research-paper	local	ssh://git@localhost/srv/git/repos/trad-mus-research-paper.git
+school/W3Schools/DS_Home	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ds_home.git
+school/W3Schools/DS_Home	local	ssh://git@localhost:/srv/git/repos/ds_home.git
+self-hosted/homelab/Raymer	home	sweetpea-git:/srv/git/repos/raymer-homelab-docs.git
+self-hosted/llmfit	hub	https://github.com/AlexsJones/llmfit.git
+self-hosted/zettelkasten	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/zettelkasten.git
+self-hosted/zettelkasten	hub	git@github.com:aaronjan98/zettelkasten.git
+self-hosted/zettelkasten	local	ssh://git@localhost/srv/git/repos/zettelkasten.git

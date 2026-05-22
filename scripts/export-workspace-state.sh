@@ -4,6 +4,7 @@ set -euo pipefail
 LIVE_ROOT="${HOME}/Repositories"
 SNAPSHOT_ROOT="${HOME}/nixos-config/tools/workspace/Repositories"
 MANIFEST_PATH="${SNAPSHOT_ROOT}/repos.tsv"
+REMOTES_PATH="${SNAPSHOT_ROOT}/remotes.tsv"
 
 log() {
   printf '==> %s\n' "$*"
@@ -58,6 +59,25 @@ write_manifest_header() {
 EOM
 }
 
+write_remotes_header() {
+  cat > "$REMOTES_PATH" <<'EOM'
+# relative_path	remote_name	remote_url
+EOM
+}
+
+record_remotes() {
+  local repo_dir="$1"
+  local rel_path="$2"
+  local remote_name
+  local remote_url
+
+  while IFS= read -r remote_name; do
+    [[ -z "$remote_name" ]] && continue
+    remote_url="$(git -C "$repo_dir" remote get-url "$remote_name" 2>/dev/null)" || continue
+    printf '%s\t%s\t%s\n' "$rel_path" "$remote_name" "$remote_url" >> "$REMOTES_PATH"
+  done < <(git -C "$repo_dir" remote 2>/dev/null | sort)
+}
+
 record_repo() {
   local repo_dir="$1"
   local rel_path="$2"
@@ -68,6 +88,7 @@ record_repo() {
   remote_url="$(get_remote_url "$repo_dir")"
 
   printf '%s\t%s\t%s\n' "$rel_path" "$repo_name" "$remote_url" >> "$MANIFEST_PATH"
+  record_remotes "$repo_dir" "$rel_path"
 }
 
 discover_tree() {
@@ -120,6 +141,7 @@ main() {
   log "Resetting snapshot routing directories"
   find "$SNAPSHOT_ROOT" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
   write_manifest_header
+  write_remotes_header
 
   log "Copying top-level agent files"
   copy_if_exists "${LIVE_ROOT}/ROUTER.md"   "${SNAPSHOT_ROOT}/ROUTER.md"
@@ -134,6 +156,7 @@ main() {
   log "Workspace export complete"
   log "Snapshot root: $SNAPSHOT_ROOT"
   log "Manifest: $MANIFEST_PATH"
+  log "Remotes: $REMOTES_PATH"
 }
 
 main "$@"
