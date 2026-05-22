@@ -50,7 +50,15 @@ sync_repo() {
   fi
 
   log "Fetching updates in ${target_dir}"
-  git -C "$target_dir" fetch --all --prune
+  # Iterate per-remote so a single dead remote (e.g. a `local` bare repo not
+  # seeded on this laptop) only warns instead of killing the whole sync.
+  local remote
+  while IFS= read -r remote; do
+    [[ -z "$remote" ]] && continue
+    if ! git -C "$target_dir" fetch --prune "$remote" 2>&1; then
+      warn "Fetch failed for remote '${remote}' in ${target_dir} — continuing"
+    fi
+  done < <(git -C "$target_dir" remote)
 
   if ! repo_is_clean "$target_dir"; then
     warn "Repo has local changes, skipping pull: ${target_dir}"
