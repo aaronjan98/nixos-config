@@ -1,26 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# sync-machine.sh — pull or push all synced data layers when switching laptops.
+# sync-machine.sh — pull or check git layers when switching laptops.
+#
+# Documents and Pictures are handled by Syncthing in the background; this
+# script only touches the git-tracked layers that need explicit pull/push.
 #
 # Usage:
 #   sync-machine.sh --arrive   (run when sitting down at this machine)
 #   sync-machine.sh --leave    (run before switching to another machine)
 #
-# Arrive: pulls git repos + Documents from NAS + workspace repos
-# Leave:  pushes Documents to NAS + warns about any uncommitted git changes
+# Arrive: pulls git repos + reconstructs workspace
+# Leave:  warns about any uncommitted git changes
 
-NAS_HOST="${NAS_HOST:-aj@qwerty.home}"
-NAS_DOCS_REMOTE="${NAS_DOCS_REMOTE:-/mnt/storage/desktop-sync/Documents}"
-NAS_PICS_REMOTE="${NAS_PICS_REMOTE:-/mnt/storage/desktop-sync/Pictures}"
-LOCAL_DOCS="${LOCAL_DOCS:-${HOME}/Documents}"
-LOCAL_PICS="${LOCAL_PICS:-${HOME}/Pictures}"
 ZETTELKASTEN="${ZETTELKASTEN:-${HOME}/Repositories/self-hosted/zettelkasten}"
 NIXOS_CONFIG="${HOME}/nixos-config"
 PASS_DIR="${HOME}/.password-store"
 DOTFILES_DIR="${HOME}/.dotfiles"
-
-RSYNC_SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15)
 
 log()  { printf '\n==> %s\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
@@ -56,33 +52,6 @@ check_uncommitted() {
     fi
 }
 
-# ─── rsync helpers ───────────────────────────────────────────────────────────
-
-_rsync_pull() {
-    local label="$1" remote="$2" local_dir="$3"
-    log "Pulling ${label} from NAS..."
-    # No --delete on pull: preserve local files not yet pushed to NAS.
-    rsync -avhz --progress \
-        -e "ssh ${RSYNC_SSH_OPTS[*]}" \
-        "${NAS_HOST}:${remote}/" "${local_dir}/" \
-        || warn "${label} pull failed (NAS unreachable? Try: tailscale up)"
-}
-
-_rsync_push() {
-    local label="$1" remote="$2" local_dir="$3"
-    log "Pushing ${label} to NAS..."
-    # --delete: NAS mirrors current state; always pull first on the other machine.
-    rsync -avhz --progress --delete \
-        -e "ssh ${RSYNC_SSH_OPTS[*]}" \
-        "${local_dir}/" "${NAS_HOST}:${remote}/" \
-        || warn "${label} push failed (NAS unreachable? Try: tailscale up)"
-}
-
-rsync_pull_docs() { _rsync_pull "Documents" "${NAS_DOCS_REMOTE}" "${LOCAL_DOCS}"; }
-rsync_push_docs() { _rsync_push "Documents" "${NAS_DOCS_REMOTE}" "${LOCAL_DOCS}"; }
-rsync_pull_pics() { _rsync_pull "Pictures"  "${NAS_PICS_REMOTE}" "${LOCAL_PICS}"; }
-rsync_push_pics() { _rsync_push "Pictures"  "${NAS_PICS_REMOTE}" "${LOCAL_PICS}"; }
-
 # ─── commands ────────────────────────────────────────────────────────────────
 
 cmd_arrive() {
@@ -94,13 +63,12 @@ cmd_arrive() {
     dotfiles_pull
     git_pull "pass" "${PASS_DIR}"
     git_pull "zettelkasten" "${ZETTELKASTEN}"
-    rsync_pull_docs
-    rsync_pull_pics
 
     log "Syncing workspace repos..."
     bash "${NIXOS_CONFIG}/scripts/sync-workspace-repos.sh"
 
     log "Arrive sync complete."
+    info "Documents and Pictures sync continuously via Syncthing — no action needed here."
     info "If nixos-config changed, run: nrs"
     info "Source your shell if aliases changed: source ~/.bashrc"
 }
@@ -111,11 +79,9 @@ cmd_leave() {
     check_uncommitted "pass"         "${PASS_DIR}"
     check_uncommitted "zettelkasten" "${ZETTELKASTEN}"
 
-    rsync_push_docs
-    rsync_push_pics
-
     log "Leave sync complete."
     info "Push git repos before closing: g pushall / dot pushall"
+    info "Documents and Pictures are already syncing via Syncthing."
 }
 
 # ─── main ────────────────────────────────────────────────────────────────────
@@ -126,8 +92,8 @@ case "${1:-}" in
     *)
         printf 'Usage: %s --arrive | --leave\n' "$(basename "$0")"
         printf '\n'
-        printf '  --arrive  pull all layers when sitting down at this machine\n'
-        printf '  --leave   push Documents and warn about uncommitted changes\n'
+        printf '  --arrive  pull all git layers when sitting down at this machine\n'
+        printf '  --leave   warn about uncommitted changes\n'
         exit 1
         ;;
 esac

@@ -24,12 +24,6 @@ main() {
   log "Enabling export-workspace-state.timer by default"
   systemctl --user enable --now export-workspace-state.timer
 
-  log "Enabling sync-documents.timer by default"
-  systemctl --user enable --now sync-documents.timer
-
-  log "Enabling sync-pictures.timer by default"
-  systemctl --user enable --now sync-pictures.timer
-
   log "Leaving video-summary units disabled by default"
   systemctl --user disable --now video-summary.timer 2>/dev/null || true
   systemctl --user disable --now video-summary.path 2>/dev/null || true

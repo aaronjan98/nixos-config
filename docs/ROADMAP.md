@@ -39,21 +39,16 @@ Relevant file: `modules/hypr-idle-lock.nix`
 
 ## Future features
 
-### NAS sync: refactor to systemd template service when adding more directories
+### WIP-branch helper for moving uncommitted work between hosts
 
-Current state: `~/Documents` and `~/Pictures` each have their own `sync-*.service` / `sync-*.timer` pair (Option A, chosen for simplicity with two directories).
+Syncthing handles file-sync (Documents/Pictures). Git repos remain pull/push-driven on purpose — file-syncing `.git/` is unsafe (mutable binary database, non-atomic across files, sync-conflict files inside `.git/` corrupt the repo).
 
-If a third directory is added (e.g. `~/Music`, `~/Videos`), refactor all sync units to a single systemd template service:
+That leaves a real workflow gap: uncommitted WIP on host A is not visible on host B without committing. Proposed helpers:
 
-- Rename to `sync-nas@.service` / `sync-nas@.timer` (using the `%i` instance specifier for the directory name)
-- Delete the individual `sync-documents.*` and `sync-pictures.*` units
-- Enable instances: `sync-nas@Documents`, `sync-nas@Pictures`, `sync-nas@Music`, etc.
+- `wip-leave` — for each tracked repo with uncommitted changes, stage everything, commit as `wip: <host> <iso-timestamp>`, push to a `wip/<host>` branch.
+- `wip-arrive` — for each repo with a matching `wip/<host>` branch newer than `main`, check out that branch and `git reset --soft HEAD~1` so the changes reappear as uncommitted, then delete the remote WIP branch.
 
-This keeps unit files DRY and avoids accumulating near-duplicate pairs for every new directory.
-
-Relevant files:
-- `systemd/user/sync-documents.service` / `sync-documents.timer`
-- `systemd/user/sync-pictures.service` / `sync-pictures.timer`
+This captures the "Syncthing for repos" feeling using git's atomic primitives. Relevant files when implementing: `scripts/sync-machine.sh` (hook into `--leave` / `--arrive`), the per-repo iteration logic from the suspend preflight.
 
 ---
 

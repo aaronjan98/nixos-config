@@ -1,9 +1,0 @@
-[Unit]
-Description=Sync ~/Pictures to qwerty desktop-sync
-After=network-online.target
-
-[Service]
-Type=oneshot
-Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
-ExecStart=/run/current-system/sw/bin/rsync -avhz --progress --delete /home/aj/Pictures/ aj@qwerty:/mnt/storage/desktop-sync/Pictures/
-WorkingDirectory=/home/aj
