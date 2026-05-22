@@ -24,6 +24,10 @@ main() {
   log "Enabling export-workspace-state.timer by default"
   systemctl --user enable --now export-workspace-state.timer
 
+  log "Enabling sync-arrive.service on graphical login"
+  # No --now: this fires automatically when graphical-session.target next activates.
+  systemctl --user enable sync-arrive.service
+
   log "Leaving video-summary units disabled by default"
   systemctl --user disable --now video-summary.timer 2>/dev/null || true
   systemctl --user disable --now video-summary.path 2>/dev/null || true

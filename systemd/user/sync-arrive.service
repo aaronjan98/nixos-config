@@ -1,0 +1,17 @@
+[Unit]
+Description=Pull all git-tracked sync layers on graphical login
+# graphical-session.target activates when a desktop session (SDDM->Hyprland)
+# starts, so this fires once per arrive, not on every shell login.
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=oneshot
+# %t expands to $XDG_RUNTIME_DIR (/run/user/<uid>) — same SSH agent socket
+# path used by the retired sync-documents.service, known to work here.
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+ExecStart=/home/aj/nixos-config/scripts/sync-machine.sh --arrive
+WorkingDirectory=/home/aj
+
+[Install]
+WantedBy=graphical-session.target
