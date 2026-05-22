@@ -28,9 +28,11 @@
     ../../modules/caddy.nix
     ../../modules/podman.nix
     ../../modules/syncthing.nix
+    ../../modules/sync-leave-preflight.nix
   ];
 
   aj.syncthing.enable = true;
+  aj.syncLeavePreflight.enable = true;
 
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];

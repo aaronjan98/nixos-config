@@ -17,6 +17,9 @@ ZETTELKASTEN="${ZETTELKASTEN:-${HOME}/Repositories/self-hosted/zettelkasten}"
 NIXOS_CONFIG="${HOME}/nixos-config"
 PASS_DIR="${HOME}/.password-store"
 DOTFILES_DIR="${HOME}/.dotfiles"
+REPOS_ROOT="${HOME}/Repositories"
+WORKSPACE_MANIFEST="${HOME}/nixos-config/tools/workspace/Repositories/repos.tsv"
+LEAVE_STATUS_FILE="/tmp/sync-leave.status"
 
 log()  { printf '\n==> %s\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
@@ -43,13 +46,20 @@ dotfiles_pull() {
         || warn "dotfiles: could not fast-forward. Pull manually with: dot pull home main"
 }
 
-check_uncommitted() {
-    local name="$1" dir="$2"
-    [[ -d "${dir}/.git" ]] || return 0
-    if ! git -C "${dir}" diff --quiet 2>/dev/null \
-        || ! git -C "${dir}" diff --cached --quiet 2>/dev/null; then
-        warn "${name}: has uncommitted changes — commit and push before leaving."
-    fi
+repo_is_dirty() {
+    local dir="$1"
+    [[ -d "${dir}/.git" ]] || return 1
+    [[ -n "$(git -C "$dir" status --porcelain 2>/dev/null)" ]]
+}
+
+# Dotfiles uses $HOME as worktree, so untracked-files would include the entire
+# home directory. Restrict to tracked file changes only via -uno.
+dotfiles_is_dirty() {
+    [[ -d "$DOTFILES_DIR" ]] || return 1
+    local out
+    out="$(git --git-dir="$DOTFILES_DIR" --work-tree="$HOME" \
+        status --porcelain -uno 2>/dev/null || true)"
+    [[ -n "$out" ]]
 }
 
 # ─── commands ────────────────────────────────────────────────────────────────
@@ -74,14 +84,47 @@ cmd_arrive() {
 }
 
 cmd_leave() {
-    log "Checking for uncommitted changes..."
-    check_uncommitted "nixos-config" "${NIXOS_CONFIG}"
-    check_uncommitted "pass"         "${PASS_DIR}"
-    check_uncommitted "zettelkasten" "${ZETTELKASTEN}"
+    log "Checking all tracked repos for uncommitted changes..."
 
-    log "Leave sync complete."
-    info "Push git repos before closing: g pushall / dot pushall"
-    info "Documents and Pictures are already syncing via Syncthing."
+    local -a dirty=()
+
+    # System-level repos
+    if repo_is_dirty "$NIXOS_CONFIG"; then dirty+=("nixos-config"); fi
+    if repo_is_dirty "$PASS_DIR";     then dirty+=("pass");         fi
+    if dotfiles_is_dirty;             then dirty+=("dotfiles");     fi
+
+    # Workspace repos — iterate the same manifest bootstrap/sync use, so the
+    # scope here matches what sync-arrive pulls.
+    if [[ -f "$WORKSPACE_MANIFEST" ]]; then
+        local rel _name _url
+        while IFS=$'\t' read -r rel _name _url; do
+            [[ -z "$rel" ]] && continue
+            [[ "${rel:0:1}" == "#" ]] && continue
+            if repo_is_dirty "${REPOS_ROOT}/${rel}"; then
+                dirty+=("Repositories/${rel}")
+            fi
+        done < "$WORKSPACE_MANIFEST"
+    else
+        warn "Workspace manifest not found: ${WORKSPACE_MANIFEST}"
+    fi
+
+    if [[ ${#dirty[@]} -eq 0 ]]; then
+        printf 'All repos clean — safe to close lid.\n' | tee "$LEAVE_STATUS_FILE"
+        log "Leave check complete: no dirty repos."
+        info "Documents and Pictures sync continuously via Syncthing."
+        return 0
+    fi
+
+    {
+        printf '%d repo(s) with uncommitted changes:\n' "${#dirty[@]}"
+        local d
+        for d in "${dirty[@]}"; do
+            printf '  • %s\n' "$d"
+        done
+    } | tee "$LEAVE_STATUS_FILE"
+
+    log "Leave check complete: ${#dirty[@]} dirty repo(s) — review before closing lid."
+    return 2
 }
 
 # ─── main ────────────────────────────────────────────────────────────────────
