@@ -22,6 +22,11 @@
   # Kanata layout — points to this host's kbd file. Framework gets its own copy.
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
 
+  # Syncthing peers — every other host this machine should sync with.
+  aj.syncthing.devices = {
+    framework-13.id = "HREY2AY-SFXA77Y-DII3WXI-PRXKRDT-CJTOLHQ-6DQHQ2R-BA2I3MZ-CKGQPQR";
+  };
+
   # SSH public keys for the local git server on this machine.
   aj.gitServer.authorizedKeys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"

@@ -32,6 +32,11 @@
   # Kanata layout — identical to ThinkPad for now; diverge here as needed.
   environment.etc."kanata/kanata-internal.kbd".source = ./kanata/kanata-internal.kbd;
 
+  # Syncthing peers — every other host this machine should sync with.
+  aj.syncthing.devices = {
+    thinkpad-t14.id = "JGO6ECN-PM4ILSY-YMPRV7C-A4MR5L5-JQAOCFQ-UKXMT4N-UE6CYJE-PLDVXAB";
+  };
+
   # SSH public keys for the local git server on this machine.
   # Add the Framework's own ed25519 key here after first boot.
   aj.gitServer.authorizedKeys = [
