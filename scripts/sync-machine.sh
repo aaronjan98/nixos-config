@@ -87,6 +87,10 @@ rsync_push_pics() { _rsync_push "Pictures"  "${NAS_PICS_REMOTE}" "${LOCAL_PICS}"
 
 cmd_arrive() {
     git_pull "nixos-config" "${NIXOS_CONFIG}"
+
+    log "Restoring workspace routing files from snapshot..."
+    bash "${NIXOS_CONFIG}/scripts/bootstrap-workspace.sh"
+
     dotfiles_pull
     git_pull "pass" "${PASS_DIR}"
     git_pull "zettelkasten" "${ZETTELKASTEN}"
