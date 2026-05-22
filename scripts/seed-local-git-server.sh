@@ -10,11 +10,14 @@ if [[ ! -f "$IDENTITY_FILE" ]]; then
   IDENTITY_FILE="/home/aj/.ssh/id_ed25519"
 fi
 
+KNOWN_HOSTS_FILE="${HOME}/.config/git-seed/known_hosts"
+mkdir -p "$(dirname "$KNOWN_HOSTS_FILE")"
+
 SSH_OPTS=(
   -i "$IDENTITY_FILE"
   -o IdentitiesOnly=yes
   -o StrictHostKeyChecking=accept-new
-  -o UserKnownHostsFile=/var/lib/git-seed/known_hosts
+  -o "UserKnownHostsFile=${KNOWN_HOSTS_FILE}"
 )
 
 BASE="ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos"
@@ -52,7 +55,6 @@ REPOS=(
 echo "==> Seeding git repos into $REPOS_DIR"
 
 sudo mkdir -p "$REPOS_DIR"
-sudo install -d -m 700 -o aj -g users /var/lib/git-seed
 sudo chown -R git:git /srv/git || true
 sudo chmod 2775 "$REPOS_DIR" || true
 
