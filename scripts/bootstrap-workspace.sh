@@ -19,47 +19,12 @@ ensure_dir() {
   mkdir -p "$1"
 }
 
-copy_if_exists() {
-  local src="$1"
-  local dst="$2"
-
-  if [[ -f "$src" ]]; then
-    ensure_dir "$(dirname "$dst")"
-    cp "$src" "$dst"
-    log "Copied: $dst"
-  fi
-}
-
-sync_dir_if_exists() {
-  local src="$1"
-  local dst="$2"
-
-  if [[ -d "$src" ]]; then
-    ensure_dir "$dst"
-    rsync -a "$src/" "$dst/"
-  fi
-}
 
 restore_routing_files() {
-  log "Restoring top-level routing files"
-  copy_if_exists "${SNAPSHOT_ROOT}/ROUTER.md"  "${LIVE_ROOT}/ROUTER.md"
-  copy_if_exists "${SNAPSHOT_ROOT}/CONTEXT.md" "${LIVE_ROOT}/CONTEXT.md"
-  copy_if_exists "${SNAPSHOT_ROOT}/MEMORY.md"  "${LIVE_ROOT}/MEMORY.md"
-  sync_dir_if_exists "${SNAPSHOT_ROOT}/memory"         "${LIVE_ROOT}/memory"
-  sync_dir_if_exists "${SNAPSHOT_ROOT}/project-memory" "${LIVE_ROOT}/project-memory"
-
-  log "Restoring area-level routing files"
-  local area_dir area_name
-  shopt -s nullglob
-  for area_dir in "${SNAPSHOT_ROOT}"/*/; do
-    [[ -d "$area_dir" ]] || continue
-    area_name="$(basename "$area_dir")"
-    copy_if_exists "${area_dir}/CONTEXT.md" "${LIVE_ROOT}/${area_name}/CONTEXT.md"
-    copy_if_exists "${area_dir}/MEMORY.md"  "${LIVE_ROOT}/${area_name}/MEMORY.md"
-    sync_dir_if_exists "${area_dir}/memory"         "${LIVE_ROOT}/${area_name}/memory"
-    sync_dir_if_exists "${area_dir}/project-memory" "${LIVE_ROOT}/${area_name}/project-memory"
-  done
-  shopt -u nullglob
+  log "Restoring routing files from snapshot"
+  # The snapshot already stops at git repo boundaries, so rsync the whole tree.
+  # repos.tsv is snapshot metadata — it should not appear in ~/Repositories/.
+  rsync -a --exclude='repos.tsv' "${SNAPSHOT_ROOT}/" "${LIVE_ROOT}/"
 }
 
 # After cloning, rename origin to local/hub and add home remote as appropriate.
