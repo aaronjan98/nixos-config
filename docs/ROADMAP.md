@@ -52,6 +52,50 @@ This captures the "Syncthing for repos" feeling using git's atomic primitives. R
 
 ---
 
+### Local-AI-driven auto-commit on Super+E
+
+Status: blocked on local-LLM capability
+
+Goal:
+- Have `Super+E` (sync-leave) optionally hand off each dirty repo to a
+  local AI agent that can:
+  1. Read the diff (`git diff` + `git diff --staged`)
+  2. Author a meaningful, repo-aware commit message
+  3. Stage + commit + push to the appropriate remote(s)
+- The current `sync-leave` is intentionally read-only (notification only)
+  because automated commit messages on uncommitted work would be noise
+  without genuine summarisation quality. A capable local model would close
+  this gap and let the user actually walk away from the laptop after a
+  single keypress.
+
+Why deferred:
+- Needs a local model that is **good at tool calling** (file reads, shell
+  commands, git operations) **and fast enough** to commit ~5–15 repos in
+  under a minute. As of now no shipping local model in the user's
+  hardware budget meets both bars reliably. Cloud models meet the bar but
+  defeat the "works offline, on suspend" property.
+
+Design notes for when this is unblocked:
+- Add a `sync-machine.sh --leave-auto` mode (or flag) that delegates to a
+  per-repo agent run; keep the current `--leave` as the safe default.
+- Agent should refuse to commit when the diff exceeds some sanity
+  threshold (e.g. >500 lines or >20 files), to avoid one runaway commit
+  flattening real work. Fall back to the notification-only path with a
+  "too big — commit by hand" toast in that case.
+- Push step should respect existing remote conventions (e.g. `g pushall`
+  semantics) and skip repos without an upstream rather than guessing.
+- Worth pairing with the WIP-branch helper above: the agent's automated
+  commits could land on `wip/<host>` first and only graduate to `main`
+  on explicit user approval.
+
+Relevant files when implementing:
+- `scripts/sync-machine.sh` — add the `--leave-auto` codepath
+- `~/.config/hypr/scripts/sync-toast` — wire `Super+E` (or a new keybind)
+  to the auto mode
+- `~/.config/hypr/conf.d/20-binds.conf` — keybind
+
+---
+
 ### math-ocr / pix2tex: reimplement using venv runtime model
 
 **Background**: multiple attempts were made to package pix2tex (LaTeX-OCR) as a pure NixOS system package. All failed for the same fundamental reasons:

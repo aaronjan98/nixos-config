@@ -12,6 +12,31 @@ The goal is not to make every machine identical at every moment — it is to kee
 
 ---
 
+## TL;DR — the everyday workflow
+
+**Sitting down at a laptop:** press `Super+A`. That's it. It pulls
+nixos-config, dotfiles, pass, zettelkasten, and every project repo.
+A toast tells you when it's done. (It also runs automatically the
+first time you log in graphically, so most of the time you don't even
+press it.)
+
+**Walking away from a laptop:** press `Super+E` *or just close the lid*.
+A toast lists any repos with uncommitted changes — your reminder to
+commit and push before suspend. It never auto-pushes; that part is on
+you (`g pushall` / `dot pushall`).
+
+**Documents and Pictures:** nothing to do — Syncthing mirrors them
+continuously over LAN or relay between every laptop and the always-on
+homelab peer (`qwerty`). Even if both laptops are never on at the same
+time, the homelab catches changes and propagates them on next session.
+
+**After a `Super+A` pull, if anything in `nixos-config` changed:** run
+`nrs` to rebuild. If shell aliases changed: `source ~/.bashrc`.
+
+That's the whole loop. Everything below is the detail behind it.
+
+---
+
 ## Day-to-day workflow
 
 Two keybinds in Hyprland (`~/.config/hypr/conf.d/20-binds.conf`) drive the manual layers. Both run through `~/.config/hypr/scripts/sync-toast`, which wraps `sync-machine.sh` and surfaces results via `notify-send` toasts (rendered by Quickshell).

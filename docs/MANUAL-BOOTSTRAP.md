@@ -104,6 +104,11 @@ The script handles:
 5. Authenticates Tailscale (`sudo tailscale up`)
 6. Runs `bootstrap-new-machine.sh` (workspace setup, git server seeding, etc.)
 
+The system-level `sync-leave-preflight` service is pulled in automatically
+via `hosts/common` (no manual enable needed). It hooks `sleep.target` to
+toast a dirty-repo warning before the machine suspends — see Phase 3
+below to validate it after rebuild.
+
 ### 3. Add the new ed25519 key to NixOS config
 
 The script prints the public key. Add it to
@@ -119,6 +124,22 @@ Then commit, push, and rebuild:
     g ci -am 'hosts/<hostname>: add ed25519 SSH key'
     g pushall
     nrs
+
+---
+
+## Phase 3 — Smoke test
+
+After the rebuild, verify the cross-machine flows actually work:
+
+1. **Keybinds**: press `Super+A` (sync-arrive) and `Super+E` (sync-leave) —
+   both should toast (green "OK" or yellow "action needed").
+2. **Pre-suspend toast**: `sudo systemctl start sync-leave-preflight` —
+   should exit cleanly with a toast. Real validation: close the lid, wake,
+   confirm the toast is in your notification history.
+3. **Push reach**: `g pushall` on `~/nixos-config` should push to `home`,
+   `hub`, and `local` without errors. Likewise `dot pushall`.
+4. **Syncthing**: confirm the new host appears in the Syncthing UI on the
+   other peers and shares `Documents`/`Pictures`.
 
 ---
 
@@ -153,3 +174,9 @@ before the build. Run:
     nix --extra-experimental-features 'nix-command' store add-file \
       /var/lib/distfiles/wolfram/Wolfram_14.3.0_LIN_Bndl.sh
     nrs
+
+**`seed-local-git-server.sh` reports "fatal: not a git repository" for
+every existing mirror** — `/srv/git/` is mode 700, blocking traversal by
+group `git` members. Current `seed-local-git-server.sh` self-heals this
+(`sudo chmod 2750 /srv/git`), but if you're on an older copy of the
+script, apply the chmod manually and re-run.
