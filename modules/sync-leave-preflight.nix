@@ -42,21 +42,22 @@ in
       # Pull this in whenever the system heads for any sleep state.
       wantedBy = [ "sleep.target" ];
       before   = [ "sleep.target" ];
+      # Resolve XDG_RUNTIME_DIR / DBUS_SESSION_BUS_ADDRESS at runtime via
+      # `id -u`. Avoids depending on systemd specifier expansion (%U) inside
+      # Environment= values, which NixOS rendered as a literal "%U" and broke
+      # notify-send's ability to reach the user's session bus.
+      script = ''
+        export PATH="/run/current-system/sw/bin:/run/wrappers/bin:$PATH"
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+        exec ${cfg.wrapper} leave
+      '';
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;
         Group = "users";
-        # %U expands to the configured user's UID. Quickshell listens on the
-        # user session bus at /run/user/<uid>/bus; without this env var,
-        # notify-send would try the system bus and silently fail.
-        Environment = [
-          "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus"
-          "XDG_RUNTIME_DIR=/run/user/%U"
-          "PATH=/run/current-system/sw/bin:/run/wrappers/bin"
-        ];
         # Cap the runtime so a hung git status can't delay suspend indefinitely.
         TimeoutStartSec = "20s";
-        ExecStart = "${cfg.wrapper} leave";
         # Exit 2 from the wrapper (dirty repos found) is informational, not
         # a failure. Don't poison the suspend cycle if the toast itself reports
         # warnings.
