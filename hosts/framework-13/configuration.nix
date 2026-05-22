@@ -35,6 +35,7 @@
   # Syncthing peers — every other host this machine should sync with.
   aj.syncthing.devices = {
     thinkpad-t14.id = "JGO6ECN-PM4ILSY-YMPRV7C-A4MR5L5-JQAOCFQ-UKXMT4N-UE6CYJE-PLDVXAB";
+    qwerty.id       = "F4NZQDP-JYNM45X-6M4J5QE-UY4RI3E-DYCRDWS-BX2L6KF-SIW3M3I-WG7I5AR";
   };
 
   # SSH public keys for the local git server on this machine.

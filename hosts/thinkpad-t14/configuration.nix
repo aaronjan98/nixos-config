@@ -25,6 +25,7 @@
   # Syncthing peers — every other host this machine should sync with.
   aj.syncthing.devices = {
     framework-13.id = "HREY2AY-SFXA77Y-DII3WXI-PRXKRDT-CJTOLHQ-6DQHQ2R-BA2I3MZ-CKGQPQR";
+    qwerty.id       = "F4NZQDP-JYNM45X-6M4J5QE-UY4RI3E-DYCRDWS-BX2L6KF-SIW3M3I-WG7I5AR";
   };
 
   # SSH public keys for the local git server on this machine.
