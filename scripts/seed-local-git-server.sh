@@ -54,7 +54,7 @@ for entry in "${REPOS[@]}"; do
   read -r name url <<<"$entry"
   dest="$REPOS_DIR/$name.git"
 
-  if [[ -d "$dest" ]]; then
+  if sudo test -d "$dest"; then
     echo "--> Updating mirror: $name"
     git --git-dir="$dest" remote set-url origin "$url" || true
     if ! GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
@@ -75,7 +75,7 @@ for entry in "${REPOS[@]}"; do
       continue
     fi
 
-    sudo mv "$tmp/$name.git" "$dest"
+    sudo cp -a "$tmp/$name.git" "$dest"
     rm -rf "$tmp"
   fi
 
