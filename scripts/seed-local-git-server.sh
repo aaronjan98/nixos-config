@@ -56,9 +56,9 @@ for entry in "${REPOS[@]}"; do
 
   if sudo test -d "$dest"; then
     echo "--> Updating mirror: $name"
-    git --git-dir="$dest" remote set-url origin "$url" || true
+    sudo -u git git -c safe.directory="$dest" --git-dir="$dest" remote set-url origin "$url" || true
     if ! GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
-        git --git-dir="$dest" remote update --prune; then
+        sudo -u git git -c safe.directory="$dest" --git-dir="$dest" remote update --prune; then
       echo "WARN: failed to update $name — skipping."
       failed+=("$name")
       continue
