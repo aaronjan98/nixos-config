@@ -60,6 +60,10 @@ echo "==> Seeding git repos into $REPOS_DIR"
 sudo mkdir -p "$REPOS_DIR"
 sudo chown -R git:git /srv/git || true
 sudo chmod 2775 "$REPOS_DIR" || true
+# /srv/git itself needs to be traversable by the git group, otherwise
+# group members (e.g. aj) can't reach the bare repos to update them —
+# clone works (via /tmp + sudo cp -a) but `git remote update` doesn't.
+sudo chmod 2750 /srv/git || true
 
 umask 002
 
@@ -71,7 +75,20 @@ for entry in "${REPOS[@]}"; do
 
   if sudo test -d "$dest"; then
     echo "--> Updating mirror: $name"
-    git -c safe.directory="$dest" --git-dir="$dest" remote set-url origin "$url" || true
+    # Pre-emptively widen group perms — existing object dirs may have been
+    # created with stricter modes that block unpack-objects when running as aj.
+    sudo chmod -R g+rwX "$dest" 2>/dev/null || true
+    # Some repos were created with `git init --bare` instead of `clone --mirror`
+    # and have no 'origin' configured. Add it with mirror semantics if missing,
+    # otherwise just refresh the URL.
+    if git -c safe.directory="$dest" --git-dir="$dest" \
+        remote get-url origin >/dev/null 2>&1; then
+      git -c safe.directory="$dest" --git-dir="$dest" \
+        remote set-url origin "$url" || true
+    else
+      git -c safe.directory="$dest" --git-dir="$dest" \
+        remote add --mirror=fetch origin "$url" || true
+    fi
     if ! GIT_SSH_COMMAND="ssh ${SSH_OPTS[*]}" \
         git -c safe.directory="$dest" --git-dir="$dest" remote update --prune; then
       echo "WARN: failed to update $name — skipping."
