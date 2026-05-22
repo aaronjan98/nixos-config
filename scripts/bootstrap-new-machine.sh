@@ -79,7 +79,11 @@ main() {
 
   run_step "Installing tracked user systemd units" "$INSTALL_UNITS"
   run_step "Seeding local git server" "$SEED_GIT_SERVER"
-  run_step "Syncing distfiles" "$SYNC_DISTFILES"
+  if ask_yes_no "Sync distfiles from NAS now? (Only needed before a requireFile Nix build — skip on most setups)"; then
+    run_step "Syncing distfiles" "$SYNC_DISTFILES"
+  else
+    log "Skipping distfiles sync. Run manually when needed: sync-distfiles <name>"
+  fi
   run_step "Bootstrapping workspace layout" "$BOOTSTRAP_WORKSPACE"
   run_step "Syncing workspace repos" "$SYNC_WORKSPACE"
 
