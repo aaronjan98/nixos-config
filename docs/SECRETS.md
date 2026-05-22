@@ -38,6 +38,20 @@ SSH files are restored from `pass` using the prefix:
 These are written into:
 - `~/.ssh/`
 
+#### Per-host SSH config convention
+
+Each host's `~/.ssh/config` is stored separately in pass and may differ across hosts in `IdentityFile` lines. The standing conventions are:
+
+- `Host sweetpea-git` (homelab git server) → `IdentityFile ~/.ssh/id_rsa`. `id_rsa` is the shared cross-machine key already authorized on the homelab, so any new host can bootstrap without manual `authorized_keys` editing.
+- `Host *.home` and other homelab aliases → `IdentityFile ~/.ssh/id_rsa` for the same reason.
+- Machine-specific identity keys (`~/.ssh/<hostname>`, e.g. `~/.ssh/thinkpad-t14`) exist for local git server access (authorized in each host's `configuration.nix` via `aj.gitServer.authorizedKeys`) and any per-host services you choose. They are not used for homelab git access.
+
+Adding a new host:
+1. On an existing source-of-truth host, `pass cp laptop/<existing>/ssh/<file> laptop/<new-host>/ssh/<file>` for each file that should propagate (skip the existing host's machine identity key).
+2. Push pass.
+3. On the new host, after GPG + pass are working, run `restore-secrets.sh`.
+4. Generate the new host's machine identity key locally (`~/.ssh/<new-host>`), add the pubkey to that host's `configuration.nix`, push.
+
 ### SOPS age key
 The SOPS age key is stored in `pass` at:
 
