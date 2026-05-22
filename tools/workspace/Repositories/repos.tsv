@@ -12,6 +12,6 @@ school/published-stats-notes	published-stats-notes	ssh://git@localhost/srv/git/r
 school/scientific_computing	scientific_computing	ssh://git@localhost:/srv/git/repos/scientific_computing.git
 school/trad-mus-research-paper	trad-mus-research-paper	ssh://git@localhost/srv/git/repos/trad-mus-research-paper.git
 school/W3Schools/DS_Home	DS_Home	ssh://git@localhost:/srv/git/repos/ds_home.git
-self-hosted/homelab/Raymer	Raymer	ssh://git@localhost/srv/git/repos/raymer-homelab-docs.git
+self-hosted/homelab/Raymer	Raymer	sweetpea-git:/srv/git/repos/raymer-homelab-docs.git
 self-hosted/llmfit	llmfit	https://github.com/AlexsJones/llmfit.git
 self-hosted/zettelkasten	zettelkasten	ssh://git@localhost/srv/git/repos/zettelkasten.git
