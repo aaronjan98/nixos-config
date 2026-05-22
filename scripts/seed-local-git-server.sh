@@ -51,8 +51,8 @@ REPOS=(
 
 echo "==> Seeding git repos into $REPOS_DIR"
 
-sudo mkdir -p "$REPOS_DIR" /var/lib/git-seed
-sudo chmod 700 /var/lib/git-seed
+sudo mkdir -p "$REPOS_DIR"
+sudo install -d -m 700 -o aj -g users /var/lib/git-seed
 sudo chown -R git:git /srv/git || true
 sudo chmod 2775 "$REPOS_DIR" || true
 
