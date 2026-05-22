@@ -27,7 +27,10 @@
     ../../modules/pi.nix
     ../../modules/caddy.nix
     ../../modules/podman.nix
+    ../../modules/syncthing.nix
   ];
+
+  aj.syncthing.enable = true;
 
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
