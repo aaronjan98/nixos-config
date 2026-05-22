@@ -77,6 +77,52 @@ apply_remotes_for_repo() {
       git -C "$target_dir" remote add "$name" "$url"
     fi
   done
+
+  # Heal upstream tracking. A fresh `git clone <url>` sets origin and points
+  # branch.<main>.remote=origin; removing origin above leaves that config
+  # dangling so `@{u}` no longer resolves and sync-workspace-repos.sh
+  # correctly refuses to pull. Re-pin the branch to a real remote — preferring
+  # `home` (self-hosted) if present, falling back to the first listed remote.
+  local branch
+  branch="$(git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [[ -z "$branch" || "$branch" == "HEAD" ]]; then
+    return  # detached HEAD or unborn branch — skip silently
+  fi
+
+  if git -C "$target_dir" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    return  # upstream already resolves to an existing remote — leave it alone
+  fi
+
+  local primary=""
+  for i in "${!desired_names[@]}"; do
+    if [[ "${desired_names[i]}" == "home" ]]; then
+      primary="home"
+      break
+    fi
+  done
+  if [[ -z "$primary" && ${#desired_names[@]} -gt 0 ]]; then
+    primary="${desired_names[0]}"
+  fi
+  if [[ -z "$primary" ]]; then
+    warn "  ${rel_path}: no remotes in manifest, cannot set upstream"
+    return
+  fi
+
+  if ! git -C "$target_dir" show-ref --verify --quiet "refs/remotes/${primary}/${branch}"; then
+    log "  ${rel_path}: fetching ${primary} to discover ${branch}"
+    if ! git -C "$target_dir" fetch --quiet "$primary" 2>/dev/null; then
+      warn "  ${rel_path}: fetch from ${primary} failed, cannot set upstream"
+      return
+    fi
+  fi
+
+  if ! git -C "$target_dir" show-ref --verify --quiet "refs/remotes/${primary}/${branch}"; then
+    warn "  ${rel_path}: ${primary} has no branch '${branch}', cannot set upstream"
+    return
+  fi
+
+  log "  ${rel_path}: set upstream ${branch} -> ${primary}/${branch}"
+  git -C "$target_dir" branch --set-upstream-to="${primary}/${branch}" "$branch"
 }
 
 apply_remotes() {
