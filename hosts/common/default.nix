@@ -188,6 +188,7 @@
       "vscode-extension-ms-toolsai-jupyter-keymap"
       "vscode-extension-ms-toolsai-jupyter-renderers"
       "cursor"
+      "burpsuite"
     ];
 
   # Users
@@ -454,4 +455,24 @@
     [Default Applications]
     application/pdf=org.gnome.Evince.desktop
   '';
+
+  # ============================================================
+  # PENTEST SPECIALISATION (all hosts)
+  # Boot via systemd-boot menu, or activate in-place with:
+  #   /run/current-system/specialisation/pentest/bin/switch-to-configuration switch
+  # Revert to default in-place:
+  #   /run/current-system/bin/switch-to-configuration switch
+  # ============================================================
+  specialisation.pentest.configuration = {
+    imports = [ ../../modules/pentest.nix ];
+
+    # Blacklist internal WiFi at kernel level — forces use of external adapter
+    boot.blacklistedKernelModules = [ "iwlwifi" "iwlmvm" ];
+
+    # VM support
+    virtualisation.libvirtd.enable = true;
+    virtualisation.spiceUSBRedirection.enable = true;
+    users.users.aj.extraGroups = [ "libvirtd" ];
+    environment.systemPackages = [ pkgs.virt-manager ];
+  };
 }

@@ -246,18 +246,16 @@ Goal:
 ---
 
 ### NixOS specialisations / alternative system profiles
-Goal:
-- figure out whether named NixOS specialisations fit the daily workflow and are worth maintaining
+Status: partially resolved — `pentest` specialisation implemented in `hosts/common/default.nix`
 
-Why this is interesting:
-- `nixos-rebuild list-generations` already exposes the `Specialisation` field, but the current setup does not use it
-- specialisations could support alternative profiles such as battery-saving, work, AI-heavy, gaming, or minimal modes
+What's in place:
+- `pentest` specialisation available on all hosts: blacklists internal WiFi, enables libvirtd + virt-manager, adds full pentest toolset (burpsuite, metasploit, nmap, etc.)
+- Activate in-place: `/run/current-system/specialisation/pentest/bin/switch-to-configuration switch`
+- Revert: `/run/current-system/bin/switch-to-configuration switch`
 
-Open questions:
-- which profiles are actually worth the maintenance cost
-- how much should differ between the base system and a specialisation
-- whether switching should happen mainly at boot, at runtime, or both
-- how service and dotfiles behavior should integrate with profile changes
+Still open:
+- whether additional profiles (battery-saving, minimal, etc.) are worth maintaining
+- dotfiles/home-manager integration with profile changes is not addressed
 
 ### `scripts/backup-secrets.sh`
 Goal:

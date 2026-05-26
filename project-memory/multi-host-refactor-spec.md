@@ -145,7 +145,7 @@ Candidate packages (fill in as needed):
 
 ## Key constraints / decisions
 
-- **Pentest as module, not specialisation** — always-on on Framework, no separate boot entry
+- **Pentest as specialisation on Framework** — default boot is clean; `pentest` specialisation adds tools, blacklists internal WiFi, enables libvirtd. `pentest.nix` is still a standalone module imported only inside the specialisation.
 - **Hosts maximally identical** — host files are thin; anything that can be shared should be
 - **Kanata files are per-host** even if identical at first — prevents cross-host coupling
 - **nixpkgs-unstable pin** — currently pinned to `01fbdeef22b76df85ea168fbfe1bfd9e63681b30`; applies to both hosts via shared flake.nix

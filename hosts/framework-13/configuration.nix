@@ -10,7 +10,6 @@
   imports = [
     ./hardware-configuration.nix
     ../common/default.nix
-    ../../modules/pentest.nix
   ];
 
   networking.hostName = "framework-13";
