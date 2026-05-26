@@ -93,8 +93,16 @@
     tailscale = {
       enable = true;
       useRoutingFeatures = "client";
+      extraUpFlags = [ "--accept-routes" "--operator=aj" ];
     };
-    resolved.enable = true;
+    resolved = {
+      enable = true;
+      extraConfig = ''
+        [Resolve]
+        DNS=100.97.56.82
+        Domains=~home
+      '';
+    };
   };
 
   # Git server — authorizedKeys is a list and merges with whatever each host
