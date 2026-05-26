@@ -22,6 +22,7 @@ enough to promote into their own repo directories.
 | Repo | Status | Description |
 |------|--------|-------------|
 | `agent-display/` | active | Local conversation workspace for AI agents and chats — file-first thread storage, browser UI, Markdown import/export, future math-native and graph workflows |
+| `canvas-accessibility-skill/` | active | Portable, agent-agnostic skill that produces WCAG 2.1-conformant accessible PDFs from course slides (LaTeX source or PDF-only). Shipped as a zipped directory to professors who unzip it and point their AI agent at it. Initial recipient: Prof. Jing Li, CSUN MATH 351 |
 
 ## Future project pipeline
 - Keep unstarted ideas in `project-memory/`

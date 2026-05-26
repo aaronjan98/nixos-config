@@ -1,6 +1,6 @@
 # Project: Home Network Monitor (LANtern)
 
-Status: incubation — router replacement must come first (provides OpenWrt data sources)
+Status: ready to start — router replacement complete as of 2026-05-24 (RPi5 + OpenWrt live)
 Resume tier: strong — demonstrates network systems, security, LLM integration, full-stack
 
 ---
@@ -127,7 +127,7 @@ This is why router replacement is a prerequisite.
 ## Build phases
 
 ### Phase 0 (prerequisite): Router replacement
-- Get OpenWrt on RPi5; replace Orbi
+- ✅ Get OpenWrt on RPi5; replace Orbi (completed 2026-05-24, LAN now 10.0.50.0/24)
 - Enable dnsmasq query logging and netflow export in OpenWrt
 - Confirm data flows to sweetpea
 
@@ -169,6 +169,7 @@ This is why router replacement is a prerequisite.
 
 ## Notes
 
-- Router replacement must come first — Orbi is a black box, no data access
+- Router replacement done (2026-05-24) — RPi5 running OpenWrt 25.12.4, LAN on 10.0.50.0/24
+- Next blocker: enable dnsmasq query logging + softflowd/netflow on OpenWrt, verify data reaches sweetpea
 - See `Raymer/project-memory/router-replacement.md` for router plan and hardware list
 - sauron WOL integration already exists; LLM queries can wake sauron on demand
