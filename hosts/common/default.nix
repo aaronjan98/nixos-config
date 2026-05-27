@@ -264,11 +264,21 @@
     GSETTINGS_SCHEMA_DIR =
       "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
   };
-  environment.extraInit = ''
-    export HUGGING_FACE_HUB_TOKEN="$(cat ${config.sops.secrets."hf_token".path})"
-    export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7_api_key".path})"
-    export OPENCODE_ZEN_API_KEY="$(cat ${config.sops.secrets."opencode_zen_api_key".path})"
-    export FORGEJO_TOKEN="$(cat ${config.sops.secrets."forgejo_token".path})"
+  # Lazy-reference each secret so the pentest specialisation (which drops
+  # these from sops.secrets) can evaluate this option without erroring on
+  # missing attrs. NixOS evaluates all definitions of `lines`-typed options
+  # to determine priority, so a hard reference here would break pentest even
+  # though pentest uses `mkForce ""` to discard the value.
+  environment.extraInit = let
+    exportSecret = name: envVar:
+      if config.sops.secrets ? ${name}
+      then ''export ${envVar}="$(cat ${config.sops.secrets.${name}.path})"''
+      else "";
+  in ''
+    ${exportSecret "hf_token" "HUGGING_FACE_HUB_TOKEN"}
+    ${exportSecret "context7_api_key" "CONTEXT7_API_KEY"}
+    ${exportSecret "opencode_zen_api_key" "OPENCODE_ZEN_API_KEY"}
+    ${exportSecret "forgejo_token" "FORGEJO_TOKEN"}
   '';
   programs.nix-ld.enable = true;
   programs.hyprland = {
@@ -473,6 +483,63 @@
     virtualisation.libvirtd.enable = true;
     virtualisation.spiceUSBRedirection.enable = true;
     users.users.aj.extraGroups = [ "libvirtd" ];
+
+    # === Tier 1: identity & credential isolation ===
+    services.tailscale.enable = lib.mkForce false;
+    aj.syncthing.enable = lib.mkForce false;
+    services.avahi.enable = lib.mkForce false;
+    services.gnome.gnome-keyring.enable = lib.mkForce false;
+    programs.ssh.startAgent = lib.mkForce false;
+
+    # Stop exporting API tokens / forgejo creds to every shell.
+    environment.extraInit = lib.mkForce "";
+
+    # Don't materialize API tokens in pentest. Keeping only login-required
+    # password secrets and any secret that other modules read at eval time
+    # (obsidian-ipc.nix dereferences obsidian/api_key in a `let`, so dropping
+    # it would break evaluation of the pentest closure).
+    #
+    # Effect: /run/secrets/{hf_token,context7_api_key,opencode_zen_api_key,
+    # forgejo_token} are not created, so any ~/.bashrc line that does
+    # `cat /run/secrets/forgejo_token` reads a missing file and exports "".
+    sops.secrets = lib.mkForce {
+      "passwords/aj" = {
+        key = "passwords_aj";
+        path = "/run/sops-nix/passwords_aj";
+        neededForUsers = true;
+      };
+      "passwords/root" = {
+        key = "passwords_root";
+        path = "/run/sops-nix/passwords_root";
+        neededForUsers = true;
+      };
+      "obsidian/api_key" = {
+        sopsFile = ../../secrets/obsidian.yaml;
+        format = "yaml";
+        key = "obsidian_key";
+        owner = "aj";
+      };
+    };
+
+    # Drop identity-tied chat apps; keep neutral utilities.
+    users.users.aj.packages = lib.mkForce (with pkgs; [
+      protonvpn-gui
+      motrix
+      mpv
+    ]);
+
+    # === Tier 2: service surface reduction ===
+    services.caddy.enable = lib.mkForce false;
+    aj.gitServer.enable = lib.mkForce false;
+    services.ollama.enable = lib.mkForce false;
+    services.open-webui.enable = lib.mkForce false;
+    services.printing.enable = lib.mkForce false;
+
+    # === Tier 3: cosmetic surface ===
+    hardware.bluetooth.enable = lib.mkForce false;
+    services.blueman.enable = lib.mkForce false;
+    services.flatpak.enable = lib.mkForce false;
+
     environment.systemPackages = [ pkgs.virt-manager ];
   };
 }

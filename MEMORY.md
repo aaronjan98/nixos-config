@@ -20,6 +20,28 @@ When applying NixOS configuration changes, agents MUST use the following aliases
 
 Always run `nrt` first to verify the configuration builds correctly before applying it with `nrs`.
 
+### `dot` alias for dotfiles
+For any operation on files tracked by the home-directory bare repo (`~/.config/`, `~/.bashrc`, `~/.bash_aliases`, `~/.gitconfig`, `~/.bash_profile`, `~/.dotfiles.gitignore`), use the `dot` shell function — not `g` or plain `git`.
+
+```
+dot add <path>
+dot commit -m "..."
+dot pushall    # pushes to home, hub (github), and local mirrors
+dot pull
+dot st
+```
+
+`dot` is defined as `git --git-dir="$HOME/.dotfiles/" --work-tree="$HOME"`. `g` is reserved for working-tree repos under `~/Repositories/`. This is also documented in `~/.config/ai/shared/tool-commands.md`.
+
+### `ssh -t` for interactive remote commands
+Always include `-t` (TTY allocation) when an `ssh` command will hit `sudo` or any interactive prompt on the remote. Without it, sudo's password prompt fails silently. `ssh user@host "sudo ..."` → `ssh -t user@host "sudo ..."`.
+
+### Session notes location
+Save session notes to `~/nixos-config/memory/YYYY-MM-DD topic.md`, not under `~/.claude/`. The repo-local `memory/` is agent-agnostic and gets browsed alongside the project files.
+
+### Zettelkasten — `Zettels/` is permanent/general; `Inside/` is personal
+Notes under `~/Repositories/self-hosted/zettelkasten/Zettels/` are **permanent, general-purpose** — they should read as true for any reader in that domain, not just the user. First-person framing ("this bit me"), project-specific names (sops.secrets, forgejo, ollama, framework-13), and one-off setup details belong under `Inside/` instead. When adding to `Zettels/`, strip personal narrative and use neutral example identifiers (`foo`, `someService`, `someAttrs`). If a topic genuinely combines general principles with personal specifics, split into a general zettel + an `Inside/` note that links to it.
+
 ---
 
 ## Excluding KDE Plasma Packages

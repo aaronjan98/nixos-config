@@ -239,6 +239,32 @@ Open question: whether grouping is the right primitive here or whether `cyclenex
 Goal:
 - replace any ad-hoc `iptables` commands with `nft` equivalents once nft is available on the system
 
+### Netbird overlay network (future)
+
+When setting up Netbird as a Tailscale alternative or complement, **do not use the default `100.64.0.0/10` range** — it collides with Tailscale's CGNAT block. Pick a clean range that doesn't conflict with:
+
+| Range | Already in use for |
+|---|---|
+| `10.0.50.0/24` | Home LAN |
+| `192.168.30.0/24` | VLAN30 on sweetpea |
+| `100.64.0.0/10` | Tailscale CGNAT |
+| `172.17-19.0/16` | Docker bridges on sweetpea |
+
+Recommended: **`10.10.0.0/16`** — well away from home LAN, easy to remember.
+
+### Tailscale subnet route conflict on LAN (intermittent)
+
+Symptom: when on the home LAN, `ip route get <lan-ip>` shows traffic routed via `tailscale0` instead of the local interface. Observed on framework-13 on 2026-05-26 right after the home network's subnet mask was changed.
+
+Root cause hypothesis: sweetpea advertises `10.0.50.0/24` as a Tailscale subnet route (for off-network access to `.home` services). Tailscale clients have `--accept-routes` and normally detect local-subnet overlap and skip installing the conflicting route — but a race with NetworkManager / stale DHCP lease after the subnet change can cause Tailscale to win.
+
+Workarounds when it happens:
+- `sudo systemctl restart tailscaled` to force re-detection of local subnets
+- `sudo tailscale down && sudo tailscale up` to refresh prefs
+- Or just reboot
+
+Longer-term fix to consider: switch `.home` access strategy from advertising the LAN subnet to using sweetpea's Tailscale IP directly (`*.home → 100.97.56.82` via dnsmasq), eliminating the route advertisement entirely. Requires all `.home` services to be reachable on sweetpea's Tailscale interface.
+
 ### Framework 13 AMD support
 Goal:
 - add a Framework 13 AMD as a second host by refactoring `hosts/thinkpad-t14/configuration.nix` into a shared base that other host configurations derive from
