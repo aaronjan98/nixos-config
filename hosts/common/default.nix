@@ -467,81 +467,93 @@
   '';
 
   # ============================================================
-  # PENTEST SPECIALISATION (all hosts)
-  # Boot via systemd-boot menu, or activate in-place with:
-  #   /run/current-system/specialisation/pentest/bin/switch-to-configuration switch
-  # Revert to default in-place:
-  #   /run/current-system/bin/switch-to-configuration switch
+  # PENTEST SPECIALISATIONS (all hosts)
+  #
+  # pentest         — tools + hardening, WiFi works (for web app / network testing)
+  # pentest-isolated — same + WiFi blacklisted (for maximum OpSec / WiFi attacks)
+  #
+  # Activate in-place (from default boot):
+  #   /run/current-system/specialisation/<name>/bin/switch-to-configuration switch
+  # Revert to default:
+  #   /nix/var/nix/profiles/system/bin/switch-to-configuration switch
   # ============================================================
-  specialisation.pentest.configuration = {
-    imports = [ ../../modules/pentest.nix ];
+  #
+  # Shared pentest config — imported by both specialisations to avoid duplication.
+  # Defined as a module lambda so it receives the standard NixOS args.
+  specialisation =
+    let
+      pentestCommon = { lib, pkgs, ... }: {
+        imports = [ ../../modules/pentest.nix ];
 
-    # Blacklist internal WiFi at kernel level — forces use of external adapter
-    # iwlwifi/iwlmvm: Intel WiFi (ThinkPad T14)
-    # mt7925e: MediaTek MT7925 WiFi (Framework 13 AMD)
-    boot.blacklistedKernelModules = [ "iwlwifi" "iwlmvm" "mt7925e" ];
+        # VM support
+        virtualisation.libvirtd.enable = true;
+        virtualisation.spiceUSBRedirection.enable = true;
+        users.users.aj.extraGroups = [ "libvirtd" ];
+        environment.systemPackages = [ pkgs.virt-manager ];
 
-    # VM support
-    virtualisation.libvirtd.enable = true;
-    virtualisation.spiceUSBRedirection.enable = true;
-    users.users.aj.extraGroups = [ "libvirtd" ];
+        # === Tier 1: identity & credential isolation ===
+        services.tailscale.enable = lib.mkForce false;
+        aj.syncthing.enable = lib.mkForce false;
+        services.avahi.enable = lib.mkForce false;
+        services.gnome.gnome-keyring.enable = lib.mkForce false;
+        programs.ssh.startAgent = lib.mkForce false;
 
-    # === Tier 1: identity & credential isolation ===
-    services.tailscale.enable = lib.mkForce false;
-    aj.syncthing.enable = lib.mkForce false;
-    services.avahi.enable = lib.mkForce false;
-    services.gnome.gnome-keyring.enable = lib.mkForce false;
-    programs.ssh.startAgent = lib.mkForce false;
+        # API token exports are a no-op when secrets are absent (base extraInit
+        # uses `?` checks), so no mkForce needed — and we must NOT use mkForce ""
+        # here because that clobbers the security.wrappers PATH injection and
+        # breaks sudo.
 
-    # Stop exporting API tokens / forgejo creds to every shell.
-    environment.extraInit = lib.mkForce "";
+        # Drop identity-tied secrets; keep login passwords and any secret read
+        # at eval time by an imported module (obsidian-ipc reads obsidian/api_key).
+        sops.secrets = lib.mkForce {
+          "passwords/aj" = {
+            key = "passwords_aj";
+            path = "/run/sops-nix/passwords_aj";
+            neededForUsers = true;
+          };
+          "passwords/root" = {
+            key = "passwords_root";
+            path = "/run/sops-nix/passwords_root";
+            neededForUsers = true;
+          };
+          "obsidian/api_key" = {
+            sopsFile = ../../secrets/obsidian.yaml;
+            format = "yaml";
+            key = "obsidian_key";
+            owner = "aj";
+          };
+        };
 
-    # Don't materialize API tokens in pentest. Keeping only login-required
-    # password secrets and any secret that other modules read at eval time
-    # (obsidian-ipc.nix dereferences obsidian/api_key in a `let`, so dropping
-    # it would break evaluation of the pentest closure).
-    #
-    # Effect: /run/secrets/{hf_token,context7_api_key,opencode_zen_api_key,
-    # forgejo_token} are not created, so any ~/.bashrc line that does
-    # `cat /run/secrets/forgejo_token` reads a missing file and exports "".
-    sops.secrets = lib.mkForce {
-      "passwords/aj" = {
-        key = "passwords_aj";
-        path = "/run/sops-nix/passwords_aj";
-        neededForUsers = true;
+        # Drop identity-tied chat apps; keep neutral utilities.
+        users.users.aj.packages = lib.mkForce (with pkgs; [
+          protonvpn-gui
+          motrix
+          mpv
+        ]);
+
+        # === Tier 2: service surface reduction ===
+        services.caddy.enable = lib.mkForce false;
+        aj.gitServer.enable = lib.mkForce false;
+        services.ollama.enable = lib.mkForce false;
+        services.open-webui.enable = lib.mkForce false;
+        services.printing.enable = lib.mkForce false;
+
+        # === Tier 3: cosmetic surface ===
+        hardware.bluetooth.enable = lib.mkForce false;
+        services.blueman.enable = lib.mkForce false;
+        services.flatpak.enable = lib.mkForce false;
       };
-      "passwords/root" = {
-        key = "passwords_root";
-        path = "/run/sops-nix/passwords_root";
-        neededForUsers = true;
+    in
+    {
+      pentest.configuration = {
+        imports = [ pentestCommon ];
       };
-      "obsidian/api_key" = {
-        sopsFile = ../../secrets/obsidian.yaml;
-        format = "yaml";
-        key = "obsidian_key";
-        owner = "aj";
+
+      pentest-isolated.configuration = {
+        imports = [ pentestCommon ];
+        # Blacklist internal WiFi — use a USB dongle or phone tether instead.
+        # iwlwifi/iwlmvm: Intel (ThinkPad T14) — mt7925e: MediaTek (Framework 13 AMD)
+        boot.blacklistedKernelModules = [ "iwlwifi" "iwlmvm" "mt7925e" ];
       };
     };
-
-    # Drop identity-tied chat apps; keep neutral utilities.
-    users.users.aj.packages = lib.mkForce (with pkgs; [
-      protonvpn-gui
-      motrix
-      mpv
-    ]);
-
-    # === Tier 2: service surface reduction ===
-    services.caddy.enable = lib.mkForce false;
-    aj.gitServer.enable = lib.mkForce false;
-    services.ollama.enable = lib.mkForce false;
-    services.open-webui.enable = lib.mkForce false;
-    services.printing.enable = lib.mkForce false;
-
-    # === Tier 3: cosmetic surface ===
-    hardware.bluetooth.enable = lib.mkForce false;
-    services.blueman.enable = lib.mkForce false;
-    services.flatpak.enable = lib.mkForce false;
-
-    environment.systemPackages = [ pkgs.virt-manager ];
-  };
 }
