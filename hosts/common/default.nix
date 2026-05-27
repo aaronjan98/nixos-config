@@ -477,7 +477,9 @@
     imports = [ ../../modules/pentest.nix ];
 
     # Blacklist internal WiFi at kernel level — forces use of external adapter
-    boot.blacklistedKernelModules = [ "iwlwifi" "iwlmvm" ];
+    # iwlwifi/iwlmvm: Intel WiFi (ThinkPad T14)
+    # mt7925e: MediaTek MT7925 WiFi (Framework 13 AMD)
+    boot.blacklistedKernelModules = [ "iwlwifi" "iwlmvm" "mt7925e" ];
 
     # VM support
     virtualisation.libvirtd.enable = true;
