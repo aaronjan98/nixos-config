@@ -76,31 +76,104 @@ See `docs/SCRIPTS.md` for full descriptions. Quick reference:
 
 ## Printing (CUPS)
 
-Enabled via `services.printing.enable = true` and `services.avahi` in `hosts/thinkpad-t14/configuration.nix`.
+Enabled via `services.printing.enable = true` and `services.avahi` in `hosts/common/default.nix` (so all hosts that import the common module get printing — currently disabled only on the `pi` host via `lib.mkForce false`).
 
-**Add or manage printers:** `http://localhost:631/`
+The household printer is an **Epson ET-2850** on the home network's IoT SSID (`Connect here IoT`, 2.4 GHz only — see homelab `docs/network.md` for why the SSID was split). It is discovered via Avahi/mDNS and registered as a CUPS queue automatically — no driver package is needed for IPP-Everywhere capable printers like this one.
 
-**Check printer status:**
-```
-lpstat -p
+### Architecture — how the printer ends up as a CUPS queue
+
+Three daemons cooperate to make a network printer printable:
+
+- **`avahi-daemon`** — listens for mDNS announcements on the LAN, resolves `<printer>.local` hostnames, populates `nss-mdns` so the system can look up `.local` names
+- **`cupsd`** — the CUPS server, accepts print jobs, manages queues, talks IPP to the printer
+- **`cups-browsed`** — bridges DNS-SD-discovered remote printers into local CUPS queues using an `implicitclass://` indirection, so the actual IPP endpoint can change underneath without breaking the queue
+
+The implicit-class indirection is what makes the printer "self-healing" — if the printer changes IP, sleeps and wakes, or rejoins the network on a different SSID, the user-facing queue keeps working because `cups-browsed` rebinds the underlying URI transparently.
+
+### Day-to-day commands
+
+```sh
+lpstat -p                                    # queue status: enabled/disabled, idle/printing, last error
+lpstat -v                                    # device-uri for each queue (tells you queue origin — see below)
+lpstat -o                                    # all queued / in-progress jobs
+lpstat -W not-completed                      # all in-flight jobs (cleaner than -o)
+lpstat -W not-completed -o <queue-name>      # in-flight jobs for one queue
+lpstat -t                                    # full system status — verbose but complete
+
+cancel <job-id>                              # cancel one job
+cancel -a <queue-name>                       # cancel ALL jobs on a queue (use when queue is stuck)
+
+sudo lpadmin -x <queue-name>                 # delete a queue
+sudo lpadmin -d <queue-name>                 # set the default queue
 ```
 
-**List queued jobs:**
-```
-lpstat -o
+The CUPS web UI at `http://localhost:631/` provides the same controls in a browser.
+
+### Reading `lpstat -v` — three URI families to recognize
+
+When debugging or cleaning up, the `device-uri` reveals where a queue came from and how robust it is.
+
+| URI prefix | Origin | Behavior |
+|------------|--------|----------|
+| `ipp://<host>.local:631/ipp/print` | Static auto-add at discovery time | Fragile — locked to a specific hostname/path captured when the queue was created; silently breaks if the printer's IPP endpoint shifts |
+| `implicitclass://<queue-name>/` | `cups-browsed` indirection | Robust — re-binds to whatever IPP target is currently advertised via DNS-SD |
+| `dnssd://...` | Direct DNS-SD URI | Resolves at print time via Avahi; works as long as DNS-SD is healthy |
+| `ipp://<ip>:631/ipp/print` | Manual add by IP | Pinned to one IP — breaks on DHCP renewal |
+
+**Preference order:** `implicitclass://` > `dnssd://` > `ipp://<ip>` > `ipp://<hostname>.local`. If you see two queues for the same physical printer and one is `implicitclass://`, keep that one and delete the others.
+
+### Verifying mDNS resolution
+
+```sh
+avahi-resolve -n EPSON139ABF.local           # → 10.0.50.114 (the printer's current IP)
+avahi-browse -art | grep -i epson             # list every Bonjour service the printer advertises
+systemctl status avahi-daemon                 # confirm avahi is running
 ```
 
-**Cancel a job:**
-```
-lprm <job-id>
+### Common gotchas
+
+#### Printer is "online" but AirPrint / Bonjour can't find it
+
+Consumer Epsons (the ET-2850 included) sleep aggressively. **While asleep, they stop sending mDNS / Bonjour announcements**, so the print dialog on phones and laptops never sees the printer. The IP-layer is fine — `ping` works, the web UI responds — but AirPrint discovery is silent.
+
+**Quick wake from any always-on host on the LAN:**
+```sh
+curl -s -o /dev/null http://EPSON139ABF.local/      # any TCP connect wakes the printer
 ```
 
-Printer discovery on the local network is handled by avahi (mDNS). If a network printer is not appearing in CUPS, confirm avahi-daemon is running:
-```
-systemctl status avahi-daemon
+The cups-browsed `implicitclass://` queue will re-bind within a few seconds once the printer announces itself again.
+
+**Permanent fix:** in the printer's panel, set Power Saving → Sleep Timer to a much longer interval (or disable it), and enable "Wake from Sleep" → "Wake by Network" if available.
+
+#### Two queues for the same printer (one works, one doesn't)
+
+Common after re-pairing the printer or moving it between SSIDs. CUPS keeps the original queue, but cups-browsed creates a new implicitclass one. Both appear in `lpstat -p` and only one (the implicitclass) actually works — the other piles up stuck jobs marked "The printer is unreachable at this time."
+
+**Cleanup:**
+```sh
+lpstat -v                                    # identify the stale queue (it'll be the ipp:// one, not implicitclass://)
+cancel -a <stale-queue-name>                 # clear stuck jobs
+sudo lpadmin -x <stale-queue-name>           # delete it
+lpstat -p                                    # confirm only the implicitclass queue remains
 ```
 
-If a driver is missing, add `pkgs.gutenprint` (generic) or a vendor package (e.g. `pkgs.hplip` for HP) to `environment.systemPackages` and rebuild.
+#### Printer recently moved to a different SSID — old queue is stuck
+
+This is the same scenario as above. The static `ipp://<hostname>.local:...` URI was captured when the printer was on the previous SSID; even if Avahi still resolves the hostname correctly, the CUPS IPP backend can fail in subtle ways (TLS handshake mismatch, capability negotiation, stale port path). Delete and let cups-browsed re-create from the current DNS-SD announcement.
+
+#### No driver appears to load (legacy printers only)
+
+The ET-2850 uses IPP Everywhere / driverless printing — no PPD needed. For older printers that *do* need a driver:
+
+- Generic: add `pkgs.gutenprint` to `environment.systemPackages`
+- HP: add `pkgs.hplip`
+- Brother: add the vendor-provided package (varies)
+
+Then `nixos-rebuild switch` and re-add the printer via the CUPS web UI.
+
+### Scanning
+
+The ET-2850 is also a scanner. SANE is enabled in the same `hosts/common/default.nix` block via `hardware.sane.enable = true` and `hardware.sane.extraBackends = [ pkgs.sane-airscan ]` for eSCL/AirScan over the network. Use any SANE frontend (`simple-scan`, `xsane`, GIMP's Acquire menu) and the printer should appear automatically — no separate configuration needed.
 
 ---
 
