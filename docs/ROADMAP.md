@@ -96,6 +96,31 @@ Relevant files when implementing:
 
 ---
 
+### Live transcription with running AI commentary (`record-session` extension)
+
+Status: deferred — current `record-session` is record-then-transcribe only
+
+Goal:
+- Stream mic audio through whisper.cpp in real time
+- Feed each finalized utterance to a (cloud or local) model that can offer running commentary, clarifying questions, or flag things to act on — useful during phone calls, lectures, advising meetings
+- Today's flow is post-hoc: record → Ctrl+C → transcribe → paste transcript into a chat. The live-input version would close that loop
+
+Why deferred:
+- Live commentary needs a model with **low first-token latency on streaming text input** plus the ability to decide when to speak vs stay quiet. Cloud Claude meets latency but the "stay quiet most of the time" behavior requires careful prompting and ideally a dedicated streaming integration, not the standard chat loop
+- Local models on this hardware (Ryzen 7 PRO 5850U, no CUDA) are too slow for useful streaming commentary on top of whisper.cpp already eating CPU
+- The chunked-transcription path (sketched and rejected before settling on the post-hoc design) had quality issues at chunk boundaries that hurt accuracy where it matters most (named entities, numbers, dates)
+
+Architecture sketch for when this is unblocked:
+- `whisper.cpp` has a `whisper-stream` binary that does live mic transcription using SDL audio capture; package it from nixpkgs alongside `whisper-cpp` and wire a `record-session --live` flag
+- Pipe finalized whisper segments (whisper emits when it commits a phrase) into a small daemon that batches them and queries the model
+- Display commentary via `notify-send` toast or a Quickshell panel — definitely not blocking the user with a terminal in foreground
+- Persist the same WAV + markdown transcript as the post-hoc flow so live mode is strictly additive
+
+Relevant files when implementing:
+- `tools/scripts/record-session.sh` — add a `--live` mode that calls `whisper-stream` instead of `ffmpeg + whisper-cli`
+- `tools/pkgs/record-session.nix` — add `whisper-cpp` `stream` binary if it isn't in the default package output
+- new: `tools/scripts/transcript-commentary.sh` (or daemon) — the model-querying loop
+
 ### math-ocr / pix2tex: reimplement using venv runtime model
 
 **Background**: multiple attempts were made to package pix2tex (LaTeX-OCR) as a pure NixOS system package. All failed for the same fundamental reasons:

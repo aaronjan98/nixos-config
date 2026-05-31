@@ -185,6 +185,32 @@ Typical use:
 Purpose:
 - operational helper for the math OCR workflow
 
+## `record-session` (system command)
+Purpose:
+- record system mic to a WAV file until Ctrl+C, then transcribe with whisper.cpp (small.en model) and write a markdown transcript
+
+Usage:
+```bash
+record-session [label]      # e.g. record-session consulate-call
+```
+
+Output (under `~/Documents/transcripts/`):
+- `YYYY-MM-DD-HHMMSS-<label>.wav` — raw recording (16 kHz mono)
+- `YYYY-MM-DD-HHMMSS-<label>.md` — transcript with header and whisper output
+
+Model:
+- `ggml-small.bin` (~466 MB) — multilingual whisper.cpp small model; downloaded on first run to `~/.cache/whisper-cpp/`
+- Auto-detects language per ~30 s segment and transcribes each in its original language (no translation)
+- Runs CPU-only on this hardware at roughly real-time × 0.3–0.5
+
+Translation, comparison, and other re-processing are intentionally out of scope — the WAV is preserved so any downstream tool (a different whisper model, a translation pass, an LLM) can work from it.
+
+Notes:
+- Captures the **default PulseAudio source** via PipeWire's pulse compat layer (ffmpeg `-f pulse -i default`). Switch the default input in `pavucontrol` or `wpctl` if needed before invoking.
+- For phone-on-speaker call recording, place the phone near the laptop mic. Quality is muddy but typically 85–92% accurate with `small.en`.
+- WAV files are kept (not deleted) so the audio can be re-transcribed later with a different model if quality matters.
+- Source script: `tools/scripts/record-session.sh`; package wrapper: `tools/pkgs/record-session.nix`; wired into `hosts/common/default.nix` via `nix-tools.packages.<system>.record-session`.
+
 ## `doc-scan.py`
 Purpose:
 - turn a phone photo of a document into a flatbed-style scan

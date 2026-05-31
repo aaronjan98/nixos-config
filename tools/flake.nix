@@ -9,7 +9,10 @@
       pkgs = import nixpkgs { inherit system; };
     in
     {
-      packages.${system}.math-ocr = pkgs.callPackage ./pkgs/math-ocr.nix { };
+      packages.${system} = {
+        math-ocr = pkgs.callPackage ./pkgs/math-ocr.nix { };
+        record-session = pkgs.callPackage ./pkgs/record-session.nix { };
+      };
 
       # convenience
       defaultPackage.${system} = self.packages.${system}.math-ocr;
