@@ -185,6 +185,28 @@ Typical use:
 Purpose:
 - operational helper for the math OCR workflow
 
+## `doc-scan.py`
+Purpose:
+- turn a phone photo of a document into a flatbed-style scan
+- interactive 4-corner perspective correction + CLAHE contrast boost
+
+Usage:
+```bash
+nix-shell -p 'python3.withPackages(p: [p.opencv4 p.numpy p.matplotlib p.tkinter])' \
+    --run "python3 ~/nixos-config/scripts/doc-scan.py <input.jpg> <output.jpg>"
+```
+A matplotlib (TkAgg) window opens; click the 4 page corners in order TL → TR → BR → BL, then the window auto-closes and the corrected scan is written.
+
+To compress under a size cap (e.g. for visa portals):
+```bash
+nix-shell -p imagemagick \
+    --run "magick <scan.jpg> -resize 2400x -define jpeg:extent=1900KB <scan-small.jpg>"
+```
+
+Notes:
+- nixpkgs `opencv4` lacks GTK/Qt GUI bindings, and matplotlib's `Qt5Agg` backend has no Wayland plugin; that's why this uses matplotlib with `TkAgg` and `p.tkinter` in the nix-shell.
+- Not yet packaged. If usage grows, graduate it to a `doc-scan` system command following the `math-ocr` precedent (`modules/`, `pkgs/`, `tools/`, `hosts/common/default.nix`).
+
 ## `tmux-battery.sh`
 Purpose:
 - tmux helper/status script
