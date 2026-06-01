@@ -117,6 +117,29 @@ The homelab peer runs vanilla Syncthing (apt package) under `loginctl enable-lin
 
 Every folder uses staggered versioning (Syncthing retains deletes for 30 days at `~/.stversions/`), so a stray `rm` on one peer is recoverable from any other peer.
 
+### Accessing the Syncthing GUI on `qwerty`
+
+`qwerty`'s Syncthing GUI is bound to `127.0.0.1:8384` (not the LAN) so the
+admin UI is never exposed beyond the box itself — auth is set, but localhost
+binding removes the attack surface entirely.
+
+To reach it from a laptop, open an SSH tunnel and visit the friendly local
+domain wired into `modules/caddy.nix`:
+
+```sh
+ssh -L 8384:127.0.0.1:8384 aj@qwerty.home
+# then in a browser:
+#   http://syncthing.local
+```
+
+The caddy entry binds to `127.0.0.1` only, so the domain itself isn't
+reachable off the laptop either — `syncthing.local` is purely a convenience
+URL, not exposure.
+
+For laptop-local Syncthing, `http://localhost:8384` works directly (no
+tunnel needed) since the NixOS module binds the GUI to loopback on each
+machine.
+
 ### Git repos are NOT synced via Syncthing
 
 `.git/` is a mutable binary database; a sync-conflict file inside `.git/objects/` would corrupt the repo. Repos travel via explicit pull/push in `sync-machine.sh`. See `docs/ROADMAP.md` for the "WIP-branch helper" idea (deferred) — a possible future shortcut for moving uncommitted work between laptops via git's atomic primitives instead of Syncthing.
