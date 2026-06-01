@@ -31,13 +31,14 @@
         reverse_proxy http://qwerty:2283
       '';
 
-      # Syncthing GUI on qwerty is bound to 127.0.0.1:8384 (admin-only).
-      # Reach it by first opening an SSH tunnel:
-      #   ssh -L 8384:127.0.0.1:8384 aj@qwerty.home
-      # Then http://syncthing.local routes here, into the tunnel, into qwerty.
+      # Friendly local alias for this machine's own Syncthing GUI.
+      # Syncthing's CSRF check rejects requests whose Host header doesn't match
+      # its bind address, so rewrite Host to 127.0.0.1:8384 before forwarding.
       "syncthing.local:80".extraConfig = ''
         bind 127.0.0.1
-        reverse_proxy 127.0.0.1:8384
+        reverse_proxy 127.0.0.1:8384 {
+          header_up Host {upstream_hostport}
+        }
       '';
     };
   };

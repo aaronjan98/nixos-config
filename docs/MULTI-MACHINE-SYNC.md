@@ -117,28 +117,40 @@ The homelab peer runs vanilla Syncthing (apt package) under `loginctl enable-lin
 
 Every folder uses staggered versioning (Syncthing retains deletes for 30 days at `~/.stversions/`), so a stray `rm` on one peer is recoverable from any other peer.
 
-### Accessing the Syncthing GUI on `qwerty`
+### Accessing the Syncthing GUI
 
-`qwerty`'s Syncthing GUI is bound to `127.0.0.1:8384` (not the LAN) so the
-admin UI is never exposed beyond the box itself — auth is set, but localhost
-binding removes the attack surface entirely.
+Every Syncthing peer's GUI shows the **full mesh** — every device's online
+status, folder sync state across all shared folders, and recent activity. So
+day-to-day monitoring only needs one GUI: the local one.
 
-To reach it from a laptop, open an SSH tunnel and visit the friendly local
-domain wired into `modules/caddy.nix`:
+#### `syncthing.local` — friendly alias for this laptop's GUI
 
-```sh
-ssh -L 8384:127.0.0.1:8384 aj@qwerty.home
-# then in a browser:
-#   http://syncthing.local
+NixOS hosts get `syncthing.local` wired up in `modules/caddy.nix`. Caddy
+binds the alias to `127.0.0.1` only (no LAN exposure) and rewrites the Host
+header so Syncthing's CSRF check accepts the proxied request.
+
+```
+http://syncthing.local      # this laptop's syncthing GUI
+http://localhost:8384       # same thing, direct
 ```
 
-The caddy entry binds to `127.0.0.1` only, so the domain itself isn't
-reachable off the laptop either — `syncthing.local` is purely a convenience
-URL, not exposure.
+#### When you need a *different* peer's GUI
 
-For laptop-local Syncthing, `http://localhost:8384` works directly (no
-tunnel needed) since the NixOS module binds the GUI to loopback on each
-machine.
+Only required for peer-specific config changes (its own rate limits, GUI
+auth, devices it knows about). Status/monitoring doesn't need this — the
+local GUI already shows the whole mesh.
+
+Use an SSH tunnel with a non-conflicting local port, since the local
+Syncthing already owns 8384:
+
+```sh
+ssh -L 18384:127.0.0.1:8384 aj@qwerty.home
+# then in a browser:
+#   http://localhost:18384
+```
+
+`qwerty`'s GUI specifically is bound to `127.0.0.1:8384` (not the LAN) —
+the tunnel is the only path in, by design.
 
 ### Git repos are NOT synced via Syncthing
 
