@@ -42,13 +42,29 @@ echo ""
 
 REC_PID=""
 on_interrupt() {
+  # No-op if ffmpeg already exited normally (avoids noisy output when the
+  # EXIT trap runs after a clean wait).
+  if [ -z "$REC_PID" ] || ! kill -0 "$REC_PID" 2>/dev/null; then
+    return
+  fi
   echo ""
   echo "Stopping recording..."
-  if [ -n "$REC_PID" ]; then
-    kill -INT "$REC_PID" 2>/dev/null || true
-  fi
+  kill -INT "$REC_PID" 2>/dev/null || true
+  # Give ffmpeg up to 5s to finalize the WAV trailer cleanly.
+  for _ in 1 2 3 4 5; do
+    kill -0 "$REC_PID" 2>/dev/null || return
+    sleep 1
+  done
+  # Escalate if it's still running (e.g. ffmpeg got stuck).
+  kill -TERM "$REC_PID" 2>/dev/null || true
+  sleep 1
+  kill -KILL "$REC_PID" 2>/dev/null || true
 }
-trap on_interrupt INT
+# HUP/TERM matter because setsid detaches ffmpeg from the terminal — without
+# trapping them, closing the terminal or dropping an SSH session leaves ffmpeg
+# orphaned and recording indefinitely. EXIT catches any other script exit
+# (errexit, etc.) so the recorder can't outlive its parent.
+trap on_interrupt INT HUP TERM EXIT
 
 # setsid puts ffmpeg in its own process group so terminal Ctrl+C only reaches
 # this script; the trap then forwards a single clean SIGINT to ffmpeg, which
@@ -56,7 +72,11 @@ trap on_interrupt INT
 setsid ffmpeg -hide_banner -loglevel error -nostdin -f pulse -i default -ac 1 -ar 16000 "$WAV" </dev/null &
 REC_PID=$!
 wait "$REC_PID" 2>/dev/null || true
-trap - INT
+# ffmpeg has exited — clear all traps so Ctrl+C during the transcription
+# phase below behaves normally (default kill) rather than calling the no-op
+# cleanup handler.
+REC_PID=""
+trap - INT HUP TERM EXIT
 
 if [ ! -s "$WAV" ]; then
   echo "Recording produced no audio. Check mic permissions or input source." >&2
