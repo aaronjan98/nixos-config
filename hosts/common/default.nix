@@ -373,6 +373,7 @@
     wget
     iw
     tailscale
+    dnsutils  # nslookup, dig, host, nsupdate
 
     # Security & GPG
     gnupg
