@@ -1,21 +1,26 @@
-{ lib, stdenv, fetchzip, makeWrapper, ripgrep, bubblewrap }:
+{ lib, stdenvNoCC, fetchzip, makeWrapper }:
 
-stdenv.mkDerivation (finalAttrs: {
+stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "openai-codex";
-  version = "0.125.0";
+  version = "0.137.0";
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@openai/codex/-/codex-${finalAttrs.version}-linux-x64.tgz";
-    hash = "sha256-W0+Iy93irv9EG02gN5oS8ytZ4salwubLd4cTXjBFGHM=";
+    hash = "sha256-Bg6FvS/qa+q+v035Z7Y7Mq36w2FD//J/Da7G7JgTIhM=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
 
   installPhase = ''
     runHook preInstall
-    install -Dm755 vendor/x86_64-unknown-linux-musl/codex/codex $out/bin/.codex-unwrapped
-    makeWrapper $out/bin/.codex-unwrapped $out/bin/codex \
-      --prefix PATH : ${lib.makeBinPath [ ripgrep bubblewrap ]}
+
+    vendor_root="$out/lib/openai-codex"
+    mkdir -p "$vendor_root" "$out/bin"
+    cp -r vendor/x86_64-unknown-linux-musl/. "$vendor_root/"
+
+    chmod +x "$vendor_root/bin/codex"
+    makeWrapper "$vendor_root/bin/codex" "$out/bin/codex"
+
     runHook postInstall
   '';
 

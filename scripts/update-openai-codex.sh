@@ -5,7 +5,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 PKG_FILE="${REPO_ROOT}/pkgs/openai-codex/default.nix"
-BUILD_TARGET='.#nixosConfigurations.thinkpad-t14.config.system.build.toplevel'
 PACKAGE_NAME='@openai/codex'
 
 log() {
@@ -21,6 +20,15 @@ require_cmd() {
     warn "Required command not found: $1"
     exit 1
   }
+}
+
+resolve_flake_host() {
+  local host="${NIXOS_FLAKE_HOST:-$(hostname)}"
+
+  case "$host" in
+    nixos) echo "thinkpad-t14" ;;
+    *) echo "$host" ;;
+  esac
 }
 
 usage() {
@@ -39,7 +47,7 @@ Behavior:
   - optionally runs a Nix build to verify the package
 
 This script updates tracked files only. Activate the result separately with:
-  sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14
+  nrs
 EOF
 }
 
@@ -104,6 +112,10 @@ main() {
     exit 1
   fi
 
+  local flake_host
+  flake_host="$(resolve_flake_host)"
+  local build_target=".#nixosConfigurations.${flake_host}.config.system.build.toplevel"
+
   if [[ -z "$version" ]]; then
     log "Resolving latest Codex version from npm"
     version="$(npm view "$PACKAGE_NAME" version)"
@@ -122,8 +134,8 @@ main() {
   update_default_nix "$version" "$src_hash_sri"
 
   if [[ "$run_build" -eq 1 ]]; then
-    log "Building NixOS system to verify the update"
-    nix build "$BUILD_TARGET" --impure --extra-experimental-features 'nix-command flakes' --option warn-dirty false
+    log "Building ${flake_host} NixOS system to verify the update"
+    nix build "$build_target" --impure --extra-experimental-features 'nix-command flakes' --option warn-dirty false
   else
     log "Skipping verification build (--no-build)"
   fi
@@ -133,7 +145,8 @@ main() {
   printf '  %s\n' "$PKG_FILE"
   printf '\nNext steps:\n'
   printf '  1. Review the diff\n'
-  printf '  2. Run: sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14\n'
+  printf '  2. Run: nrs\n'
+  printf '     (explicit: sudo nixos-rebuild switch --flake ~/nixos-config#%s)\n' "$flake_host"
   printf '  3. Verify: codex --version\n'
 }
 

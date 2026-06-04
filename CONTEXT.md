@@ -138,10 +138,13 @@ Restores SSH material and the SOPS age key from `pass`.
 Guided orchestrator for new machine setup.
 
 ### `scripts/update-pi.sh`
-Refreshes the pinned `pkgs/pi` package from npm, regenerates its lockfile and hashes, and optionally verifies the system build.
+Refreshes the pinned `pkgs/pi` package from npm, regenerates its lockfile and hashes, and optionally verifies the current host's system build.
 
 ### `scripts/update-openai-codex.sh`
-Refreshes the pinned `pkgs/openai-codex` package from npm, updates its source hash, and optionally verifies the system build.
+Refreshes the pinned `pkgs/openai-codex` package from npm, updates its source hash, and optionally verifies the current host's system build.
+
+### `scripts/update-all-pinned-packages.sh`
+Runs the tracked pinned-package update scripts in sequence and optionally verifies the current host's combined result with one Nix build.
 
 ## How to work in this repo
 - Start with the smallest relevant file or directory for the task.

@@ -6,7 +6,6 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 PKG_FILE="${REPO_ROOT}/pkgs/pi/default.nix"
 LOCK_FILE="${REPO_ROOT}/pkgs/pi/package-lock.json"
-BUILD_TARGET='.#nixosConfigurations.thinkpad-t14.config.system.build.toplevel'
 PACKAGE_NAME='@mariozechner/pi-coding-agent'
 
 log() {
@@ -22,6 +21,15 @@ require_cmd() {
     warn "Required command not found: $1"
     exit 1
   }
+}
+
+resolve_flake_host() {
+  local host="${NIXOS_FLAKE_HOST:-$(hostname)}"
+
+  case "$host" in
+    nixos) echo "thinkpad-t14" ;;
+    *) echo "$host" ;;
+  esac
 }
 
 usage() {
@@ -41,7 +49,7 @@ Behavior:
   - optionally runs a Nix build to verify the package
 
 This script updates tracked files only. Activate the result separately with:
-  sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14
+  nrs
 EOF
 }
 
@@ -110,6 +118,10 @@ main() {
     exit 1
   fi
 
+  local flake_host
+  flake_host="$(resolve_flake_host)"
+  local build_target=".#nixosConfigurations.${flake_host}.config.system.build.toplevel"
+
   if [[ -z "$version" ]]; then
     log "Resolving latest Pi version from npm"
     version="$(npm view "$PACKAGE_NAME" version)"
@@ -119,7 +131,7 @@ main() {
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap "rm -rf -- '$tmp_dir'" EXIT
 
   local tarball_url="https://registry.npmjs.org/@mariozechner/pi-coding-agent/-/pi-coding-agent-${version}.tgz"
   local tarball_path="${tmp_dir}/pi-coding-agent-${version}.tgz"
@@ -154,8 +166,8 @@ main() {
   update_default_nix "$version" "$src_hash_sri" "$npm_deps_hash"
 
   if [[ "$run_build" -eq 1 ]]; then
-    log "Building NixOS system to verify the update"
-    nix build "$BUILD_TARGET" --impure --extra-experimental-features 'nix-command flakes' --option warn-dirty false
+    log "Building ${flake_host} NixOS system to verify the update"
+    nix build "$build_target" --impure --extra-experimental-features 'nix-command flakes' --option warn-dirty false
   else
     log "Skipping verification build (--no-build)"
   fi
@@ -166,7 +178,8 @@ main() {
   printf '  %s\n' "$LOCK_FILE"
   printf '\nNext steps:\n'
   printf '  1. Review the diff\n'
-  printf '  2. Run: sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad-t14\n'
+  printf '  2. Run: nrs\n'
+  printf '     (explicit: sudo nixos-rebuild switch --flake ~/nixos-config#%s)\n' "$flake_host"
   printf '  3. Verify: pi --version\n'
 }
 

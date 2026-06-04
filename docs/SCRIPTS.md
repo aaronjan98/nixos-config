@@ -237,6 +237,21 @@ Notes:
 Purpose:
 - tmux helper/status script
 
+## `update-all-pinned-packages.sh`
+Purpose:
+- run the tracked pinned-package update scripts in sequence
+- refresh all configured local package pins in one command
+- optionally verify the combined result with one Nix build
+
+Notes:
+- currently orchestrates `update-pi.sh` and `update-openai-codex.sh`
+- calls the individual update scripts with `--no-build`, then runs one final verification build by default
+- resolves the flake host from the current machine hostname (same idea as `nrs`), so the verification build follows whichever laptop you are on
+
+Typical use:
+- when multiple locally pinned tools should be refreshed together
+- when you want one command for the current pinned-package update set instead of running each updater manually
+
 ## `update-pi.sh`
 Purpose:
 - update the pinned `pkgs/pi` package from the upstream npm release
@@ -246,6 +261,7 @@ Purpose:
 
 Notes:
 - Pi is packaged as a local `buildNpmPackage` derivation, so this script handles both the upstream source tarball pin and the npm dependency pin
+- verification builds target the current machine's flake host using the same hostname mapping pattern as `nrs`
 
 Typical use:
 - when Pi reports a new upstream release and the machine should stay on the reproducible Nix-managed install path
@@ -259,6 +275,7 @@ Purpose:
 
 Notes:
 - Codex is packaged from a prebuilt upstream tarball, so this script is simpler than the Pi updater and does not manage an npm lockfile
+- verification builds target the current machine's flake host using the same hostname mapping pattern as `nrs`
 
 Typical use:
 - when Codex CLI reports a new upstream release and the machine should stay on the reproducible Nix-managed install path

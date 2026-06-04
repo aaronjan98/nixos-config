@@ -77,7 +77,7 @@ This document explains the purpose of each script in:
 - `~/nixos-config/scripts`
 
 Use this when you are debugging, extending, or orchestrating the scripted workflow.
-This includes the tracked update workflows for locally packaged tools like Pi and Codex.
+This includes the tracked update workflows for locally packaged tools like Pi and Codex, including the combined pinned-package updater.
 
 ### 6. `AGENT-WORKFLOW.md`
 Read this to understand how AI agents are expected to operate within the system.

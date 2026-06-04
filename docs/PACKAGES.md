@@ -102,10 +102,13 @@ Pinned local packages should be updated through tracked repo workflows rather th
 
 Current examples:
 
+    ./scripts/update-all-pinned-packages.sh
     ./scripts/update-pi.sh
     ./scripts/update-openai-codex.sh
 
 These refresh the pinned local package version and hashes without switching away from the repo-managed derivation workflow.
+Use `update-all-pinned-packages.sh` when you want to refresh the full current set at once.
+Their verification builds are host-aware, so they follow the current machine's flake target instead of assuming a specific laptop.
 
 The exact update work differs by package type:
 
@@ -282,6 +285,11 @@ This gives:
 - exposed through the overlay as `pkgs.pi`
 - installation boundary: `modules/pi.nix`
 - update workflow: `scripts/update-pi.sh`
+
+### Combined pinned-package updater
+- source: orchestration script in `scripts/update-all-pinned-packages.sh`
+- covers the current local pinned package set (`pi`, `openai-codex`)
+- runs the individual updaters with one final verification build by default
 
 ---
 

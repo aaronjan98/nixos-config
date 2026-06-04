@@ -61,7 +61,7 @@ Operational scripts used for:
 - new machine setup
 - local git server setup
 - distfiles sync
-- pinned package update workflows (`pi`, `openai-codex`)
+- pinned package update workflows (`pi`, `openai-codex`, and the combined orchestrator)
 
 ### `systemd/user/`
 Tracked source of truth for user systemd units.
