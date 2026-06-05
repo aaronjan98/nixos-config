@@ -148,6 +148,6 @@ Candidate packages (fill in as needed):
 - **Pentest as specialisation on Framework** — default boot is clean; `pentest` specialisation adds tools, blacklists internal WiFi, enables libvirtd. `pentest.nix` is still a standalone module imported only inside the specialisation.
 - **Hosts maximally identical** — host files are thin; anything that can be shared should be
 - **Kanata files are per-host** even if identical at first — prevents cross-host coupling
-- **nixpkgs-unstable pin** — currently pinned to `01fbdeef22b76df85ea168fbfe1bfd9e63681b30`; applies to both hosts via shared flake.nix
+- **nixpkgs-unstable input** — follows `github:NixOS/nixpkgs/nixpkgs-unstable`; applies to both hosts via shared flake.nix
 - **sops secrets** — both hosts share the same `secrets/` directory; per-host secrets can be added as separate yaml files if needed later
 - **Test on ThinkPad before touching Framework** — ThinkPad is the validation machine throughout the refactor

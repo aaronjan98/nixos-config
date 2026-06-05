@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchzip, makeWrapper }:
+{ lib, stdenvNoCC, fetchzip, makeWrapper, bubblewrap, ripgrep }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "openai-codex";
@@ -19,7 +19,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     cp -r vendor/x86_64-unknown-linux-musl/. "$vendor_root/"
 
     chmod +x "$vendor_root/bin/codex"
-    makeWrapper "$vendor_root/bin/codex" "$out/bin/codex"
+    makeWrapper "$vendor_root/bin/codex" "$out/bin/codex" \
+      --prefix PATH : ${lib.makeBinPath [ bubblewrap ripgrep ]}
 
     runHook postInstall
   '';
