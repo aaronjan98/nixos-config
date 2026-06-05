@@ -209,6 +209,7 @@ Do not implement this script without confirming these decisions with the user fi
 Long-running, multi-session work items with design decisions and progress checklists live in `project-memory/`. Read the relevant spec before starting work on a tracked initiative.
 
 - `project-memory/multi-host-refactor-spec.md` — multi-host refactor (ThinkPad + Framework 13 AMD), shared base extraction, pentest module, branch: `multi-host`
+- `project-memory/math-ocr-pix2tex-venv-spec.md` — math OCR reimplementation using a Nix-managed wrapper plus pinned pix2tex repo/venv runtime
 
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.
