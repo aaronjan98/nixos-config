@@ -308,23 +308,8 @@ Still open:
 - whether additional profiles (battery-saving, minimal, etc.) are worth maintaining
 - dotfiles/home-manager integration with profile changes is not addressed
 
-### `scripts/backup-secrets.sh`
-Goal:
-- implement the inverse of `restore-secrets.sh` so SSH material can be backed up into `pass`
-
-Current shape:
-- the script should read files from `~/.ssh/`
-- it should write them into `pass` under `laptop/<hostname>/ssh/<filename>`
-
-Open questions:
-- scope: back up all of `~/.ssh/`, or only the fixed list used by `restore-secrets.sh`
-- overwrite behavior: overwrite, skip, or prompt
-- hostname: derive from `$(hostname)` or accept an argument
-- auto-push: run `pass git push` automatically or leave it manual
-
-References:
-- `CONTEXT.md`
-- `docs/SCRIPTS.md`
+### ~~`scripts/backup-secrets.sh`~~ ✅ implemented 2026-06-07
+See `docs/SCRIPTS.md` for usage.
 
 ### Live runtime theme switcher
 Goal:

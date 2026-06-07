@@ -229,6 +229,18 @@ Verify afterwards:
     ls -la ~/.ssh
     sudo ls -l /var/lib/sops-nix/key.txt
 
+### Saving SSH material back to pass
+
+After editing `~/.ssh/config` (or any other tracked SSH file), save it back with:
+
+    ~/nixos-config/scripts/backup-secrets.sh
+    pass git push
+
+To propagate a change to another machine's pass entry:
+
+    pass cp laptop/thinkpad-t14-nixos/ssh/config laptop/framework-13/ssh/config
+    pass git push
+
 ---
 
 ## After the first rebuild

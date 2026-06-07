@@ -283,13 +283,31 @@ Typical use:
 
 ---
 
-## Planned / not yet implemented
+---
 
-### `backup-secrets.sh`
-Intended as the inverse of `restore-secrets.sh`.
+## `backup-secrets.sh`
+Inverse of `restore-secrets.sh`. Saves SSH files from `~/.ssh/` back into pass.
+Run manually after editing SSH material (e.g. adding a host to `~/.ssh/config`).
+
 Purpose:
-- read SSH material from `~/.ssh/`
-- store each file into `pass` under the hostname-derived prefix `laptop/<hostname>/ssh/<filename>`
-- prepare or refresh the password-store entries that `restore-secrets.sh` depends on
+- iterate the same known file list as `restore-secrets.sh`
+- for each file that exists in `~/.ssh/`, insert it into pass under `laptop/<hostname>/ssh/<filename>`
+- commit the pass git repo; does NOT push automatically
 
-See `CONTEXT.md` for the open design questions that must be resolved before this is written.
+Design decisions:
+- **Scope**: same fixed list as `restore-secrets.sh` — only backs up known files, not everything in `~/.ssh/`
+- **Overwrite**: always (`--force`) — no prompting
+- **Hostname**: derived from `$(hostname)` with the same slug mapping (`nixos` → `thinkpad-t14-nixos`)
+- **Push**: manual — script commits only; run `pass git push` separately
+
+Typical use:
+```sh
+# After editing ~/.ssh/config (e.g. adding a new host alias):
+backup-secrets.sh
+pass git push
+# To propagate to another machine's pass entry:
+pass cp laptop/thinkpad-t14-nixos/ssh/config laptop/framework-13/ssh/config
+pass git push
+```
+
+## Planned / not yet implemented
