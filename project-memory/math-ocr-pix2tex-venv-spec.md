@@ -80,7 +80,7 @@ Use this architecture instead:
 Use this runtime path:
 
 ```text
-~/Repositories/self-hosted/pix2tex/
+~/Repositories/automation/pix2tex/
   .git/              # git clone of pix2tex
   .venv/             # ignored Python virtual environment
 ```
@@ -88,7 +88,7 @@ Use this runtime path:
 Reasoning:
 
 - It keeps the mutable runtime outside `~/nixos-config`.
-- It fits the existing `~/Repositories/self-hosted` area, which already owns locally run tools and services.
+- It fits the existing `~/Repositories/automation` area, which owns laptop utility workflows and automation projects.
 - It keeps repo code and venv close enough that cleanup/debugging is obvious.
 - It keeps `.venv/` inside a git repo boundary so `export-workspace-state.sh` records the repo and does not recursively walk the venv.
 
@@ -103,8 +103,8 @@ Progress is tracked in this file. Session-level detail is tracked in `memory/YYY
 | Checkpoint | Status | Exit Criteria |
 |---|---|---|
 | 1. Cleanup vestigial pure-Nix attempts | Complete | Dead files and stale comments removed; active `tools/` wrapper remains |
-| 2. Build wrapper package | Pending | `tools` flake package builds after cleanup |
-| 3. Add `bootstrap-pix2tex` | Pending | Manual bootstrap creates/repairs repo + `.venv` |
+| 2. Build wrapper package | Complete | `tools` flake package builds after cleanup |
+| 3. Add `bootstrap-pix2tex` | Complete | Manual bootstrap creates/repairs repo + `.venv` |
 | 4. Wire `math-ocr` to venv | Pending | Wrapper calls `.venv/bin/pix2tex` and fails clearly if missing |
 | 5. Manual OCR test | Pending | Simple equation screenshot copies LaTeX to clipboard |
 | 6. Rebuild integration | Pending | `nrt` passes; `nrs` only after user approval |
@@ -114,7 +114,7 @@ Progress is tracked in this file. Session-level detail is tracked in `memory/YYY
 
 Ask the user before coding:
 
-1. Runtime path: approved as `~/Repositories/self-hosted/pix2tex`.
+1. Runtime path: approved as `~/Repositories/automation/pix2tex`.
 2. Should bootstrap use the local git server only, or fall back to upstream GitHub if the server is unreachable?
 3. Should bootstrap run automatically at login via user systemd, or only on first `math-ocr` invocation?
 4. Should the first implementation include GUI command support for `latexocr`, or only the screenshot CLI flow?
@@ -124,6 +124,16 @@ Recommended answers:
 - Git source: local git server only, fail clearly if unreachable.
 - Bootstrap trigger: both systemd user service and on-demand check from `math-ocr`.
 - GUI support: defer GUI until CLI flow works.
+
+Resolved source-repo blocker:
+
+- `bootstrap-pix2tex` builds and runs.
+- The pix2tex source repo now exists locally at `~/Repositories/automation/pix2tex`.
+- Local `main` tracks `home/main`.
+- `home` points at `ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/pix2tex.git`.
+- `upstream` points at `https://github.com/lukas-blecher/LaTeX-OCR.git` for fetch-only upstream reference, with push disabled.
+- Checkpoint 3 completed after running `bootstrap-pix2tex` against the existing local repo and confirming it created/repaired `.venv`.
+- Dependency constraints were added for the venv install. Unbounded PyPI resolution pulled newer dependencies that compiled `stringzilla`; constraints now keep the runtime closer to the 2025-era pix2tex stack.
 
 ### Phase 1: Clean vestigial pure-Nix artifacts
 
