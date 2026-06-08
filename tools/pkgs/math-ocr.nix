@@ -46,6 +46,40 @@ let
     text = builtins.readFile ../scripts/ocr-correct-last.sh;
   };
 
+  text-ocr = pkgs.writeShellApplication {
+    name = "text-ocr";
+
+    runtimeInputs = [
+      pkgs.grim
+      pkgs.slurp
+      pkgs.wl-clipboard
+      pkgs.libnotify
+      pkgs.bash
+      pkgs.systemd
+      pkgs.jq
+      pkgs.file
+      pkgs.coreutils
+      pkgs.gnused
+      pkgs.gnugrep
+      pkgs.gawk
+      pkgs.tesseract
+    ];
+
+    excludeShellChecks = [ "SC2016" ];
+
+    text = builtins.readFile ../scripts/text-ocr.sh;
+  };
+
+  ocr-combined = pkgs.writeShellApplication {
+    name = "ocr-combined";
+
+    runtimeInputs = [
+      pkgs.libnotify
+    ];
+
+    text = builtins.readFile ../scripts/ocr-combined.sh;
+  };
+
   bootstrap-pix2tex = pkgs.writeShellApplication {
     name = "bootstrap-pix2tex";
 
@@ -70,11 +104,13 @@ pkgs.symlinkJoin {
   paths = [
     math-ocr
     ocr-correct-last
+    text-ocr
+    ocr-combined
     bootstrap-pix2tex
   ];
 
   meta = with lib; {
-    description = "Screenshot-to-LaTeX OCR using pix2tex (AJ tool wrapper)";
+    description = "Screenshot OCR tools for math and text capture";
     license = licenses.mit;
   };
 }

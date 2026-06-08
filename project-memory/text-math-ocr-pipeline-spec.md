@@ -1,6 +1,6 @@
 # Text + Math OCR Pipeline Spec
 
-**Status:** Checkpoint 3 implemented; system rebuild/user verification pending
+**Status:** Checkpoint 4 implemented; system rebuild/user verification pending
 **Goal:** Build a reliable Mathpix-like workflow for screen captures and documents that can extract plain text, math LaTeX, and combined Markdown, while preserving failed OCR examples for correction and future model improvement.
 
 ---
@@ -38,6 +38,7 @@ Current status:
 - `math-ocr` is installed from `~/nixos-config/tools`.
 - `math-ocr` calls `~/Repositories/automation/pix2tex/.venv/bin/pix2tex`.
 - `bootstrap-pix2tex` creates/repairs the local pix2tex repo and venv.
+- `text-ocr` is implemented as a local Tesseract baseline using the same archive/review workflow.
 - `Super+M` is the intended math OCR hotkey.
 - `nrt` has verified the wrapper in the current test generation.
 - `nrs` has not been run for this branch unless the user later chooses to promote it.
@@ -59,7 +60,8 @@ Relevant notes:
 
 Interpretation:
 
-- Pix2Text is the likely all-in-one candidate for layout + text + math.
+- Surya is the current higher-priority all-in-one candidate for layout + text + math screen captures.
+- Pix2Text remains relevant mainly because it appears in AJ's earlier notes and can be used for comparison.
 - pix2tex / LaTeX-OCR is a narrower math-only component.
 - The current NixOS work intentionally solved the pix2tex runtime slice first.
 
@@ -102,7 +104,7 @@ Purpose:
 
 Candidate local backends:
 
-- Tesseract for mature local OCR.
+- Tesseract for mature local OCR and a cheap baseline.
 - OCRmyPDF/Tesseract for document/page workflows.
 - PaddleOCR/EasyOCR only if accuracy justifies the Python runtime complexity.
 
@@ -114,6 +116,13 @@ Output:
 
 - Plain text copied to clipboard.
 - Raw attempt saved to the OCR archive.
+
+Current baseline:
+
+- `text-ocr` captures a selected screen region.
+- It runs Tesseract locally with `TEXT_OCR_LANG=eng` and `TEXT_OCR_PSM=6` by default.
+- It saves the attempt as `~/.local/share/ocr-captures/attempts/<timestamp>_text`.
+- It intentionally does not implement `OCR_BACKEND=sauron` yet.
 
 ### `ocr-combined`
 
@@ -129,12 +138,17 @@ Candidate backends:
    - send text regions to `text-ocr`;
    - send math regions to `math-ocr`;
    - merge output into Markdown.
-2. Pix2Text-style all-in-one pipeline.
+2. Surya-style all-in-one pipeline:
+   - run a newer document OCR/layout model that can emit text, math, tables, and reading order;
+   - use local or `sauron` runtime depending on speed and install complexity.
+3. Pix2Text-style all-in-one pipeline.
 
 Recommendation:
 
-- Start with the custom layout split + separate engines mental model because it matches AJ's intended workflow.
-- Keep Pix2Text as a candidate backend/prototype, especially for benchmarking whether an all-in-one model handles layout better than a hand-rolled split.
+- Keep `math-ocr` and `text-ocr` as baseline commands and comparison tools.
+- Do not assume a hand-rolled splitter is the fastest path anymore.
+- Benchmark Surya on saved screen captures before investing heavily in custom merging logic.
+- Keep Pix2Text as a lower-priority candidate backend/prototype, especially for historical comparison with AJ's earlier notes.
 - Keep the command boundary separate so either strategy can be swapped behind `ocr-combined`.
 
 Output:
@@ -213,7 +227,10 @@ Recommended path:
 ~/.local/share/ocr-captures/
   README.md
   review.md                     # triage/history queue; safe to edit/remove entries
-  latest -> attempts/<attempt-id>
+  latest -> attempts/<attempt-id>          # newest attempt of any type
+  latest-math -> attempts/<attempt-id>     # newest math attempt
+  latest-text -> attempts/<attempt-id>     # newest text attempt
+  latest-combined -> attempts/<attempt-id> # newest combined attempt, once implemented
   attempts/
     2026-06-07T23-15-22_math/
       README.md
@@ -405,9 +422,9 @@ Progress is tracked here. Do not implement later phases until the prior checkpoi
 | 1. Confirm architecture choices | Complete | User chooses local/remote defaults and command names |
 | 2. Add attempt archive | Implemented | `math-ocr` saves input/output/metadata for each run |
 | 3. Add correction files and commands | Implemented | User can edit corrected output for any attempt |
-| 4. Add text OCR command | Pending | `text-ocr` captures region and copies plain text |
+| 4. Add text OCR command | Implemented | `text-ocr` captures region and copies plain text |
 | 5. Add combined OCR prototype | Pending | `ocr-combined` returns Markdown for simple text+math region |
-| 6. Evaluate backend quality | Pending | Compare local pix2tex/Pix2Text/text OCR on saved examples |
+| 6. Evaluate backend quality | Pending | Compare local pix2tex/Tesseract/Surya/Pix2Text on saved examples |
 | 7. Decide remote `sauron` service | Pending | API contract and auth model chosen |
 | 8. Optional warm daemon | Pending | Local or remote daemon avoids model reload per invocation |
 | 9. Dataset export | Pending | Corrected examples can export to training/eval format |
@@ -421,7 +438,7 @@ Resolved answers:
 
 - Archive location: `~/.local/share/ocr-captures`.
 - `sauron`: optional backend that can be turned on/off to compare local and remote behavior.
-- Combined OCR: prefer a layout split pipeline first, where text regions and math regions go to separate engines and are then merged into Markdown; keep Pix2Text as a candidate all-in-one benchmark.
+- Combined OCR: benchmark Surya before building custom layout splitting; keep custom routing and Pix2Text as comparison/fallback paths.
 
 Remaining questions:
 
@@ -442,18 +459,19 @@ Remaining questions:
    - Resolved: every attempt gets editable `review.md`; support `$EDITOR` and `--from-clipboard` as convenience paths.
 
 6. **Text OCR backend**
-   - Recommended first local backend: Tesseract, because it is mature and easy to package.
-   - Recommended research/prototype backend: Pix2Text, because it targets text + layout + math.
+   - Implemented first local backend: Tesseract, because it is mature and easy to package.
+   - Its role is baseline/comparison, not final proof that text OCR is solved.
 
 7. **Combined OCR strategy**
-   - Resolved direction: custom layout split + separate engines first.
-   - Keep Pix2Text as an all-in-one comparison backend.
+   - Updated direction: benchmark Surya before building a custom splitter.
+   - Keep custom layout split as a fallback and learning path, using `math-ocr`/`text-ocr` as reusable components.
+   - Keep Pix2Text as an all-in-one comparison backend, but lower priority than Surya.
 
 ---
 
 ## Recommended Next Checkpoint
 
-Verify the feedback archive and correction workflow in the live system before changing OCR engines.
+Verify the feedback archive and correction workflow in the live system, then verify `text-ocr` before changing combined OCR engines.
 
 Reason:
 
@@ -465,10 +483,11 @@ Implemented in `~/nixos-config` but not necessarily installed until `nrt` or `nr
 
 1. `math-ocr` creates an attempt bundle under `~/.local/share/ocr-captures/attempts`.
 2. `~/.local/share/ocr-captures/latest` points to the newest attempt.
-3. `~/.local/share/ocr-captures/review.md` gets a queue entry with links to the screenshot and per-attempt review file.
-4. `ocr-correct-last --from-clipboard` replaces the `## Correction` block in the latest attempt's `review.md`.
-5. Raw output, normalized output, review file, input image, README, backend log, and `metadata.json` are saved per attempt.
-6. Mock validation passed and `nix build ./tools#math-ocr --no-link --print-out-paths --option warn-dirty false` passed.
+3. `~/.local/share/ocr-captures/latest-math` points to the newest math attempt.
+4. `~/.local/share/ocr-captures/review.md` gets a queue entry with links to the screenshot and per-attempt review file.
+5. `ocr-correct-last --from-clipboard` replaces the `## Correction` block in the latest attempt's `review.md`.
+6. Raw output, normalized output, review file, input image, README, backend log, and `metadata.json` are saved per attempt.
+7. Mock validation passed and `nix build ./tools#math-ocr --no-link --print-out-paths --option warn-dirty false` passed.
 
 Live verification next:
 
@@ -480,3 +499,20 @@ Live verification next:
 6. Confirm `review.md` exists in the latest attempt and can be edited directly for current or older attempts.
 
 Do not start training yet.
+
+Checkpoint 4 implementation notes:
+
+1. `text-ocr` is implemented in `tools/scripts/text-ocr.sh`.
+2. It uses the same archive root, queue, `latest` symlink, and per-attempt `review.md` workflow as `math-ocr`.
+3. It is exposed through `tools/pkgs/math-ocr.nix` alongside `math-ocr`, `ocr-correct-last`, and `bootstrap-pix2tex`.
+4. It is a local-only baseline. `OCR_BACKEND=sauron` should fail clearly until a remote API exists.
+5. The next live test should capture clear printed text first, not mixed text+math.
+
+Checkpoint 5 keybind plan:
+
+- `Super+M`: `math-ocr`.
+- `Super+T`: `text-ocr`.
+- `Super+N`: `ocr-combined`.
+- `Ctrl+Shift+N`: Neovide, moved away from `Super+N`.
+- `Ctrl+Shift+T`: old Hyprland `togglesplit` binding.
+- `ocr-combined` is currently a placeholder command that notifies the user that combined OCR is not implemented yet.

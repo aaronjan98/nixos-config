@@ -189,7 +189,9 @@ Purpose:
 Archive:
 - root: `~/.local/share/ocr-captures`
 - queue/history: `~/.local/share/ocr-captures/review.md`
-- latest attempt: `~/.local/share/ocr-captures/latest`
+- latest attempt of any type: `~/.local/share/ocr-captures/latest`
+- latest math attempt: `~/.local/share/ocr-captures/latest-math`
+- latest text attempt: `~/.local/share/ocr-captures/latest-text`
 - per-attempt review file: `~/.local/share/ocr-captures/attempts/<attempt-id>/review.md`
 
 Correction workflow:
@@ -198,6 +200,41 @@ Correction workflow:
 - remove entries from `~/.local/share/ocr-captures/review.md` if they are not useful for future OCR improvement; this does not delete the attempt bundle
 - optional helper: `ocr-correct-last --from-clipboard` replaces the latest attempt's `## Correction` block with the current clipboard text
 - optional helper: `ocr-correct-last <attempt-id-or-dir>` opens an older attempt's `review.md`
+
+## `text-ocr.sh`
+Purpose:
+- operational helper for plain text OCR
+- captures a selected region, runs Tesseract, copies normalized plain text, and records an OCR attempt for later review
+- provides a local baseline for comparison against heavier combined OCR tools such as Surya
+
+Defaults:
+- backend: `OCR_BACKEND=local`
+- language: `TEXT_OCR_LANG=eng`
+- Tesseract page segmentation mode: `TEXT_OCR_PSM=6`
+
+Archive:
+- uses the same `~/.local/share/ocr-captures` archive and `review.md` correction workflow as `math-ocr`
+- per-attempt folders are named `YYYY-MM-DDTHH-MM-SS..._text`
+- the latest attempt is still available through `~/.local/share/ocr-captures/latest`
+- the latest text attempt is available through `~/.local/share/ocr-captures/latest-text`
+
+Notes:
+- `OCR_BACKEND=sauron` and `OCR_BACKEND=auto` are intentionally not implemented yet for `text-ocr`
+- clear printed text should work first; mixed text+math remains the separate `ocr-combined` checkpoint
+
+## `ocr-combined.sh`
+Purpose:
+- placeholder command for the future combined text+math OCR workflow
+- gives a notification instead of silently failing when the keybind is pressed before implementation
+
+Planned workflow:
+- captures a selected region
+- runs a combined text+math engine such as Surya or a custom routing pipeline
+- copies Markdown to the clipboard
+- records a combined OCR attempt under `~/.local/share/ocr-captures`
+
+Status:
+- not implemented yet; next step is benchmarking Surya against saved screen captures
 
 ## `record-session` (system command)
 Purpose:
