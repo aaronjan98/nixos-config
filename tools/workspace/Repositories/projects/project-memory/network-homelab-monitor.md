@@ -1,7 +1,12 @@
 # Project: Home Network Monitor (LANtern)
 
-Status: ready to start — router replacement complete as of 2026-05-24 (RPi5 + OpenWrt live)
+Status: Phase 1 complete — collectors running on sweetpea, SQLite DB live with real data
 Resume tier: strong — demonstrates network systems, security, LLM integration, full-stack
+
+GitHub: https://github.com/aaronjan98/LANtern
+Forgejo: https://git.aaronjanovitch.com/aj/lantern
+Zettelkasten: [[LANtern — home network observability stack]]
+UI spec: `project-memory/lantern-ui-spec.md`
 
 ---
 

@@ -31,8 +31,6 @@ school/trad-mus-research-paper	local	ssh://git@localhost/srv/git/repos/trad-mus-
 school/W3Schools/DS_Home	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ds_home.git
 school/W3Schools/DS_Home	local	ssh://git@localhost:/srv/git/repos/ds_home.git
 self-hosted/homelab/Raymer	home	sweetpea-git:/srv/git/repos/raymer-homelab-docs.git
-self-hosted/lantern	home	sweetpea-git:/srv/git/repos/lantern.git
-self-hosted/lantern	hub	git@github.com:aaronjan98/LANtern.git
 self-hosted/zettelkasten	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/zettelkasten.git
 self-hosted/zettelkasten	hub	git@github.com:aaronjan98/zettelkasten.git
 self-hosted/zettelkasten	local	ssh://git@localhost/srv/git/repos/zettelkasten.git

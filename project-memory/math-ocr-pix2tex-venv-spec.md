@@ -105,7 +105,7 @@ Progress is tracked in this file. Session-level detail is tracked in `memory/YYY
 | 1. Cleanup vestigial pure-Nix attempts | Complete | Dead files and stale comments removed; active `tools/` wrapper remains |
 | 2. Build wrapper package | Complete | `tools` flake package builds after cleanup |
 | 3. Add `bootstrap-pix2tex` | Complete | Manual bootstrap creates/repairs repo + `.venv` |
-| 4. Wire `math-ocr` to venv | Pending | Wrapper calls `.venv/bin/pix2tex` and fails clearly if missing |
+| 4. Wire `math-ocr` to venv | Complete | Wrapper calls `.venv/bin/pix2tex` and fails clearly if missing |
 | 5. Manual OCR test | Pending | Simple equation screenshot copies LaTeX to clipboard |
 | 6. Rebuild integration | Pending | `nrt` passes; `nrs` only after user approval |
 | 7. Docs and sync | Pending | Docs, roadmap, memory, and workspace routing reflect final state |

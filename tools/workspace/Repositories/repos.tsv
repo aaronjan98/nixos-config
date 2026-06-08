@@ -15,5 +15,4 @@ school/scientific_computing	scientific_computing	ssh://git@localhost:/srv/git/re
 school/trad-mus-research-paper	trad-mus-research-paper	ssh://git@localhost/srv/git/repos/trad-mus-research-paper.git
 school/W3Schools/DS_Home	DS_Home	ssh://git@localhost:/srv/git/repos/ds_home.git
 self-hosted/homelab/Raymer	Raymer	sweetpea-git:/srv/git/repos/raymer-homelab-docs.git
-self-hosted/lantern	lantern	sweetpea-git:/srv/git/repos/lantern.git
 self-hosted/zettelkasten	zettelkasten	ssh://git@localhost/srv/git/repos/zettelkasten.git
