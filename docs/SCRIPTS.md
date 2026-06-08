@@ -224,17 +224,38 @@ Notes:
 
 ## `ocr-combined.sh`
 Purpose:
-- placeholder command for the future combined text+math OCR workflow
-- gives a notification instead of silently failing when the keybind is pressed before implementation
+- operational helper for the combined text+math OCR workflow
+- captures a selected region, runs Surya, copies normalized HTML/Markdown-ish output, and records an OCR attempt for later review
 
-Planned workflow:
-- captures a selected region
-- runs a combined text+math engine such as Surya or a custom routing pipeline
-- copies Markdown to the clipboard
-- records a combined OCR attempt under `~/.local/share/ocr-captures`
+Runtime:
+- uses a mutable Surya Python venv at `~/.local/share/ocr-runtimes/surya/.venv`
+- bootstrap with `bootstrap-surya-ocr`
+- local CPU mode depends on Surya's `llama.cpp` backend; the Nix wrapper provides `llama-server`
+- `SURYA_KEEP_SERVER=1 ocr-combined` leaves Surya's inference server running for faster repeated use
 
-Status:
-- not implemented yet; next step is benchmarking Surya against saved screen captures
+Archive:
+- uses the same `~/.local/share/ocr-captures` archive and `review.md` correction workflow as `math-ocr` and `text-ocr`
+- per-attempt folders are named `YYYY-MM-DDTHH-MM-SS..._combined`
+- the latest combined attempt is available through `~/.local/share/ocr-captures/latest-combined`
+- Surya's original JSON is saved as `surya/results.json` and copied to `raw-output.txt`
+
+Notes:
+- output is currently Surya block `html` / `text_lines` joined in reading order
+- the wrapper normalizes Surya `<math>...</math>` tags to Markdown inline math `$...$`
+- `OCR_BACKEND=sauron` and `OCR_BACKEND=auto` are intentionally not implemented yet for `ocr-combined`
+
+## `bootstrap-surya-ocr.sh`
+Purpose:
+- create/repair the mutable Surya venv used by `ocr-combined`
+- install the pinned pip package `surya-ocr==0.16.0`
+- verify `surya_ocr` is available and can import Surya
+
+Runtime location:
+- default: `~/.local/share/ocr-runtimes/surya`
+- override with `SURYA_RUNTIME_DIR`
+
+Logs:
+- `~/.cache/ocr-combined/bootstrap.log`
 
 ## `record-session` (system command)
 Purpose:

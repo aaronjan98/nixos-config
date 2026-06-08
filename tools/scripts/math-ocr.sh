@@ -80,7 +80,7 @@ Start here:
 - `latest` — newest OCR attempt of any type.
 - `latest-math` — newest math OCR attempt.
 - `latest-text` — newest text OCR attempt.
-- `latest-combined` — newest combined OCR attempt, once implemented.
+- `latest-combined` — newest combined OCR attempt.
 
 Recommended workflow:
 
@@ -100,7 +100,7 @@ Capture commands:
 
 - `math-ocr` — isolated formula to LaTeX.
 - `text-ocr` — selected text region to plain text.
-- `ocr-combined` — planned combined text+math Markdown OCR.
+- `ocr-combined` — selected text+math region to Markdown/HTML using Surya.
 
 Each attempt is safe to edit manually. For model improvement, the important field is the `## Correction` section in an attempt's `review.md`.
 

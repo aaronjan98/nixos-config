@@ -1,6 +1,6 @@
 # Text + Math OCR Pipeline Spec
 
-**Status:** Checkpoint 4 implemented; system rebuild/user verification pending
+**Status:** Checkpoint 5 implemented; Surya runtime bootstrap/user verification pending
 **Goal:** Build a reliable Mathpix-like workflow for screen captures and documents that can extract plain text, math LaTeX, and combined Markdown, while preserving failed OCR examples for correction and future model improvement.
 
 ---
@@ -39,6 +39,8 @@ Current status:
 - `math-ocr` calls `~/Repositories/automation/pix2tex/.venv/bin/pix2tex`.
 - `bootstrap-pix2tex` creates/repairs the local pix2tex repo and venv.
 - `text-ocr` is implemented as a local Tesseract baseline using the same archive/review workflow.
+- `ocr-combined` is implemented as a local Surya probe using the same archive/review workflow.
+- `bootstrap-surya-ocr` creates/repairs the mutable Surya venv at `~/.local/share/ocr-runtimes/surya`.
 - `Super+M` is the intended math OCR hotkey.
 - `nrt` has verified the wrapper in the current test generation.
 - `nrs` has not been run for this branch unless the user later chooses to promote it.
@@ -151,9 +153,28 @@ Recommendation:
 - Keep Pix2Text as a lower-priority candidate backend/prototype, especially for historical comparison with AJ's earlier notes.
 - Keep the command boundary separate so either strategy can be swapped behind `ocr-combined`.
 
+Current Surya probe:
+
+- `ocr-combined` captures a selected screen region.
+- It saves the input as `~/.local/share/ocr-captures/attempts/<timestamp>_combined/input.png`.
+- It runs `~/.local/share/ocr-runtimes/surya/.venv/bin/surya_ocr input.png --output_dir <attempt>/surya`.
+- It extracts Surya block `html` in reading order into `normalized-output.txt`.
+- It normalizes Surya `<math>...</math>` tags into Markdown inline math `$...$`.
+- It saves the original Surya JSON at `surya/results.json` and `raw-output.txt`.
+- It intentionally does not implement `OCR_BACKEND=sauron` yet.
+- `SURYA_KEEP_SERVER=1` can leave Surya's backend server running for faster repeated tests.
+
+Why Surya fits screen capture:
+
+- Surya's CLI accepts an image path as `DATA_PATH`, not only PDFs.
+- The screen capture pipeline already produces an image path (`input.png`).
+- Surya's OCR output includes layout-labeled blocks, reading order, `html`, bounding boxes, and confidence.
+- Surya 2 handles equations inline in the full-page OCR output using `<math>...</math>` tags, so it is a plausible first combined OCR backend.
+- The main caveat is runtime cost: Surya 2 needs an inference backend (`llama.cpp` on CPU/Apple Silicon or `vllm` on NVIDIA GPU).
+
 Output:
 
-- Markdown copied to clipboard.
+- HTML/Markdown-ish combined output copied to clipboard.
 - Attempt bundle saved to the OCR archive.
 
 ---
@@ -230,7 +251,7 @@ Recommended path:
   latest -> attempts/<attempt-id>          # newest attempt of any type
   latest-math -> attempts/<attempt-id>     # newest math attempt
   latest-text -> attempts/<attempt-id>     # newest text attempt
-  latest-combined -> attempts/<attempt-id> # newest combined attempt, once implemented
+  latest-combined -> attempts/<attempt-id> # newest combined attempt
   attempts/
     2026-06-07T23-15-22_math/
       README.md
@@ -423,7 +444,7 @@ Progress is tracked here. Do not implement later phases until the prior checkpoi
 | 2. Add attempt archive | Implemented | `math-ocr` saves input/output/metadata for each run |
 | 3. Add correction files and commands | Implemented | User can edit corrected output for any attempt |
 | 4. Add text OCR command | Implemented | `text-ocr` captures region and copies plain text |
-| 5. Add combined OCR prototype | Pending | `ocr-combined` returns Markdown for simple text+math region |
+| 5. Add combined OCR prototype | Implemented | `ocr-combined` runs Surya on screen capture and returns normalized block HTML |
 | 6. Evaluate backend quality | Pending | Compare local pix2tex/Tesseract/Surya/Pix2Text on saved examples |
 | 7. Decide remote `sauron` service | Pending | API contract and auth model chosen |
 | 8. Optional warm daemon | Pending | Local or remote daemon avoids model reload per invocation |
@@ -463,7 +484,7 @@ Remaining questions:
    - Its role is baseline/comparison, not final proof that text OCR is solved.
 
 7. **Combined OCR strategy**
-   - Updated direction: benchmark Surya before building a custom splitter.
+   - Implemented first probe with Surya.
    - Keep custom layout split as a fallback and learning path, using `math-ocr`/`text-ocr` as reusable components.
    - Keep Pix2Text as an all-in-one comparison backend, but lower priority than Surya.
 
@@ -515,4 +536,13 @@ Checkpoint 5 keybind plan:
 - `Super+N`: `ocr-combined`.
 - `Ctrl+Shift+N`: Neovide, moved away from `Super+N`.
 - `Ctrl+Shift+T`: old Hyprland `togglesplit` binding.
-- `ocr-combined` is currently a placeholder command that notifies the user that combined OCR is not implemented yet.
+- `ocr-combined` is now a Surya-backed probe command.
+
+Checkpoint 5 implementation notes:
+
+1. `ocr-combined` is implemented in `tools/scripts/ocr-combined.sh`.
+2. `bootstrap-surya-ocr` is implemented in `tools/scripts/bootstrap-surya-ocr.sh`.
+3. Surya runtime lives outside `~/nixos-config` at `~/.local/share/ocr-runtimes/surya`.
+4. The wrapper uses the same archive root, queue, `latest` symlink, `latest-combined` symlink, and per-attempt `review.md` workflow as the other OCR commands.
+5. Mock validation passed with a fake `surya_ocr` writing `surya/results.json`.
+6. Live validation is still pending: run `nrt`, run `bootstrap-surya-ocr`, then trigger `Super+N` on a simple text+math region.

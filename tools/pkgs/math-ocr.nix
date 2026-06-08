@@ -5,6 +5,10 @@ let
     pkgs.stdenv.cc.cc.lib
   ];
 
+  suryaLibraryPath = lib.makeLibraryPath [
+    pkgs.stdenv.cc.cc.lib
+  ];
+
   math-ocr = pkgs.writeShellApplication {
     name = "math-ocr";
 
@@ -74,10 +78,41 @@ let
     name = "ocr-combined";
 
     runtimeInputs = [
+      pkgs.grim
+      pkgs.slurp
+      pkgs.wl-clipboard
       pkgs.libnotify
+      pkgs.bash
+      pkgs.systemd
+      pkgs.jq
+      pkgs.file
+      pkgs.coreutils
+      pkgs.gnused
+      pkgs.gnugrep
+      pkgs.llama-cpp
     ];
 
+    runtimeEnv.SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
+
+    excludeShellChecks = [ "SC2016" ];
+
     text = builtins.readFile ../scripts/ocr-combined.sh;
+  };
+
+  bootstrap-surya-ocr = pkgs.writeShellApplication {
+    name = "bootstrap-surya-ocr";
+
+    runtimeInputs = [
+      pkgs.python312
+      pkgs.coreutils
+      pkgs.gnugrep
+      pkgs.gnused
+      pkgs.llama-cpp
+    ];
+
+    runtimeEnv.SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
+
+    text = builtins.readFile ../scripts/bootstrap-surya-ocr.sh;
   };
 
   bootstrap-pix2tex = pkgs.writeShellApplication {
@@ -106,6 +141,7 @@ pkgs.symlinkJoin {
     ocr-correct-last
     text-ocr
     ocr-combined
+    bootstrap-surya-ocr
     bootstrap-pix2tex
   ];
 
