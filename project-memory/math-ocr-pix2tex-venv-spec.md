@@ -1,6 +1,6 @@
 # Math OCR Pix2tex Venv Runtime Spec
 
-**Status:** Draft; runtime path approved
+**Status:** Checkpoint 6 complete; docs and sync pending
 **Goal:** Make `math-ocr` reliable on NixOS by keeping the screenshot wrapper in Nix and running pix2tex from a pinned user-space Python venv.
 
 ---
@@ -106,8 +106,8 @@ Progress is tracked in this file. Session-level detail is tracked in `memory/YYY
 | 2. Build wrapper package | Complete | `tools` flake package builds after cleanup |
 | 3. Add `bootstrap-pix2tex` | Complete | Manual bootstrap creates/repairs repo + `.venv` |
 | 4. Wire `math-ocr` to venv | Complete | Wrapper calls `.venv/bin/pix2tex` and fails clearly if missing |
-| 5. Manual OCR test | Pending | Simple equation screenshot copies LaTeX to clipboard |
-| 6. Rebuild integration | Pending | `nrt` passes; `nrs` only after user approval |
+| 5. Manual OCR test | Complete | Simple equation screenshot copies LaTeX to clipboard and persists for the user's shell |
+| 6. Rebuild integration | Complete | `nrt` passes; `nrs` only after user approval |
 | 7. Docs and sync | Pending | Docs, roadmap, memory, and workspace routing reflect final state |
 
 ### Phase 0: Confirm decisions
@@ -201,6 +201,25 @@ Avoid:
 - Symlinking model files into `/nix/store`.
 
 Checkpoint for user: test `math-ocr` manually on a simple equation screenshot.
+
+Checkpoint 5 current result:
+
+- `math-ocr` successfully opens `slurp`, captures with `grim`, runs pix2tex from `~/Repositories/automation/pix2tex/.venv/bin/pix2tex`, and copies formula-only LaTeX to the Wayland clipboard.
+- The wrapper exports `LD_LIBRARY_PATH` from a Nix-provided `PIX2TEX_EXTRA_LIBRARY_PATH` so pip-installed binary wheels can find `libstdc++.so.6`.
+- The `slurp` overlay was adjusted so the selected region gets the translucent red fill instead of the whole screen.
+- pix2tex writes model weights to `~/Repositories/automation/pix2tex/pix2tex/model/checkpoints/`; those files are already ignored by pix2tex's `.gitignore`.
+- The raw pix2tex stdout remains in `$XDG_CACHE_HOME/math-ocr/last.txt` for debugging, but the clipboard strips pix2tex's `image-path:` prefix.
+- Redundant whole-output LaTeX grouping like `{\frac{...}{...}}` is normalized to `\frac{...}{...}` while preserving inner argument braces.
+- An initial clipboard check was too weak because it pasted immediately inside the launching command context. The wrapper now launches `wl-copy --foreground` through `systemd-run --user` so clipboard ownership survives after the OCR command exits.
+- User verified `wl-paste` from their shell returned the copied formula. `ALT+M` still invokes the old installed wrapper until the system rebuild/switch checkpoint installs the new Nix generation.
+
+Checkpoint 6 result:
+
+- User ran `nrt` successfully against the dirty `math-ocr` branch.
+- The current test generation installed the new wrapper, and the hotkey reached the pix2tex venv runtime instead of the old PATH-based implementation.
+- The Hyprland binding was changed from `ALT+M` to `Super+M` in `/home/aj/.config/hypr/conf.d/20-binds.conf`.
+- `nrs` was not run; leave switch-to-boot-generation as a separate user decision.
+- Remaining limitation: OCR quality is model/input-bound. The wrapper works, but pix2tex can misread more complex expressions.
 
 ### Phase 4: Optional user service
 

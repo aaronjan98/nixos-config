@@ -1,6 +1,10 @@
 { lib, pkgs }:
 
 let
+  pix2texLibraryPath = lib.makeLibraryPath [
+    pkgs.stdenv.cc.cc.lib
+  ];
+
   math-ocr = pkgs.writeShellApplication {
     name = "math-ocr";
 
@@ -9,11 +13,15 @@ let
       pkgs.slurp
       pkgs.wl-clipboard
       pkgs.libnotify
+      pkgs.bash
+      pkgs.systemd
       pkgs.file
       pkgs.coreutils
       pkgs.gnused
       pkgs.gnugrep
     ];
+
+    runtimeEnv.PIX2TEX_EXTRA_LIBRARY_PATH = pix2texLibraryPath;
 
     text = builtins.readFile ../scripts/math-ocr.sh;
   };
@@ -30,6 +38,8 @@ let
       pkgs.gnused
       pkgs.gawk
     ];
+
+    runtimeEnv.PIX2TEX_EXTRA_LIBRARY_PATH = pix2texLibraryPath;
 
     text = builtins.readFile ../scripts/bootstrap-pix2tex.sh;
   };
