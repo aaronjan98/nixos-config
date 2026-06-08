@@ -15,6 +15,7 @@ let
       pkgs.libnotify
       pkgs.bash
       pkgs.systemd
+      pkgs.jq
       pkgs.file
       pkgs.coreutils
       pkgs.gnused
@@ -23,7 +24,26 @@ let
 
     runtimeEnv.PIX2TEX_EXTRA_LIBRARY_PATH = pix2texLibraryPath;
 
+    excludeShellChecks = [ "SC2016" ];
+
     text = builtins.readFile ../scripts/math-ocr.sh;
+  };
+
+  ocr-correct-last = pkgs.writeShellApplication {
+    name = "ocr-correct-last";
+
+    runtimeInputs = [
+      pkgs.wl-clipboard
+      pkgs.libnotify
+      pkgs.jq
+      pkgs.coreutils
+      pkgs.gnused
+      pkgs.gnugrep
+    ];
+
+    excludeShellChecks = [ "SC2016" ];
+
+    text = builtins.readFile ../scripts/ocr-correct-last.sh;
   };
 
   bootstrap-pix2tex = pkgs.writeShellApplication {
@@ -49,6 +69,7 @@ pkgs.symlinkJoin {
 
   paths = [
     math-ocr
+    ocr-correct-last
     bootstrap-pix2tex
   ];
 

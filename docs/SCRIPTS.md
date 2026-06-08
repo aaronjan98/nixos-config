@@ -184,6 +184,20 @@ Typical use:
 ## `math-ocr.sh`
 Purpose:
 - operational helper for the math OCR workflow
+- captures a selected region, runs pix2tex, copies normalized LaTeX, and records an OCR attempt for later review
+
+Archive:
+- root: `~/.local/share/ocr-captures`
+- queue/history: `~/.local/share/ocr-captures/review.md`
+- latest attempt: `~/.local/share/ocr-captures/latest`
+- per-attempt review file: `~/.local/share/ocr-captures/attempts/<attempt-id>/review.md`
+
+Correction workflow:
+- edit the `## Correction` block in an attempt's `review.md`
+- use `~/.local/share/ocr-captures/review.md` as the triage queue; each entry links to its screenshot and per-attempt review file
+- remove entries from `~/.local/share/ocr-captures/review.md` if they are not useful for future OCR improvement; this does not delete the attempt bundle
+- optional helper: `ocr-correct-last --from-clipboard` replaces the latest attempt's `## Correction` block with the current clipboard text
+- optional helper: `ocr-correct-last <attempt-id-or-dir>` opens an older attempt's `review.md`
 
 ## `record-session` (system command)
 Purpose:

@@ -210,6 +210,7 @@ Long-running, multi-session work items with design decisions and progress checkl
 
 - `project-memory/multi-host-refactor-spec.md` — multi-host refactor (ThinkPad + Framework 13 AMD), shared base extraction, pentest module, branch: `multi-host`
 - `project-memory/math-ocr-pix2tex-venv-spec.md` — math OCR reimplementation using a Nix-managed wrapper plus pinned pix2tex repo/venv runtime
+- `project-memory/text-math-ocr-pipeline-spec.md` — broader Mathpix-like OCR plan for text OCR, math OCR, combined Markdown OCR, feedback capture, correction workflow, and optional `sauron` backend
 
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.
