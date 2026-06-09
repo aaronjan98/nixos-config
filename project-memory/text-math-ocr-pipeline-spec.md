@@ -279,8 +279,9 @@ What "hot" means right now:
 - The service exposes `/warmup`; the laptop wrapper calls it before `POST /ocr/combined` when `SAURON_WARMUP=1`.
 - The loaded objects are Surya 0.16 `FoundationPredictor`, `DetectionPredictor`, and `RecognitionPredictor`.
 - Sauron auto-suspend still applies. The laptop command sends Wake-on-LAN, waits for SSH, then calls the localhost API through SSH. If Sauron is asleep, the first request includes wake time; if it is already awake, it skips most of that overhead.
-- Current remote backend is `surya-ocr==0.16.0`, not Surya 2.0.
-- Validation on a saved screenshot showed startup model load around 4.6s and hot in-process OCR around 23–30s server-side, depending on request.
+- Current remote backend is `surya-ocr==0.16.0` with `torch==2.7.1+cu126`, not Surya 2.0.
+- CUDA 12.6 is intentional: newer CUDA 13 PyTorch wheels initialize on Sauron after driver 580, but they do not ship kernels for the Quadro M5000's `sm_52` compute capability.
+- Validation on a saved screenshot showed startup model load around 5s and hot in-process CUDA OCR around 22.5s server-side.
 
 ---
 
@@ -612,4 +613,4 @@ Checkpoint 9 implementation notes:
 3. Active comparison keybinds are `Super+N` for local `ocr-combined` and `Super+B` for remote `ocr-combined-sauron`.
 4. The Sauron API is now an in-memory hot predictor service using Surya 0.16, not Surya 2.
 5. `/warmup` loads the predictors, and the laptop wrapper calls `/warmup` before remote OCR by default.
-6. Sauron currently uses CPU execution; its Quadro M5000 is present, but Torch reports CUDA unavailable because the NVIDIA driver is too old for the installed Torch CUDA build.
+6. Sauron now uses the Quadro M5000 through `torch==2.7.1+cu126`; `torch 2.12.0+cu130` is incompatible with this GPU because it lacks `sm_52` kernels.
