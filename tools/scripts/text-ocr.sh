@@ -7,8 +7,12 @@ WL_COPY="${WL_COPY:-wl-copy}"
 NOTIFY="${NOTIFY:-notify-send}"
 SYSTEMD_RUN="${SYSTEMD_RUN:-systemd-run}"
 JQ="${JQ:-jq}"
+TESSERACT="${TESSERACT:-tesseract}"
 
-# ---- Ensure HOME/XDG_CACHE_HOME are sane (pix2tex uses these) ----
+TEXT_OCR_LANG="${TEXT_OCR_LANG:-eng}"
+TEXT_OCR_PSM="${TEXT_OCR_PSM:-6}"
+OCR_BACKEND="${OCR_BACKEND:-local}"
+
 real_home="$(getent passwd "$(id -un)" | cut -d: -f6 || true)"
 if [ -z "${HOME:-}" ] || [ "${HOME:-}" = "/homeless-shelter" ]; then
   export HOME="${real_home:-/tmp}"
@@ -16,19 +20,12 @@ fi
 if [ -z "${XDG_CACHE_HOME:-}" ] || [ "${XDG_CACHE_HOME:-}" = "/homeless-shelter" ]; then
   export XDG_CACHE_HOME="$HOME/.cache"
 fi
-if [ -n "${PIX2TEX_EXTRA_LIBRARY_PATH:-}" ]; then
-  export LD_LIBRARY_PATH="$PIX2TEX_EXTRA_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-fi
 
-RUNTIME_DIR="${PIX2TEX_RUNTIME_DIR:-$HOME/Repositories/automation/pix2tex}"
-VENV_DIR="${PIX2TEX_VENV_DIR:-$RUNTIME_DIR/.venv}"
-
-cache_dir="$XDG_CACHE_HOME/math-ocr"
+cache_dir="$XDG_CACHE_HOME/text-ocr"
 work_dir="$cache_dir/work"
-model_ckpt_dir="$RUNTIME_DIR/pix2tex/model/checkpoints"
 capture_root="${OCR_CAPTURE_DIR:-$HOME/.local/share/ocr-captures}"
 attempt_timestamp="$(date +%Y-%m-%dT%H-%M-%S.%N%z)"
-attempt_id="${attempt_timestamp}_math"
+attempt_id="${attempt_timestamp}_text"
 attempt_dir="$capture_root/attempts/$attempt_id"
 metadata="$attempt_dir/metadata.json"
 attempt_review="$attempt_dir/review.md"
@@ -135,7 +132,7 @@ EOF
 fi
 
 ln -sfn "$attempt_dir" "$capture_root/latest"
-ln -sfn "$attempt_dir" "$capture_root/latest-math"
+ln -sfn "$attempt_dir" "$capture_root/latest-text"
 ln -sfn "$attempt_dir" "$cache_dir/last-attempt"
 ln -sfn "$img" "$cache_dir/last.png"
 ln -sfn "$log" "$cache_dir/last.log"
@@ -160,12 +157,12 @@ write_metadata() {
   "$JQ" -n \
     --arg timestamp "$attempt_timestamp" \
     --arg attempt_id "$attempt_id" \
-    --arg command "math-ocr" \
-    --arg backend "${OCR_BACKEND:-local}" \
-    --arg engine "pix2tex" \
-    --arg engine_path "${OCR:-}" \
-    --arg runtime_dir "$RUNTIME_DIR" \
-    --arg venv_dir "$VENV_DIR" \
+    --arg command "text-ocr" \
+    --arg backend "$OCR_BACKEND" \
+    --arg engine "tesseract" \
+    --arg engine_path "$(command -v "$TESSERACT" || true)" \
+    --arg language "$TEXT_OCR_LANG" \
+    --arg page_segmentation_mode "$TEXT_OCR_PSM" \
     --arg input "$img" \
     --arg raw_output "$out" \
     --arg normalized_output "$normalized_out" \
@@ -186,8 +183,8 @@ write_metadata() {
       engine: {
         name: $engine,
         path: $engine_path,
-        runtime_dir: $runtime_dir,
-        venv_dir: $venv_dir
+        language: $language,
+        page_segmentation_mode: ($page_segmentation_mode | tonumber? // $page_segmentation_mode)
       },
       files: {
         input: $input,
@@ -216,10 +213,12 @@ write_attempt_review() {
     cat <<EOF
 ---
 id: $attempt_id
-type: math
+type: text
 status: $status
-backend: ${OCR_BACKEND:-local}
-engine: pix2tex
+backend: $OCR_BACKEND
+engine: tesseract
+language: $TEXT_OCR_LANG
+page_segmentation_mode: $TEXT_OCR_PSM
 input: input.png
 created_at: $attempt_timestamp
 region: "$region"
@@ -248,7 +247,7 @@ EOF
 
 ## Normalized Output
 
-\`\`\`latex
+\`\`\`text
 EOF
     cat "$normalized_out"
     printf '\n'
@@ -257,7 +256,7 @@ EOF
 
 ## Correction
 
-\`\`\`latex
+\`\`\`text
 EOF
     printf '%s\n' "$corrected_text"
     cat <<'EOF'
@@ -274,7 +273,7 @@ append_review_queue_entry() {
   local status="$1"
   local relative_review="attempts/$attempt_id/review.md"
   {
-    printf -- '- [ ] `%s` `%s` `%s`\n' "$attempt_timestamp" "math" "$status"
+    printf -- '- [ ] `%s` `%s` `%s`\n' "$attempt_timestamp" "text" "$status"
     printf '  - Review: [%s](%s)\n' "$relative_review" "$relative_review"
     printf '  - Image: [input.png](%s)\n' "attempts/$attempt_id/input.png"
     printf '  - Output: edit the `## Correction` block in the linked `review.md` if this was wrong.\n'
@@ -282,105 +281,70 @@ append_review_queue_entry() {
   } >>"$capture_review"
 }
 
+normalize_text_output() {
+  awk '
+    {
+      sub(/^[[:space:]]+/, "")
+      sub(/[[:space:]]+$/, "")
+      lines[++count] = $0
+    }
+    END {
+      start = 1
+      while (start <= count && lines[start] == "") {
+        start++
+      }
+
+      end = count
+      while (end >= start && lines[end] == "") {
+        end--
+      }
+
+      for (line_index = start; line_index <= end; line_index++) {
+        print lines[line_index]
+      }
+    }
+  '
+}
+
 write_metadata "started"
 write_attempt_review "started"
 
-strip_outer_latex_group() {
-  local text="$1"
-  local suffix=""
-  local last_char="${text: -1}"
+if [ "$OCR_BACKEND" != "local" ]; then
+  logln "Unsupported text OCR backend: $OCR_BACKEND"
+  logln "Only OCR_BACKEND=local is implemented for text-ocr right now."
+  write_metadata "failed" 64 "$(elapsed_ms)" 0
+  write_attempt_review "failed"
+  append_review_queue_entry "failed"
+  "$NOTIFY" -u critical "Text OCR failed" "OCR_BACKEND=$OCR_BACKEND is not implemented yet.\nLog: $log"
+  exit 64
+fi
 
-  case "$last_char" in
-    "." | "!" | "?" | "," | ":" | ";")
-      suffix="$last_char"
-      text="${text:0:${#text}-1}"
-      ;;
-  esac
-
-  if [[ "$text" != \{* ]] || [[ "$text" != *\} ]]; then
-    printf '%s%s' "$text" "$suffix"
-    return
-  fi
-
-  local length="${#text}"
-  local depth=0
-  local escaped=0
-  local close_index=-1
-  local index
-  local char
-
-  for ((index = 0; index < length; index++)); do
-    char="${text:index:1}"
-
-    if [ "$escaped" -eq 1 ]; then
-      escaped=0
-      continue
-    fi
-
-    case "$char" in
-      "\\")
-        escaped=1
-        ;;
-      "{")
-        depth=$((depth + 1))
-        ;;
-      "}")
-        depth=$((depth - 1))
-        if [ "$depth" -eq 0 ]; then
-          close_index="$index"
-          break
-        fi
-        if [ "$depth" -lt 0 ]; then
-          break
-        fi
-        ;;
-    esac
-  done
-
-  if [ "$close_index" -eq $((length - 1)) ]; then
-    printf '%s%s' "${text:1:length-2}" "$suffix"
-  else
-    printf '%s%s' "$text" "$suffix"
-  fi
-}
-
-if [ -x "$VENV_DIR/bin/pix2tex" ]; then
-  OCR="$VENV_DIR/bin/pix2tex"
-elif [ -x "$VENV_DIR/bin/pix2tex_cli" ]; then
-  OCR="$VENV_DIR/bin/pix2tex_cli"
-else
-  logln "No pix2tex command found in venv."
-  logln "RUNTIME_DIR: $RUNTIME_DIR"
-  logln "VENV_DIR: $VENV_DIR"
-  logln "Expected: $VENV_DIR/bin/pix2tex or $VENV_DIR/bin/pix2tex_cli"
+if ! command -v "$TESSERACT" >/dev/null 2>&1; then
+  logln "No tesseract command found."
   write_metadata "failed" 127 "$(elapsed_ms)" 0
   write_attempt_review "failed"
   append_review_queue_entry "failed"
-  "$NOTIFY" -u critical "Math OCR failed" "pix2tex venv is not ready. Run: bootstrap-pix2tex\nLog: $log"
-  exit 1
+  "$NOTIFY" -u critical "Text OCR failed" "tesseract not found in PATH.\nLog: $log"
+  exit 127
 fi
 
-# ---- Debug header ----
-logln "== math-ocr debug =="
+logln "== text-ocr debug =="
 logln "date: $(date -Is)"
-logln "ocr: $OCR"
+logln "backend: $OCR_BACKEND"
+logln "engine: $TESSERACT"
+logln "engine path: $(command -v "$TESSERACT" || true)"
+logln "language: $TEXT_OCR_LANG"
+logln "page segmentation mode: $TEXT_OCR_PSM"
 logln "HOME: ${HOME:-}"
 logln "XDG_CACHE_HOME: ${XDG_CACHE_HOME:-}"
-logln "RUNTIME_DIR: $RUNTIME_DIR"
-logln "VENV_DIR: $VENV_DIR"
-logln "PIX2TEX_EXTRA_LIBRARY_PATH: ${PIX2TEX_EXTRA_LIBRARY_PATH:-}"
-logln "LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-}"
 logln "cache_dir: $cache_dir"
 logln "work_dir: $work_dir"
 logln "capture_root: $capture_root"
 logln "attempt_dir: $attempt_dir"
 logln "metadata: $metadata"
-logln "pix2tex model_ckpt_dir: $model_ckpt_dir"
-logln "which $OCR: $(command -v "$OCR" || true)"
 logln "PATH: $PATH"
 logln ""
 
-# ---- Region capture ----
 region="$("$SLURP" -b "00000000" -c "e62600ff" -B "00000000" -w 2 -s "1e000080")" || {
   write_metadata "cancelled" 0 "$(elapsed_ms)" 0
   write_attempt_review "cancelled"
@@ -395,16 +359,7 @@ logln "image info:"
 (file "$img" >>"$log" 2>&1) || true
 logln ""
 
-# NOTE: we DO NOT pre-seed/copy weights into the cache.
-# Let pix2tex/pip-managed code handle downloading and managing the correct model files.
-# This avoids state-dict/version mismatch errors.
-
-logln "pix2tex model checkpoint dir listing (before running pix2tex):"
-(ls -lah "$model_ckpt_dir" >>"$log" 2>&1) || true
-logln ""
-
-# ---- Run OCR from a cache work directory, not from the source checkout ----
-cmd=( "$OCR" --no-cuda "$img" )
+cmd=( "$TESSERACT" "$img" stdout -l "$TEXT_OCR_LANG" --psm "$TEXT_OCR_PSM" )
 
 logln "running (cwd=$work_dir): ${cmd[*]}"
 logln ""
@@ -422,27 +377,23 @@ logln "exit: $rc"
 stdout_bytes="$(wc -c <"$out" | tr -d ' ')"
 logln "stdout bytes: $stdout_bytes"
 
-latex="$(tr -d '\r' <"$out" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-latex="${latex#"$img": }"
-latex="${latex#"$img":}"
-latex="$(printf '%s' "$latex" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-latex="$(strip_outer_latex_group "$latex")"
-printf "%s" "$latex" >"$normalized_out"
+tr -d '\r\f' <"$out" | normalize_text_output >"$normalized_out"
 
-if [ $rc -ne 0 ] || [ -z "${latex// }" ]; then
+if [ $rc -ne 0 ] || [ ! -s "$normalized_out" ]; then
   write_metadata "failed" "$rc" "$(elapsed_ms)" "$stdout_bytes"
   write_attempt_review "failed"
   append_review_queue_entry "failed"
   preview="$(tail -n 80 "$log" | sed 's/\t/  /g')"
-  "$NOTIFY" -u critical "Math OCR failed" "cmd: $OCR (exit $rc)\n\n$preview\n\nLog: $log\nImage: $img"
+  "$NOTIFY" -u critical "Text OCR failed" "cmd: $TESSERACT (exit $rc)\n\n$preview\n\nLog: $log\nImage: $img"
   exit 1
 fi
 
+text="$(cat "$normalized_out")"
 write_metadata "succeeded" "$rc" "$(elapsed_ms)" "$stdout_bytes"
-write_attempt_review "needs-review" "$latex"
+write_attempt_review "needs-review" "$text"
 append_review_queue_entry "needs-review"
 
-copy_unit="math-ocr-clipboard-$(date +%s%N)"
+copy_unit="text-ocr-clipboard-$(date +%s%N)"
 copy_rc=0
 
 logln "copying to clipboard via user systemd unit: $copy_unit"
@@ -467,4 +418,4 @@ else
   logln "clipboard holder started"
 fi
 
-"$NOTIFY" "Math OCR" "Copied LaTeX to clipboard"
+"$NOTIFY" "Text OCR" "Copied text to clipboard"

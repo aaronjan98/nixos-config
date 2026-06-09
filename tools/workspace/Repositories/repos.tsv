@@ -1,4 +1,5 @@
 # relative_path	repo_name	remote_url
+automation/pix2tex	pix2tex	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/pix2tex.git
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
 experiment/vulnlab	vulnlab	ssh://git@localhost/srv/git/repos/vulnlab.git

@@ -4,7 +4,7 @@
 > This configuration is specific to my machines, workflows, and preferences.
 > I recommend the repo be an inspiration, reference, or a source of ideas rather than something to copy directly without modification.
 
-![](https://cdn.discordapp.com/attachments/1420215682880114848/1471538634577412239/2026-02-12_07-18-27.png?ex=69be19e6&is=69bcc866&hm=7b2e1834518c4fa6e049b563334e2b08726b9508bec2e34e8e86f632d0796535&)
+![](https://cloud.home/s/WjEspgBbQdWmpKi)
 
 This repository is both:
 

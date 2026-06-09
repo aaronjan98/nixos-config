@@ -17,7 +17,6 @@
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
-    #../../modules/math-ocr.nix #broken currently
     ../../modules/cliphist.nix
     ../../modules/obsidian-ipc.nix
     ../../modules/ollama.nix
@@ -417,7 +416,6 @@
 
     # Custom Overlays
     breeze-hacked-cursor
-    #pix2tex
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.record-session
 

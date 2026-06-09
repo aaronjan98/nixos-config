@@ -30,7 +30,6 @@
 
       localOverlay = (final: prev: {
         breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
-        # pix2tex = final.callPackage ./pkgs/pix2tex { };
         llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
         models = final.callPackage ./pkgs/models/default.nix { };
         openai-codex = final.callPackage ./pkgs/openai-codex/default.nix { };
@@ -93,8 +92,6 @@
             inherit system;
             overlays = [ myOverlay ];
           };
-        in {
-          # inherit (pkgsWithOverlay) pix2tex;
-        };
+        in { };
     };
 }
