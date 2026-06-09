@@ -589,6 +589,7 @@ Current prototype:
 - Output root: `~/.local/share/ocr-captures/attempts/<timestamp>_custom` unless `OCR_CAPTURE_DIR` or `--attempt-dir` is supplied.
 - Latest symlink: `~/.local/share/ocr-captures/latest-custom`.
 - Artifacts: `input.png`, `processed.png`, `preprocess.json`, `debug-overlay.png`, `tesseract.tsv`, `lines.json`, `spans.json`, `display-blocks.json`, `crops/`, `display-crops/`, `raw-output.txt`, `merged-output.md`, `normalized-output.txt`, `metadata.json`, `backend.log`, and `review.md`.
+- Sauron inline artifacts: suspicious inline-math line crops are saved in `line-crops/`; responses are saved in `line-backend/`; per-line statuses and outputs are recorded in `lines.json`.
 - Preprocessing: measure mean brightness; invert dark captures before OCR, leave light captures non-inverted, grayscale/auto-level/upscale for Tesseract and math crops.
 - Pix2tex mode: default `auto` skips simple Tesseract-cleanable spans and uses cleanup fallback; `always` forces pix2tex; timeout defaults to 20 seconds per crop.
 - Display-block routing: math-heavy centered line groups are detected before inline span routing, cropped as whole blocks, and excluded from normal Tesseract line merging.
@@ -596,7 +597,8 @@ Current prototype:
 - Cleanup heuristics: normalize common math OCR confusions such as `¢` -> `c`, split glued prose suffixes like `;ie.,` back out of math spans, and collapse the observed Tesseract `dx/dx` stacked-fraction pattern into a display equation.
 - Validation so far: Nix build passed, mock pix2tex runs passed, and the latest dark-background textbook screenshot normalized correctly in auto mode without pix2tex calls.
 - Current hotkey: `Super+X` runs live `ocr-custom-split-sauron`; `ocr-custom-split` remains available as the local prototype command and `Super+C` remains `centerwindow`.
-- Sauron custom profile: the laptop still performs screen capture, adaptive preprocessing, Tesseract TSV layout, line grouping, inline span cleanup, and archive creation. Only complex display-block crops are sent through Sauron's hot OCR API. This is intentional because the screenshot must be captured locally, while the display-equation backend is the slow/weak part.
+- Sauron custom profile: the laptop still performs screen capture, adaptive preprocessing, Tesseract TSV layout, line grouping, and archive creation. Complex display-block crops and suspicious inline-math line crops are sent through Sauron's hot OCR API. This is intentional because the screenshot must be captured locally, while math recognition is the weak part.
+- Validation on the complex-conjugates example succeeded after inline line routing: Sauron corrected prose inline math to `$r_1$`, `$r_2$`, `$\lambda \pm i\mu$`, and `$r_1 = r_2$`, while display blocks produced the expected equations. CPU fallback latency was roughly 12-22s per remote crop.
 
 Implemented in `~/nixos-config` but not necessarily installed until `nrt` or `nrs`:
 

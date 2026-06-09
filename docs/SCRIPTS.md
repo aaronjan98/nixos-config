@@ -247,16 +247,18 @@ Archive:
 Notes:
 - current hotkey: `Super+X` runs `ocr-custom-split-sauron`; `ocr-custom-split` remains the local prototype command
 - local profile: captures/preprocesses on the laptop, uses Tesseract for prose/layout, skips simple math with cleanup rules, and only uses local pix2tex when explicitly forced or needed by mode
-- Sauron profile: captures/preprocesses and segments on the laptop, then sends complex display-math crops to Sauron's hot OCR API through SSH; this keeps screen capture local while moving the slow display backend to the homelab
+- Sauron profile: captures/preprocesses and segments on the laptop, then sends complex display-math crops and suspicious inline-math line crops to Sauron's hot OCR API through SSH; this keeps screen capture local while moving the weak math recognition cases to the homelab
 - it is the comparison path for deciding whether a custom Tesseract + remote display backend layout pipeline beats whole-image Surya for textbook-style screenshots
 - pix2tex defaults to `~/Repositories/automation/pix2tex/.venv/bin/pix2tex`; override with `PIX2TEX_BIN`
 - pix2tex runs with `--no-cuda` by default; override extra args with `OCR_CUSTOM_PIX2TEX_ARGS`
 - pix2tex mode defaults to `OCR_CUSTOM_PIX2TEX_MODE=auto`, which skips simple Tesseract-cleanable math and falls back to cleaned text; set `OCR_CUSTOM_PIX2TEX_MODE=always` to force pix2tex crops
 - pix2tex crop timeout defaults to `20s`; override with `OCR_CUSTOM_PIX2TEX_TIMEOUT`
 - backend profile defaults to `OCR_CUSTOM_BACKEND=local`; `ocr-custom-split-sauron` sets `OCR_CUSTOM_BACKEND=sauron` and `OCR_CUSTOM_DISPLAY_BACKEND=sauron`
+- inline backend defaults to `OCR_CUSTOM_INLINE_BACKEND=auto`; `ocr-custom-split-sauron` sets it to `sauron`, which sends suspicious inline-math line crops when Tesseract likely misread subscripts, Greek symbols, or low-confidence math
 - Sauron defaults match `ocr-combined-sauron`: `SAURON_HOST=sauron`, `SAURON_OCR_API_URL=http://127.0.0.1:8011`, `SAURON_WAKE=1`, `SAURON_WARMUP=1`, and `SAURON_OCR_TIMEOUT_SECONDS=1200`
 - preprocessing is adaptive: dark captures are inverted before OCR, light captures are not; tune with `OCR_CUSTOM_INVERT_MEAN_THRESHOLD`
 - display math is now detected as whole blocks before inline span routing; block crops are saved in `display-crops/` and outlined in cyan in `debug-overlay.png`
+- suspicious inline line crops are saved in `line-crops/`, with Sauron responses in `line-backend/` and per-line status in `lines.json`
 - complex display blocks that are not Tesseract-cleanable are marked unresolved in local auto mode instead of emitting misleading OCR text; the Sauron wrapper tries the remote display backend for those same crops
 - saved-image mode writes artifacts and prints the attempt directory; live-capture mode also copies `normalized-output.txt` to the clipboard and sends a toast
 

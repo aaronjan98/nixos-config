@@ -110,6 +110,7 @@ let
   ocr-custom-split-sauron = mkOcrCustomSplit "ocr-custom-split-sauron" {
     OCR_CUSTOM_BACKEND = "sauron";
     OCR_CUSTOM_DISPLAY_BACKEND = "sauron";
+    OCR_CUSTOM_INLINE_BACKEND = "sauron";
   };
 
   combinedRuntimeInputs = [

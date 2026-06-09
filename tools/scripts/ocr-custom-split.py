@@ -161,6 +161,12 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("OCR_CUSTOM_DISPLAY_BACKEND", "auto"),
         help="Backend for complex display math crops. auto uses Sauron when --backend=sauron.",
     )
+    parser.add_argument(
+        "--inline-backend",
+        choices=("auto", "none", "sauron"),
+        default=os.environ.get("OCR_CUSTOM_INLINE_BACKEND", "auto"),
+        help="Backend for suspicious inline math lines. auto uses Sauron when --backend=sauron.",
+    )
     copy_group = parser.add_mutually_exclusive_group()
     copy_group.add_argument(
         "--copy",
@@ -966,6 +972,14 @@ def resolve_display_backend(args: argparse.Namespace) -> str:
     return "none"
 
 
+def resolve_inline_backend(args: argparse.Namespace) -> str:
+    if args.inline_backend != "auto":
+        return args.inline_backend
+    if args.backend == "sauron":
+        return "sauron"
+    return "none"
+
+
 def sauron_ssh_command(*remote_args: str) -> list[str]:
     host = os.environ.get("SAURON_HOST", "sauron")
     return [
@@ -1082,15 +1096,13 @@ def extract_sauron_text(response: dict[str, Any]) -> str:
     return ""
 
 
-def run_sauron_display_ocr(
-    block: DisplayBlock,
+def run_sauron_image_ocr(
     crop_path: Path,
     response_path: Path,
     log_path: Path,
-) -> None:
+) -> dict[str, Any]:
     api_url = os.environ.get("SAURON_OCR_API_URL", "http://127.0.0.1:8011").rstrip("/")
     timeout = env_int("SAURON_OCR_TIMEOUT_SECONDS", 1200)
-    block.display_backend = "sauron"
     started = time.monotonic()
     try:
         result = run_command(
@@ -1112,41 +1124,79 @@ def run_sauron_display_ocr(
             stdin=crop_path.read_bytes(),
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as error:
-        block.display_backend_status = "failed"
-        block.display_backend_stderr = str(error)
-        block.display_backend_duration_ms = int((time.monotonic() - started) * 1000)
-        return
+        return {
+            "status": "failed",
+            "output": "",
+            "stderr": str(error),
+            "duration_ms": int((time.monotonic() - started) * 1000),
+        }
 
-    block.display_backend_duration_ms = int((time.monotonic() - started) * 1000)
-    block.display_backend_stderr = result.stderr.decode(errors="replace")
+    duration_ms = int((time.monotonic() - started) * 1000)
+    stderr = result.stderr.decode(errors="replace")
     response_text = result.stdout.decode(errors="replace")
     response_path.write_text(response_text)
     if result.returncode != 0:
-        block.display_backend_status = f"failed:{result.returncode}"
-        return
+        return {
+            "status": f"failed:{result.returncode}",
+            "output": "",
+            "stderr": stderr,
+            "duration_ms": duration_ms,
+        }
 
     try:
         response = json.loads(response_text)
     except json.JSONDecodeError as error:
-        block.display_backend_status = "failed:non-json"
-        block.display_backend_stderr = (block.display_backend_stderr + f"\n{error}").strip()
-        return
+        return {
+            "status": "failed:non-json",
+            "output": "",
+            "stderr": (stderr + f"\n{error}").strip(),
+            "duration_ms": duration_ms,
+        }
 
     detail = response.get("detail")
     if isinstance(detail, str) and detail.strip():
-        block.display_backend_status = "failed:remote-error"
-        block.display_backend_stderr = (block.display_backend_stderr + f"\n{detail.strip()}").strip()
-        return
+        return {
+            "status": "failed:remote-error",
+            "output": "",
+            "stderr": (stderr + f"\n{detail.strip()}").strip(),
+            "duration_ms": duration_ms,
+        }
 
     text = normalize_sauron_display_output(extract_sauron_text(response))
     if response.get("status") == "ok" and text:
-        block.display_backend_output = text
-        block.display_backend_status = "succeeded"
-    else:
-        block.display_backend_status = "failed:empty-output"
+        return {
+            "status": "succeeded",
+            "output": text,
+            "stderr": stderr,
+            "duration_ms": duration_ms,
+        }
+    return {
+        "status": "failed:empty-output",
+        "output": "",
+        "stderr": stderr,
+        "duration_ms": duration_ms,
+    }
+
+
+def run_sauron_display_ocr(
+    block: DisplayBlock,
+    crop_path: Path,
+    response_path: Path,
+    log_path: Path,
+) -> None:
+    block.display_backend = "sauron"
+    result = run_sauron_image_ocr(crop_path, response_path, log_path)
+    block.display_backend_status = result["status"]
+    block.display_backend_output = result["output"]
+    block.display_backend_stderr = result["stderr"]
+    block.display_backend_duration_ms = result["duration_ms"]
 
 
 def line_to_text(line: dict[str, Any], spans: list[Span]) -> str:
+    line_backend_output = line.get("line_backend_output")
+    if isinstance(line_backend_output, str) and line_backend_output.strip():
+        return cleanup_spacing(line_backend_output)
+
     line_words: list[Word] = line["_words"]
     line_spans = [span for span in spans if span.line_index == line["line_index"]]
     if not line_spans:
@@ -1185,6 +1235,39 @@ def line_to_text(line: dict[str, Any], spans: list[Span]) -> str:
 
 def has_math_context(words: list[Word]) -> bool:
     return any(word_profile(word)["has_seed"] or is_delta_token(word.text) for word in words)
+
+
+def line_has_suspicious_inline_math(line: dict[str, Any], spans: list[Span]) -> bool:
+    line_words: list[Word] = line["_words"]
+    line_spans = [span for span in spans if span.line_index == line["line_index"]]
+    if not line_spans:
+        return False
+
+    line_text = line["text"]
+    comma_subscript_pattern = r"(?<![A-Za-z])[A-Za-z],[,]?(?![A-Za-z])"
+    if re.search(comma_subscript_pattern, line_text):
+        return True
+
+    for word in line_words:
+        token = word.text.strip()
+        if re.fullmatch(r"[A-Za-z],[,]?", token):
+            return True
+        if word.conf >= 0 and word.conf < 65 and word_profile(word)["adjacent_ok"]:
+            return True
+
+    for span in line_spans:
+        span_text = span.text
+        if re.search(r"\b[0-9A-Z]\s*[+±]\s*i[A-Za-z]", span_text):
+            return True
+        if re.search(comma_subscript_pattern, span_text):
+            return True
+        if any(marker in span_text for marker in ("=", "+", "±")) and any(
+            word.conf >= 0 and word.conf < 70
+            for word in line_words[span.word_start : span.word_end]
+        ):
+            return True
+
+    return False
 
 
 def split_wrappable_token(text: str) -> tuple[str, str, str]:
@@ -1488,6 +1571,7 @@ def main() -> int:
                 f"attempt_dir: {attempt_dir}",
                 f"backend: {args.backend}",
                 f"display_backend: {args.display_backend}",
+                f"inline_backend: {args.inline_backend}",
                 f"lang: {args.lang}",
                 f"psm: {args.psm}",
                 "",
@@ -1560,12 +1644,17 @@ def main() -> int:
     pix2tex_bin = resolve_pix2tex_bin(args.pix2tex_bin)
     pix2tex_mode = "never" if args.no_pix2tex else args.pix2tex_mode
     display_backend = resolve_display_backend(args)
+    inline_backend = resolve_inline_backend(args)
     sauron_ready = False
 
     display_crops_dir = attempt_dir / "display-crops"
     display_crops_dir.mkdir(parents=True, exist_ok=True)
     display_backend_dir = attempt_dir / "display-backend"
     display_backend_dir.mkdir(parents=True, exist_ok=True)
+    line_crops_dir = attempt_dir / "line-crops"
+    line_crops_dir.mkdir(parents=True, exist_ok=True)
+    line_backend_dir = attempt_dir / "line-backend"
+    line_backend_dir.mkdir(parents=True, exist_ok=True)
 
     for block_index, block in enumerate(display_blocks, start=1):
         block.display_backend = display_backend
@@ -1613,6 +1702,54 @@ def main() -> int:
             continue
         run_pix2tex_for_block(block, pix2tex_bin, crop_path, log_path, args.timeout)
 
+    inline_line_padding = int(os.environ.get("OCR_CUSTOM_INLINE_LINE_PADDING", "16"))
+    for line in inline_lines:
+        line["line_backend"] = inline_backend
+        line["line_backend_status"] = "not-run"
+        line["line_backend_output"] = ""
+        line["line_backend_stderr"] = ""
+        line["line_backend_duration_ms"] = 0
+        line["line_backend_crop"] = None
+
+        if inline_backend != "sauron":
+            line["line_backend_status"] = "disabled"
+            continue
+        if not line_has_suspicious_inline_math(line, spans):
+            line["line_backend_status"] = "skipped-clean"
+            continue
+
+        line_proxy = Span(
+            line_index=line["line_index"],
+            word_start=0,
+            word_end=len(line["_words"]),
+            display=False,
+            reason="inline-line-context",
+            bbox=bbox_for_words(line["_words"], padding=inline_line_padding),
+            text=line["text"],
+        )
+        crop_path = line_crops_dir / f"line-{line['line_index']:03d}.png"
+        try:
+            crop_span(processed_image, line_proxy, crop_path, image_size, log_path)
+            line["line_backend_crop"] = str(crop_path.relative_to(attempt_dir))
+        except RuntimeError as error:
+            line["line_backend_status"] = "crop-failed"
+            line["line_backend_stderr"] = str(error)
+            continue
+
+        if not sauron_ready:
+            sauron_ready = prepare_sauron(log_path)
+        if not sauron_ready:
+            line["line_backend_status"] = "failed:sauron-not-ready"
+            continue
+
+        response_path = line_backend_dir / f"line-{line['line_index']:03d}-sauron-response.json"
+        result = run_sauron_image_ocr(crop_path, response_path, log_path)
+        line["line_backend_status"] = result["status"]
+        line["line_backend_stderr"] = result["stderr"]
+        line["line_backend_duration_ms"] = result["duration_ms"]
+        if result["status"] == "succeeded":
+            line["line_backend_output"] = result["output"]
+
     for span_index, span in enumerate(spans, start=1):
         crop_path = crops_dir / f"span-{span_index:03d}.png"
         try:
@@ -1625,6 +1762,10 @@ def main() -> int:
 
         if pix2tex_mode == "never":
             span.pix2tex_status = "disabled"
+            continue
+        line = next((candidate for candidate in lines if candidate["line_index"] == span.line_index), None)
+        if line is not None and line.get("line_backend_status") == "succeeded":
+            span.pix2tex_status = "skipped-line-backend"
             continue
         if pix2tex_mode == "auto" and span_is_simple_math(span):
             span.pix2tex_status = "skipped-simple"
@@ -1662,6 +1803,7 @@ def main() -> int:
                 "text": "tesseract",
                 "math": "pix2tex",
                 "display_backend": display_backend,
+                "inline_backend": inline_backend,
                 "pix2tex_bin": str(pix2tex_bin) if pix2tex_bin else None,
                 "pix2tex_args": os.environ.get("OCR_CUSTOM_PIX2TEX_ARGS", "--no-cuda"),
                 "pix2tex_mode": pix2tex_mode,
@@ -1679,6 +1821,8 @@ def main() -> int:
                 "display_blocks": str(attempt_dir / "display-blocks.json"),
                 "display_crops": str(display_crops_dir),
                 "display_backend": str(display_backend_dir),
+                "line_crops": str(line_crops_dir),
+                "line_backend": str(line_backend_dir),
                 "debug_overlay": str(attempt_dir / "debug-overlay.png"),
                 "raw_output": str(attempt_dir / "raw-output.txt"),
                 "normalized_output": str(attempt_dir / "normalized-output.txt"),
@@ -1701,6 +1845,7 @@ def main() -> int:
                 "pix2tex_succeeded": sum(1 for span in spans if span.pix2tex_status == "succeeded"),
                 "display_pix2tex_succeeded": sum(1 for block in display_blocks if block.pix2tex_status == "succeeded"),
                 "display_backend_succeeded": sum(1 for block in display_blocks if block.display_backend_status == "succeeded"),
+                "line_backend_succeeded": sum(1 for line in lines if line.get("line_backend_status") == "succeeded"),
             },
             "status": "succeeded",
         },
