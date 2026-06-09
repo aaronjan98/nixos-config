@@ -594,6 +594,7 @@ Current prototype:
 - Pix2tex mode: default `auto` skips simple Tesseract-cleanable spans and uses cleanup fallback; `always` forces pix2tex; timeout defaults to 20 seconds per crop.
 - Display-block routing: math-heavy centered line groups are detected before inline span routing, cropped as whole blocks, and excluded from normal Tesseract line merging.
 - Display-block fallback policy: complex display blocks that are not Tesseract-cleanable are marked `unresolved-needs-display-backend` in auto mode and point to `display-crops/block-*.png`; local pix2tex is not used by default because it repeatedly timed out on these crops.
+- Display-backend normalization: Sauron may return display equations as inline Markdown math fragments; the custom renderer strips nested `$...$` delimiters before wrapping the final display block and joins simple split condition lines with `\quad`.
 - Cleanup heuristics: normalize common math OCR confusions such as `¢` -> `c`, split glued prose suffixes like `;ie.,` back out of math spans, and collapse the observed Tesseract `dx/dx` stacked-fraction pattern into a display equation.
 - Validation so far: Nix build passed, mock pix2tex runs passed, and the latest dark-background textbook screenshot normalized correctly in auto mode without pix2tex calls.
 - Current hotkey: `Super+X` runs live `ocr-custom-split-sauron`; `ocr-custom-split` remains available as the local prototype command and `Super+C` remains `centerwindow`.

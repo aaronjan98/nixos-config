@@ -1403,9 +1403,9 @@ def block_is_tesseract_cleanable(block: DisplayBlock) -> bool:
 
 def render_display_block(block: DisplayBlock) -> str:
     if block.display_backend_output:
-        return f"$${block.display_backend_output}$$"
+        return f"$${cleanup_display_math_body(block.display_backend_output)}$$"
     if block.pix2tex_output:
-        return f"$${block.pix2tex_output}$$"
+        return f"$${cleanup_display_math_body(block.pix2tex_output)}$$"
 
     raw_lines = [line.strip() for line in block.text.splitlines() if line.strip()]
     collapsed = postprocess_merged_lines(raw_lines)
@@ -1419,6 +1419,29 @@ def render_display_block(block: DisplayBlock) -> str:
     if len(cleaned_lines) == 1:
         return f"$${cleaned_lines[0]}$$"
     return "$$\n" + "\n".join(cleaned_lines) + "\n$$"
+
+
+def strip_math_delimiters(text: str) -> str:
+    stripped = text.strip()
+    while stripped.startswith("$$") and stripped.endswith("$$") and len(stripped) >= 4:
+        stripped = stripped[2:-2].strip()
+    while stripped.startswith("$") and stripped.endswith("$") and len(stripped) >= 2:
+        stripped = stripped[1:-1].strip()
+    stripped = stripped.lstrip("$").rstrip("$").strip()
+    return stripped
+
+
+def cleanup_display_math_body(text: str) -> str:
+    lines = [
+        strip_math_delimiters(line)
+        for line in text.replace("\r", "").splitlines()
+        if strip_math_delimiters(line)
+    ]
+    if not lines:
+        return ""
+    if len(lines) == 2 and re.fullmatch(r"[A-Za-z0-9\\{}_^+\-*/().,\s<>≤≥=]+", lines[1]):
+        return f"{lines[0]} \\quad {lines[1]}"
+    return "\n".join(lines)
 
 
 def lines_to_text_with_display_blocks(

@@ -259,6 +259,7 @@ Notes:
 - preprocessing is adaptive: dark captures are inverted before OCR, light captures are not; tune with `OCR_CUSTOM_INVERT_MEAN_THRESHOLD`
 - display math is now detected as whole blocks before inline span routing; block crops are saved in `display-crops/` and outlined in cyan in `debug-overlay.png`
 - suspicious inline line crops are saved in `line-crops/`, with Sauron responses in `line-backend/` and per-line status in `lines.json`
+- display backend output is normalized before final Markdown wrapping: nested `$...$` delimiters are stripped, and simple split condition lines are joined with `\quad`
 - complex display blocks that are not Tesseract-cleanable are marked unresolved in local auto mode instead of emitting misleading OCR text; the Sauron wrapper tries the remote display backend for those same crops
 - saved-image mode writes artifacts and prints the attempt directory; live-capture mode also copies `normalized-output.txt` to the clipboard and sends a toast
 
