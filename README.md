@@ -4,7 +4,7 @@
 > This configuration is specific to my machines, workflows, and preferences.
 > I recommend the repo be an inspiration, reference, or a source of ideas rather than something to copy directly without modification.
 
-![](https://cloud.home/s/WjEspgBbQdWmpKi)
+![image](https://cloud.janovitch.com/s/WjEspgBbQdWmpKi/download)
 
 This repository is both:
 
