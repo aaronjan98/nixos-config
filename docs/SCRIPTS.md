@@ -222,6 +222,44 @@ Notes:
 - `OCR_BACKEND=sauron` and `OCR_BACKEND=auto` are intentionally not implemented yet for `text-ocr`
 - clear printed text should work first; mixed text+math remains the separate `ocr-combined` checkpoint
 
+## `ocr-custom-split`
+Purpose:
+- prototype helper for the custom text+math OCR pipeline
+- captures a selected screen region when run with no image path
+- can also read an existing screenshot or image file for repeatable testing
+- runs Tesseract TSV over the full image, groups words into lines, detects likely math spans, crops those spans, optionally runs pix2tex on the crops, and writes merged Markdown
+
+Usage:
+```bash
+ocr-custom-split
+ocr-custom-split-sauron
+ocr-custom-split ~/.local/share/ocr-captures/latest-combined/input.png
+ocr-custom-split --no-pix2tex path/to/image.png
+OCR_CAPTURE_DIR=/tmp/ocr-test ocr-custom-split path/to/image.png
+```
+
+Archive:
+- default output root: `~/.local/share/ocr-captures/attempts/<timestamp>_custom`
+- latest custom attempt: `~/.local/share/ocr-captures/latest-custom`
+- main merged output: `merged-output.md` and `normalized-output.txt`
+- debug artifacts: `processed.png`, `preprocess.json`, `debug-overlay.png`, `tesseract.tsv`, `lines.json`, `spans.json`, `display-blocks.json`, `crops/`, `display-crops/`, `metadata.json`, and `backend.log`
+
+Notes:
+- current hotkey: `Super+X` runs `ocr-custom-split-sauron`; `ocr-custom-split` remains the local prototype command
+- local profile: captures/preprocesses on the laptop, uses Tesseract for prose/layout, skips simple math with cleanup rules, and only uses local pix2tex when explicitly forced or needed by mode
+- Sauron profile: captures/preprocesses and segments on the laptop, then sends complex display-math crops to Sauron's hot OCR API through SSH; this keeps screen capture local while moving the slow display backend to the homelab
+- it is the comparison path for deciding whether a custom Tesseract + remote display backend layout pipeline beats whole-image Surya for textbook-style screenshots
+- pix2tex defaults to `~/Repositories/automation/pix2tex/.venv/bin/pix2tex`; override with `PIX2TEX_BIN`
+- pix2tex runs with `--no-cuda` by default; override extra args with `OCR_CUSTOM_PIX2TEX_ARGS`
+- pix2tex mode defaults to `OCR_CUSTOM_PIX2TEX_MODE=auto`, which skips simple Tesseract-cleanable math and falls back to cleaned text; set `OCR_CUSTOM_PIX2TEX_MODE=always` to force pix2tex crops
+- pix2tex crop timeout defaults to `20s`; override with `OCR_CUSTOM_PIX2TEX_TIMEOUT`
+- backend profile defaults to `OCR_CUSTOM_BACKEND=local`; `ocr-custom-split-sauron` sets `OCR_CUSTOM_BACKEND=sauron` and `OCR_CUSTOM_DISPLAY_BACKEND=sauron`
+- Sauron defaults match `ocr-combined-sauron`: `SAURON_HOST=sauron`, `SAURON_OCR_API_URL=http://127.0.0.1:8011`, `SAURON_WAKE=1`, `SAURON_WARMUP=1`, and `SAURON_OCR_TIMEOUT_SECONDS=1200`
+- preprocessing is adaptive: dark captures are inverted before OCR, light captures are not; tune with `OCR_CUSTOM_INVERT_MEAN_THRESHOLD`
+- display math is now detected as whole blocks before inline span routing; block crops are saved in `display-crops/` and outlined in cyan in `debug-overlay.png`
+- complex display blocks that are not Tesseract-cleanable are marked unresolved in local auto mode instead of emitting misleading OCR text; the Sauron wrapper tries the remote display backend for those same crops
+- saved-image mode writes artifacts and prints the attempt directory; live-capture mode also copies `normalized-output.txt` to the clipboard and sends a toast
+
 ## `ocr-combined.sh`
 Purpose:
 - operational helper for the combined text+math OCR workflow
@@ -248,6 +286,7 @@ Notes:
 - `ocr-combined-sauron` is the convenience wrapper for the same remote path; current hotkey plan is `Super+N` for local `ocr-combined` and `Super+B` for remote `ocr-combined-sauron`
 - Sauron OCR API defaults: host `sauron`, URL `http://127.0.0.1:8011`, request timeout `1200s`; override with `SAURON_HOST`, `SAURON_OCR_API_URL`, and `SAURON_OCR_TIMEOUT_SECONDS`
 - Sauron OCR API is now an in-process Surya 0.16 service: it loads `FoundationPredictor`, `DetectionPredictor`, and `RecognitionPredictor` once, exposes `/warmup`, and keeps the model resident in RAM while the service is alive
+- Sauron OCR API currently uses CPU fallback when PyTorch CUDA initialization fails; `/health` reports `model.device_selected` and `model.device_reason`
 - `OCR_BACKEND=auto` is intentionally not implemented yet for `ocr-combined`
 
 ## `bootstrap-surya-ocr.sh`

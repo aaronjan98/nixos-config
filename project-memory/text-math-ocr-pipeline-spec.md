@@ -150,10 +150,34 @@ Candidate backends:
 Recommendation:
 
 - Keep `math-ocr` and `text-ocr` as baseline commands and comparison tools.
-- Do not assume a hand-rolled splitter is the fastest path anymore.
-- Benchmark Surya on saved screen captures before investing heavily in custom merging logic.
-- Keep Pix2Text as a lower-priority candidate backend/prototype, especially for historical comparison with AJ's earlier notes.
+- Surya is the current best all-in-one comparison backend, but it is not the only path.
+- Proceed with a narrow custom splitter prototype now that Surya local, Surya-on-Sauron, Tesseract, and pix2tex baselines exist.
+- Keep Pix2Text as a comparison backend/prototype, especially for historical comparison with AJ's earlier notes.
 - Keep the command boundary separate so either strategy can be swapped behind `ocr-combined`.
+
+Custom splitter prototype:
+
+- Goal: determine whether routing simple text to Tesseract and likely math crops to pix2tex can beat or complement Surya.
+- Non-goal: solve perfect textbook layout segmentation in the first pass.
+- Input: one screenshot image from the existing `~/.local/share/ocr-captures` archive.
+- Step 1: run Tesseract TSV on the full image to get word boxes, line numbers, confidence, and text.
+- Step 2: group words into line objects ordered by `(block_num, par_num, line_num)` and screen coordinates.
+- Step 3: classify candidate math spans with heuristics:
+  - high symbol density: `=`, `+`, `-`, `/`, `\\`, `^`, `_`, parentheses, Greek names, primes;
+  - low Tesseract confidence inside otherwise readable text;
+  - compact clusters with many non-alphabetic tokens;
+  - display-math-looking lines where most tokens are symbols/numbers.
+- Step 4: crop likely math spans/lines with padding and send those crops to pix2tex.
+- Step 5: keep normal text tokens from Tesseract, replace math crops with pix2tex output wrapped as `$...$` for inline math or `$$...$$` for display math.
+- Step 6: merge by original coordinates and line grouping, then write normalized Markdown.
+- Step 7: save all intermediate artifacts into the same attempt directory so failures are debuggable: Tesseract TSV, JSON line/spans, crop images, pix2tex outputs, and merged output.
+
+First-pass merge rules:
+
+- Preserve Tesseract line order.
+- For an inline math span, replace the words covered by the math crop with `$<pix2tex>$`.
+- For a full-line math region, emit `$$<pix2tex>$$` on its own line.
+- Keep this conservative: if a line cannot be confidently split, leave Tesseract text intact and record the uncertainty in debug JSON instead of over-replacing.
 
 Current Surya probe:
 
@@ -280,8 +304,8 @@ What "hot" means right now:
 - The loaded objects are Surya 0.16 `FoundationPredictor`, `DetectionPredictor`, and `RecognitionPredictor`.
 - Sauron auto-suspend still applies. The laptop command sends Wake-on-LAN, waits for SSH, then calls the localhost API through SSH. If Sauron is asleep, the first request includes wake time; if it is already awake, it skips most of that overhead.
 - Current remote backend is `surya-ocr==0.16.0` with `torch==2.7.1+cu126`, not Surya 2.0.
-- CUDA 12.6 is intentional: newer CUDA 13 PyTorch wheels initialize on Sauron after driver 580, but they do not ship kernels for the Quadro M5000's `sm_52` compute capability.
-- Validation on a saved screenshot showed startup model load around 5s and hot in-process CUDA OCR around 22.5s server-side.
+- CUDA 12.6 was the best attempt for the Quadro M5000, because newer CUDA 13 PyTorch wheels do not ship kernels for the card's `sm_52` compute capability. However, the current reliable service path is CPU fallback: PyTorch currently reports `torch.cuda.is_available() is false` even while `nvidia-smi` sees the card.
+- Validation after CPU fallback showed startup model load around 4.7s and display-crop OCR around 13-16s per crop on the complex conjugates example.
 
 ---
 
@@ -499,6 +523,7 @@ Progress is tracked here. Do not implement later phases until the prior checkpoi
 | 8. Optional warm daemon | Blocked locally | Surya 2 warm runtime requires newer `llama.cpp` support for `qwen35` than the current host package provides |
 | 9. Dataset export | Pending | Corrected examples can export to training/eval format |
 | 10. Training/fine-tuning decision | Pending | Enough corrected examples exist to justify training |
+| 11. Custom splitter prototype | Implemented | `ocr-custom-split` remains the local prototype; `ocr-custom-split-sauron` uses the same layout split but sends complex display crops to Sauron |
 
 ---
 
@@ -534,20 +559,44 @@ Remaining questions:
 
 7. **Combined OCR strategy**
    - Implemented first probe with Surya.
-   - Keep custom layout split as a fallback and learning path, using `math-ocr`/`text-ocr` as reusable components.
+   - Proceed with a custom layout split prototype using Tesseract TSV plus pix2tex crops.
    - Keep Pix2Text as an all-in-one comparison backend, but lower priority than Surya.
 
 ---
 
 ## Recommended Next Checkpoint
 
-Verify the feedback archive and correction workflow in the live system, then verify `text-ocr` before changing combined OCR engines.
+Compare display-math backends on whole display crops.
+
+Exit criteria:
+
+1. Run `ocr-custom-split` and `ocr-custom-split-sauron` on saved examples with display equations.
+2. Confirm `display-blocks.json`, `display-crops/`, and cyan `debug-overlay.png` boxes identify the whole display region.
+3. Compare local pix2tex, Sauron/Surya, and any future external/math backend on the same `display-crops/block-*.png`.
+4. Choose the default display backend or mark failed display blocks explicitly instead of pretending Tesseract text is reliable.
+5. Current default comparison route: `Super+X` runs the custom splitter with Sauron as the complex display-math backend.
 
 Reason:
 
-- It immediately makes every bad pix2tex result useful.
-- It avoids losing real examples.
-- It gives objective data for choosing Pix2Text, Tesseract, a remote service, or fine-tuning.
+- Inline/prose routing is usable enough for continued testing.
+- Tesseract is not reliable inside display equations; the structural fix is whole-block detection and backend comparison.
+- The display block crop from the multi-line align example was visually correct, but local pix2tex timed out, so backend choice is now the bottleneck.
+
+Current prototype:
+
+- Commands: `ocr-custom-split` for the local prototype, `ocr-custom-split-sauron` for the Sauron display-backend profile.
+- Input: no argument for live screen capture, or an existing image path such as `~/.local/share/ocr-captures/latest-combined/input.png`.
+- Output root: `~/.local/share/ocr-captures/attempts/<timestamp>_custom` unless `OCR_CAPTURE_DIR` or `--attempt-dir` is supplied.
+- Latest symlink: `~/.local/share/ocr-captures/latest-custom`.
+- Artifacts: `input.png`, `processed.png`, `preprocess.json`, `debug-overlay.png`, `tesseract.tsv`, `lines.json`, `spans.json`, `display-blocks.json`, `crops/`, `display-crops/`, `raw-output.txt`, `merged-output.md`, `normalized-output.txt`, `metadata.json`, `backend.log`, and `review.md`.
+- Preprocessing: measure mean brightness; invert dark captures before OCR, leave light captures non-inverted, grayscale/auto-level/upscale for Tesseract and math crops.
+- Pix2tex mode: default `auto` skips simple Tesseract-cleanable spans and uses cleanup fallback; `always` forces pix2tex; timeout defaults to 20 seconds per crop.
+- Display-block routing: math-heavy centered line groups are detected before inline span routing, cropped as whole blocks, and excluded from normal Tesseract line merging.
+- Display-block fallback policy: complex display blocks that are not Tesseract-cleanable are marked `unresolved-needs-display-backend` in auto mode and point to `display-crops/block-*.png`; local pix2tex is not used by default because it repeatedly timed out on these crops.
+- Cleanup heuristics: normalize common math OCR confusions such as `¢` -> `c`, split glued prose suffixes like `;ie.,` back out of math spans, and collapse the observed Tesseract `dx/dx` stacked-fraction pattern into a display equation.
+- Validation so far: Nix build passed, mock pix2tex runs passed, and the latest dark-background textbook screenshot normalized correctly in auto mode without pix2tex calls.
+- Current hotkey: `Super+X` runs live `ocr-custom-split-sauron`; `ocr-custom-split` remains available as the local prototype command and `Super+C` remains `centerwindow`.
+- Sauron custom profile: the laptop still performs screen capture, adaptive preprocessing, Tesseract TSV layout, line grouping, inline span cleanup, and archive creation. Only complex display-block crops are sent through Sauron's hot OCR API. This is intentional because the screenshot must be captured locally, while the display-equation backend is the slow/weak part.
 
 Implemented in `~/nixos-config` but not necessarily installed until `nrt` or `nrs`:
 
@@ -584,6 +633,7 @@ Checkpoint 5 keybind plan:
 - `Super+T`: `text-ocr`.
 - `Super+N`: local `ocr-combined`.
 - `Super+B`: remote `ocr-combined-sauron`.
+- `Super+X`: custom Tesseract/layout splitter with Sauron display backend, `ocr-custom-split-sauron`.
 - `Ctrl+Shift+N`: Neovide, moved away from `Super+N`.
 - `Ctrl+Shift+T`: old Hyprland `togglesplit` binding.
 - `ocr-combined` is now a Surya-backed probe command.
@@ -613,4 +663,5 @@ Checkpoint 9 implementation notes:
 3. Active comparison keybinds are `Super+N` for local `ocr-combined` and `Super+B` for remote `ocr-combined-sauron`.
 4. The Sauron API is now an in-memory hot predictor service using Surya 0.16, not Surya 2.
 5. `/warmup` loads the predictors, and the laptop wrapper calls `/warmup` before remote OCR by default.
-6. Sauron now uses the Quadro M5000 through `torch==2.7.1+cu126`; `torch 2.12.0+cu130` is incompatible with this GPU because it lacks `sm_52` kernels.
+6. Sauron currently runs the OCR API with CPU fallback. `torch==2.7.1+cu126` is installed because it is compatible with `sm_52`, but PyTorch currently fails CUDA initialization on the Quadro M5000; `nvidia-smi` alone is not enough to prove PyTorch CUDA is usable.
+7. The Sauron API now smoke-tests CUDA before importing Surya settings. If CUDA fails, it sets `TORCH_DEVICE=cpu` before loading predictors, and `/health` reports `device_selected`, `device_requested`, and `device_reason`.

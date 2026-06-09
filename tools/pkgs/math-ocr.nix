@@ -74,6 +74,44 @@ let
     text = builtins.readFile ../scripts/text-ocr.sh;
   };
 
+  customSplitRuntimeInputs = [
+    pkgs.grim
+    pkgs.slurp
+    pkgs.wl-clipboard
+    pkgs.libnotify
+    pkgs.bash
+    pkgs.systemd
+    pkgs.tesseract
+    pkgs.imagemagick
+    pkgs.coreutils
+    pkgs.openssh
+  ];
+
+  mkOcrCustomSplit = name: extraRuntimeEnv: pkgs.writeShellApplication {
+    inherit name;
+
+    runtimeInputs = customSplitRuntimeInputs;
+
+    runtimeEnv = {
+      PIX2TEX_EXTRA_LIBRARY_PATH = pix2texLibraryPath;
+    } // extraRuntimeEnv;
+
+    text = ''
+      if [ -n "''${PIX2TEX_EXTRA_LIBRARY_PATH:-}" ]; then
+        export LD_LIBRARY_PATH="''${PIX2TEX_EXTRA_LIBRARY_PATH}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+      fi
+
+      exec ${pkgs.python312}/bin/python3 ${../scripts/ocr-custom-split.py} "$@"
+    '';
+  };
+
+  ocr-custom-split = mkOcrCustomSplit "ocr-custom-split" {};
+
+  ocr-custom-split-sauron = mkOcrCustomSplit "ocr-custom-split-sauron" {
+    OCR_CUSTOM_BACKEND = "sauron";
+    OCR_CUSTOM_DISPLAY_BACKEND = "sauron";
+  };
+
   combinedRuntimeInputs = [
     pkgs.grim
     pkgs.slurp
@@ -171,6 +209,8 @@ pkgs.symlinkJoin {
     math-ocr
     ocr-correct-last
     text-ocr
+    ocr-custom-split
+    ocr-custom-split-sauron
     ocr-combined
     ocr-combined-sauron
     ocr-combined-stop
