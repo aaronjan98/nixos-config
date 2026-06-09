@@ -7,9 +7,19 @@ WL_COPY="${WL_COPY:-wl-copy}"
 NOTIFY="${NOTIFY:-notify-send}"
 SYSTEMD_RUN="${SYSTEMD_RUN:-systemd-run}"
 JQ="${JQ:-jq}"
+SSH="${SSH:-ssh}"
+WOL_SAURON="${WOL_SAURON:-wol-sauron}"
 
 OCR_BACKEND="${OCR_BACKEND:-local}"
 SURYA_KEEP_SERVER="${SURYA_KEEP_SERVER:-0}"
+SAURON_HOST="${SAURON_HOST:-sauron}"
+SAURON_OCR_API_URL="${SAURON_OCR_API_URL:-http://127.0.0.1:8011}"
+SAURON_WAKE="${SAURON_WAKE:-1}"
+SAURON_WARMUP="${SAURON_WARMUP:-1}"
+SAURON_SSH_WAIT_SECONDS="${SAURON_SSH_WAIT_SECONDS:-90}"
+SAURON_API_WAIT_SECONDS="${SAURON_API_WAIT_SECONDS:-30}"
+SAURON_OCR_TIMEOUT_SECONDS="${SAURON_OCR_TIMEOUT_SECONDS:-1200}"
+command_name="$(basename "${0:-ocr-combined}")"
 
 real_home="$(getent passwd "$(id -un)" | cut -d: -f6 || true)"
 if [ -z "${HOME:-}" ] || [ "${HOME:-}" = "/homeless-shelter" ]; then
@@ -24,6 +34,10 @@ SURYA_OCR="${SURYA_OCR:-$SURYA_VENV_DIR/bin/surya_ocr}"
 if [ -n "${SURYA_EXTRA_LIBRARY_PATH:-}" ]; then
   export LD_LIBRARY_PATH="$SURYA_EXTRA_LIBRARY_PATH${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
+export SURYA_INFERENCE_BACKEND="${SURYA_INFERENCE_BACKEND:-llamacpp}"
+export SURYA_INFERENCE_PARALLEL="${SURYA_INFERENCE_PARALLEL:-1}"
+export SURYA_INFERENCE_CTX_SIZE="${SURYA_INFERENCE_CTX_SIZE:-16384}"
+export SURYA_INFERENCE_LOGPROBS="${SURYA_INFERENCE_LOGPROBS:-false}"
 
 cache_dir="$XDG_CACHE_HOME/ocr-combined"
 work_dir="$cache_dir/work"
@@ -164,12 +178,23 @@ write_metadata() {
   "$JQ" -n \
     --arg timestamp "$attempt_timestamp" \
     --arg attempt_id "$attempt_id" \
-    --arg command "ocr-combined" \
+    --arg command "$command_name" \
     --arg backend "$OCR_BACKEND" \
     --arg engine "surya" \
     --arg engine_path "${SURYA_OCR:-}" \
     --arg runtime_dir "$SURYA_RUNTIME_DIR" \
     --arg venv_dir "$SURYA_VENV_DIR" \
+    --arg keep_server "$SURYA_KEEP_SERVER" \
+    --arg inference_backend "${SURYA_INFERENCE_BACKEND:-}" \
+    --arg inference_url "${SURYA_INFERENCE_URL:-}" \
+    --arg inference_keep_alive "${SURYA_INFERENCE_KEEP_ALIVE:-}" \
+    --arg inference_parallel "${SURYA_INFERENCE_PARALLEL:-}" \
+    --arg inference_ctx_size "${SURYA_INFERENCE_CTX_SIZE:-}" \
+    --arg inference_logprobs "${SURYA_INFERENCE_LOGPROBS:-}" \
+    --arg sauron_host "$SAURON_HOST" \
+    --arg sauron_ocr_api_url "$SAURON_OCR_API_URL" \
+    --arg sauron_wake "$SAURON_WAKE" \
+    --arg sauron_warmup "$SAURON_WARMUP" \
     --arg input "$img" \
     --arg raw_output "$out" \
     --arg normalized_output "$normalized_out" \
@@ -193,7 +218,18 @@ write_metadata() {
         name: $engine,
         path: $engine_path,
         runtime_dir: $runtime_dir,
-        venv_dir: $venv_dir
+        venv_dir: $venv_dir,
+        keep_server: $keep_server,
+        inference_backend: $inference_backend,
+        inference_url: $inference_url,
+        inference_keep_alive: $inference_keep_alive,
+        inference_parallel: $inference_parallel,
+        inference_ctx_size: $inference_ctx_size,
+        inference_logprobs: $inference_logprobs,
+        sauron_host: $sauron_host,
+        sauron_ocr_api_url: $sauron_ocr_api_url,
+        sauron_wake: $sauron_wake,
+        sauron_warmup: $sauron_warmup
       },
       files: {
         input: $input,
@@ -226,6 +262,7 @@ write_attempt_review() {
 id: $attempt_id
 type: combined
 status: $status
+command: $command_name
 backend: $OCR_BACKEND
 engine: surya
 input: input.png
@@ -301,6 +338,10 @@ keep_server_enabled() {
   esac
 }
 
+surya_supports_keep_server() {
+  "$SURYA_OCR" --help 2>&1 | grep -q -- '--keep_server'
+}
+
 normalize_surya_output() {
   "$JQ" -r '
     def pages:
@@ -364,40 +405,201 @@ find_surya_results() {
   find "$surya_output_dir" -type f -name results.json -print -quit
 }
 
+is_truthy() {
+  case "$1" in
+    1 | true | TRUE | yes | YES | on | ON)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+validate_backend() {
+  case "$OCR_BACKEND" in
+    local | sauron)
+      return 0
+      ;;
+    *)
+      logln "Unsupported combined OCR backend: $OCR_BACKEND"
+      logln "Supported backends: local, sauron."
+      write_metadata "failed" 64 "$(elapsed_ms)" 0
+      write_attempt_review "failed"
+      append_review_queue_entry "failed"
+      "$NOTIFY" -u critical "Combined OCR failed" "OCR_BACKEND=$OCR_BACKEND is not implemented.\nLog: $log"
+      exit 64
+      ;;
+  esac
+}
+
+validate_local_runtime() {
+  if [ ! -x "$SURYA_OCR" ]; then
+    logln "No surya_ocr command found."
+    logln "SURYA_RUNTIME_DIR: $SURYA_RUNTIME_DIR"
+    logln "SURYA_VENV_DIR: $SURYA_VENV_DIR"
+    logln "Expected: $SURYA_VENV_DIR/bin/surya_ocr"
+    write_metadata "failed" 127 "$(elapsed_ms)" 0
+    write_attempt_review "failed"
+    append_review_queue_entry "failed"
+    "$NOTIFY" -u critical "Combined OCR failed" "Surya runtime is not ready. Run: bootstrap-surya-ocr\nLog: $log"
+    exit 127
+  fi
+}
+
+wait_for_sauron_ssh() {
+  local deadline
+  deadline=$((SECONDS + SAURON_SSH_WAIT_SECONDS))
+
+  logln "waiting for SSH on $SAURON_HOST for up to ${SAURON_SSH_WAIT_SECONDS}s"
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if "$SSH" -o BatchMode=yes -o ConnectTimeout=5 "$SAURON_HOST" 'echo ready' >/dev/null 2>>"$log"; then
+      logln "SSH ready on $SAURON_HOST"
+      return 0
+    fi
+    sleep 2
+  done
+
+  return 1
+}
+
+wait_for_sauron_api() {
+  local deadline
+  deadline=$((SECONDS + SAURON_API_WAIT_SECONDS))
+
+  logln "waiting for OCR API on $SAURON_HOST at $SAURON_OCR_API_URL for up to ${SAURON_API_WAIT_SECONDS}s"
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if "$SSH" "$SAURON_HOST" "curl -fsS --max-time 5 '$SAURON_OCR_API_URL/health' >/dev/null" >>"$log" 2>&1; then
+      logln "OCR API ready on $SAURON_HOST"
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+run_sauron_ocr() {
+  local response_json="$attempt_dir/sauron-response.json"
+  local remote_cmd warmup_cmd
+
+  if is_truthy "$SAURON_WAKE"; then
+    if command -v "$WOL_SAURON" >/dev/null 2>&1; then
+      logln "waking sauron with $WOL_SAURON"
+      "$WOL_SAURON" >>"$log" 2>&1 || true
+    else
+      logln "wake command not found: $WOL_SAURON"
+    fi
+  fi
+
+  if ! wait_for_sauron_ssh; then
+    logln "Sauron SSH did not become ready."
+    return 70
+  fi
+
+  warmup_cmd=""
+  if is_truthy "$SAURON_WARMUP"; then
+    warmup_cmd="curl -fsS --max-time '$SAURON_OCR_TIMEOUT_SECONDS' '$SAURON_OCR_API_URL/warmup' >/dev/null && "
+  fi
+
+  remote_cmd="for i in \$(seq 1 '$SAURON_API_WAIT_SECONDS'); do if curl -fsS --max-time 5 '$SAURON_OCR_API_URL/health' >/dev/null 2>&1; then ${warmup_cmd}exec curl -sS --max-time '$SAURON_OCR_TIMEOUT_SECONDS' -X POST '$SAURON_OCR_API_URL/ocr/combined' -H 'Content-Type: image/png' --data-binary @-; fi; sleep 1; done; echo 'Sauron OCR API did not become ready.' >&2; exit 71"
+  logln "posting image to $SAURON_HOST OCR API"
+  logln "sauron warmup: $SAURON_WARMUP"
+  logln "remote command: $remote_cmd"
+
+  if ! "$SSH" "$SAURON_HOST" "$remote_cmd" <"$img" >"$response_json" 2>>"$log"; then
+    logln "Sauron OCR API request failed."
+    [ -f "$response_json" ] && cat "$response_json" >>"$log"
+    return 72
+  fi
+
+  cp "$response_json" "$out"
+  if ! "$JQ" -r '.text // empty' "$response_json" >"$normalized_out" 2>>"$log"; then
+    logln "Sauron OCR API returned non-JSON output:"
+    cat "$response_json" >>"$log"
+    return 73
+  fi
+
+  "$JQ" '.raw_output // empty' "$response_json" >"$surya_results" 2>>"$log" || : >"$surya_results"
+
+  if ! "$JQ" -e '.status == "ok" and ((.text // "") | length > 0)' "$response_json" >/dev/null 2>>"$log"; then
+    logln "Sauron OCR API returned an invalid response:"
+    cat "$response_json" >>"$log"
+    return 73
+  fi
+
+  return 0
+}
+
+run_local_ocr() {
+  local cmd rc actual_surya_results
+
+  cmd=( "$SURYA_OCR" "$img" --output_dir "$surya_output_dir" )
+  if keep_server_enabled; then
+    cmd+=( --keep_server )
+  fi
+
+  logln "running (cwd=$work_dir): ${cmd[*]}"
+  logln ""
+
+  set +e
+  (
+    cd "$work_dir"
+    "${cmd[@]}" >>"$log" 2>&1
+  )
+  rc=$?
+  set -e
+
+  logln ""
+  logln "exit: $rc"
+
+  actual_surya_results="$(find_surya_results)"
+
+  if [ -n "$actual_surya_results" ]; then
+    if [ "$actual_surya_results" != "$surya_results" ]; then
+      cp "$actual_surya_results" "$surya_results"
+    fi
+    cp "$surya_results" "$out"
+  else
+    : >"$out"
+  fi
+
+  if [ -s "$surya_results" ]; then
+    normalize_surya_output >"$normalized_out"
+  fi
+
+  return "$rc"
+}
+
 write_metadata "started"
 write_attempt_review "started"
 
-if [ "$OCR_BACKEND" != "local" ]; then
-  logln "Unsupported combined OCR backend: $OCR_BACKEND"
-  logln "Only OCR_BACKEND=local is implemented for ocr-combined right now."
-  write_metadata "failed" 64 "$(elapsed_ms)" 0
-  write_attempt_review "failed"
-  append_review_queue_entry "failed"
-  "$NOTIFY" -u critical "Combined OCR failed" "OCR_BACKEND=$OCR_BACKEND is not implemented yet.\nLog: $log"
-  exit 64
-fi
-
-if [ ! -x "$SURYA_OCR" ]; then
-  logln "No surya_ocr command found."
-  logln "SURYA_RUNTIME_DIR: $SURYA_RUNTIME_DIR"
-  logln "SURYA_VENV_DIR: $SURYA_VENV_DIR"
-  logln "Expected: $SURYA_VENV_DIR/bin/surya_ocr"
-  write_metadata "failed" 127 "$(elapsed_ms)" 0
-  write_attempt_review "failed"
-  append_review_queue_entry "failed"
-  "$NOTIFY" -u critical "Combined OCR failed" "Surya runtime is not ready. Run: bootstrap-surya-ocr\nLog: $log"
-  exit 127
+validate_backend
+if [ "$OCR_BACKEND" = "local" ]; then
+  validate_local_runtime
 fi
 
 logln "== ocr-combined debug =="
 logln "date: $(date -Is)"
 logln "backend: $OCR_BACKEND"
 logln "engine: $SURYA_OCR"
+logln "SAURON_HOST: $SAURON_HOST"
+logln "SAURON_OCR_API_URL: $SAURON_OCR_API_URL"
+logln "SAURON_WAKE: $SAURON_WAKE"
+logln "SAURON_SSH_WAIT_SECONDS: $SAURON_SSH_WAIT_SECONDS"
+logln "SAURON_API_WAIT_SECONDS: $SAURON_API_WAIT_SECONDS"
+logln "SAURON_OCR_TIMEOUT_SECONDS: $SAURON_OCR_TIMEOUT_SECONDS"
 logln "HOME: ${HOME:-}"
 logln "XDG_CACHE_HOME: ${XDG_CACHE_HOME:-}"
 logln "SURYA_RUNTIME_DIR: $SURYA_RUNTIME_DIR"
 logln "SURYA_VENV_DIR: $SURYA_VENV_DIR"
 logln "SURYA_KEEP_SERVER: $SURYA_KEEP_SERVER"
+logln "SURYA_INFERENCE_BACKEND: ${SURYA_INFERENCE_BACKEND:-}"
+logln "SURYA_INFERENCE_URL: ${SURYA_INFERENCE_URL:-}"
+logln "SURYA_INFERENCE_KEEP_ALIVE: ${SURYA_INFERENCE_KEEP_ALIVE:-}"
+logln "SURYA_INFERENCE_PARALLEL: ${SURYA_INFERENCE_PARALLEL:-}"
+logln "SURYA_INFERENCE_CTX_SIZE: ${SURYA_INFERENCE_CTX_SIZE:-}"
+logln "SURYA_INFERENCE_LOGPROBS: ${SURYA_INFERENCE_LOGPROBS:-}"
 logln "SURYA_EXTRA_LIBRARY_PATH: ${SURYA_EXTRA_LIBRARY_PATH:-}"
 logln "LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:-}"
 logln "cache_dir: $cache_dir"
@@ -408,6 +610,19 @@ logln "metadata: $metadata"
 logln "surya_output_dir: $surya_output_dir"
 logln "PATH: $PATH"
 logln ""
+
+if keep_server_enabled; then
+  export SURYA_INFERENCE_KEEP_ALIVE="${SURYA_INFERENCE_KEEP_ALIVE:-1}"
+  if ! surya_supports_keep_server; then
+    logln "Surya warm mode requested, but this surya_ocr does not support --keep_server."
+    logln "Run bootstrap-surya-ocr to upgrade to the pinned Surya 2 runtime."
+    write_metadata "failed" 64 "$(elapsed_ms)" 0
+    write_attempt_review "failed"
+    append_review_queue_entry "failed"
+    "$NOTIFY" -u critical "Combined OCR failed" "Warm mode needs Surya 2. Run: bootstrap-surya-ocr\nLog: $log"
+    exit 64
+  fi
+fi
 
 region="$("$SLURP" -b "00000000" -c "e62600ff" -B "00000000" -w 2 -s "1e000080")" || {
   write_metadata "cancelled" 0 "$(elapsed_ms)" 0
@@ -423,49 +638,30 @@ logln "image info:"
 (file "$img" >>"$log" 2>&1) || true
 logln ""
 
-cmd=( "$SURYA_OCR" "$img" --output_dir "$surya_output_dir" )
-if keep_server_enabled; then
-  cmd+=( --keep_server )
-fi
-
-logln "running (cwd=$work_dir): ${cmd[*]}"
-logln ""
-
-set +e
-(
-  cd "$work_dir"
-  "${cmd[@]}" >>"$log" 2>&1
-)
-rc=$?
-set -e
-
-logln ""
-logln "exit: $rc"
-
-actual_surya_results="$(find_surya_results)"
-
-if [ -n "$actual_surya_results" ]; then
-  if [ "$actual_surya_results" != "$surya_results" ]; then
-    cp "$actual_surya_results" "$surya_results"
-  fi
-  cp "$surya_results" "$out"
-else
-  : >"$out"
-fi
+case "$OCR_BACKEND" in
+  local)
+    run_local_ocr
+    rc=$?
+    ;;
+  sauron)
+    run_sauron_ocr
+    rc=$?
+    ;;
+esac
 
 stdout_bytes="$(wc -c <"$out" | tr -d ' ')"
 logln "result bytes: $stdout_bytes"
 
-if [ -s "$surya_results" ]; then
-  normalize_surya_output >"$normalized_out"
+if [ "$OCR_BACKEND" = "sauron" ]; then
+  logln "remote response bytes: $stdout_bytes"
 fi
 
-if [ $rc -ne 0 ] || [ ! -s "$normalized_out" ]; then
+if [ "$rc" -ne 0 ] || [ ! -s "$normalized_out" ]; then
   write_metadata "failed" "$rc" "$(elapsed_ms)" "$stdout_bytes"
   write_attempt_review "failed"
   append_review_queue_entry "failed"
   preview="$(tail -n 80 "$log" | sed 's/\t/  /g')"
-  "$NOTIFY" -u critical "Combined OCR failed" "cmd: $SURYA_OCR (exit $rc)\n\n$preview\n\nLog: $log\nImage: $img"
+  "$NOTIFY" -u critical "Combined OCR failed" "backend: $OCR_BACKEND (exit $rc)\n\n$preview\n\nLog: $log\nImage: $img"
   exit 1
 fi
 

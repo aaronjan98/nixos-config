@@ -1,6 +1,6 @@
 # Text + Math OCR Pipeline Spec
 
-**Status:** Checkpoint 5 implemented; Surya runtime bootstrap/user verification pending
+**Status:** Checkpoint 8 blocked locally; Surya 2 warm runtime needs newer `llama.cpp`, stable local path restored to Surya 0.16
 **Goal:** Build a reliable Mathpix-like workflow for screen captures and documents that can extract plain text, math LaTeX, and combined Markdown, while preserving failed OCR examples for correction and future model improvement.
 
 ---
@@ -41,6 +41,8 @@ Current status:
 - `text-ocr` is implemented as a local Tesseract baseline using the same archive/review workflow.
 - `ocr-combined` is implemented as a local Surya probe using the same archive/review workflow.
 - `bootstrap-surya-ocr` creates/repairs the mutable Surya venv at `~/.local/share/ocr-runtimes/surya`.
+- The current working local Surya pin is `surya-ocr==0.16.0`.
+- Surya 2 warm mode was tested and blocked because the current Nix `llama-server` cannot load Surya 2's `qwen35` GGUF model architecture.
 - `Super+M` is the intended math OCR hotkey.
 - `nrt` has verified the wrapper in the current test generation.
 - `nrs` has not been run for this branch unless the user later chooses to promote it.
@@ -162,7 +164,8 @@ Current Surya probe:
 - It normalizes Surya `<math>...</math>` tags into Markdown inline math `$...$`.
 - It saves the original Surya JSON at `surya/results.json` and `raw-output.txt`.
 - It intentionally does not implement `OCR_BACKEND=sauron` yet.
-- `SURYA_KEEP_SERVER=1` can leave Surya's backend server running for faster repeated tests.
+- `ocr-combined-stop` stops the warm Surya server and clears Surya's spawn lock.
+- Local warm mode is not currently installed as a supported command because Surya 2 requires newer `llama.cpp` support than the host package provides.
 
 Why Surya fits screen capture:
 
@@ -233,6 +236,51 @@ Resolved decision:
 
 - `sauron` should be optional and easy to turn on/off for local-versus-remote testing.
 - Do not silently send screenshots to `sauron` unless the command/config explicitly says remote mode is allowed.
+
+### Remote OCR API checkpoint
+
+The remote OCR path should reuse the video-summary operational pattern, not invent a new deployment model.
+
+Sauron facts:
+
+- Host aliases: `sauron` externally and `sauron.home` on LAN.
+- Wake command on the laptop: `wol-sauron`.
+- Existing video-summary client wakes Sauron, waits for SSH, then calls a localhost FastAPI service through SSH.
+- Existing server app pattern: `/opt/ai-services/<service>/`, Python venv inside that directory, systemd service as user `aj`, LAN/localhost API.
+
+Recommended first remote OCR slice:
+
+1. Add a separate service on Sauron at `/opt/ai-services/ocr-api`, not an endpoint inside `summarizer-api`. Implemented.
+2. Use `surya-ocr==0.16.0` first because it is the currently working local combined OCR runtime. Implemented.
+3. Expose `POST /ocr/combined` accepting raw PNG bytes and returning JSON with normalized text plus raw Surya output. Implemented.
+4. Run the service on localhost only, e.g. `127.0.0.1:8011`, and call it through `ssh sauron 'curl ... --data-binary @-'`. Implemented.
+5. Add `OCR_BACKEND=sauron` to `ocr-combined`; the command still captures locally, archives locally, wakes Sauron, waits for SSH, POSTs the screenshot, copies the returned text to the clipboard, and stores the remote response in the same attempt bundle. Implemented and validated with a saved screenshot.
+6. Add `ocr-combined-sauron` as the explicit remote wrapper so local and Sauron speed tests can use separate commands and keybinds.
+7. Keep `OCR_BACKEND=local` as the default unless the user explicitly switches the backend.
+
+Current remote service state:
+
+- Service path: `/opt/ai-services/ocr-api`.
+- Systemd unit: `/etc/systemd/system/ocr-api.service`.
+- Tracked source repo: `/opt/ai-services/ocr-api`, branch `main`.
+- Remote: `home = sweetpea-git:/srv/git/repos/sauron-ocr-api.git`.
+- Forgejo: `https://git.aaronjanovitch.com/aj/sauron-ocr-api`.
+- Health endpoint: `ssh sauron 'curl -fsS http://127.0.0.1:8011/health'`.
+
+Why this first slice is not Surya 2:
+
+- Local Surya 2 warm mode failed because the current Nix `llama-server` could not load Surya 2's `qwen35` GGUF architecture.
+- Sauron might still become the Surya 2 host later if it gets a compatible newer `llama.cpp` or another backend, but the first useful checkpoint is remote transport and API shape.
+- A separate OCR API keeps the door open to swap its backend from Surya 0.16 CLI to in-process Surya predictors, Surya 2, Pix2Text, or a custom pipeline without changing the laptop command surface.
+
+What "hot" means right now:
+
+- The Sauron service is now hot in the model-resident sense: `ocr-api.service` loads Surya predictors into the FastAPI process and reuses them across requests.
+- The service exposes `/warmup`; the laptop wrapper calls it before `POST /ocr/combined` when `SAURON_WARMUP=1`.
+- The loaded objects are Surya 0.16 `FoundationPredictor`, `DetectionPredictor`, and `RecognitionPredictor`.
+- Sauron auto-suspend still applies. The laptop command sends Wake-on-LAN, waits for SSH, then calls the localhost API through SSH. If Sauron is asleep, the first request includes wake time; if it is already awake, it skips most of that overhead.
+- Current remote backend is `surya-ocr==0.16.0`, not Surya 2.0.
+- Validation on a saved screenshot showed startup model load around 4.6s and hot in-process OCR around 23–30s server-side, depending on request.
 
 ---
 
@@ -445,9 +493,9 @@ Progress is tracked here. Do not implement later phases until the prior checkpoi
 | 3. Add correction files and commands | Implemented | User can edit corrected output for any attempt |
 | 4. Add text OCR command | Implemented | `text-ocr` captures region and copies plain text |
 | 5. Add combined OCR prototype | Implemented | `ocr-combined` runs Surya on screen capture and returns normalized block HTML |
-| 6. Evaluate backend quality | Pending | Compare local pix2tex/Tesseract/Surya/Pix2Text on saved examples |
+| 6. Evaluate backend quality | In progress | Compare local pix2tex/Tesseract/Surya/Pix2Text on saved examples |
 | 7. Decide remote `sauron` service | Pending | API contract and auth model chosen |
-| 8. Optional warm daemon | Pending | Local or remote daemon avoids model reload per invocation |
+| 8. Optional warm daemon | Blocked locally | Surya 2 warm runtime requires newer `llama.cpp` support for `qwen35` than the current host package provides |
 | 9. Dataset export | Pending | Corrected examples can export to training/eval format |
 | 10. Training/fine-tuning decision | Pending | Enough corrected examples exist to justify training |
 
@@ -533,7 +581,8 @@ Checkpoint 5 keybind plan:
 
 - `Super+M`: `math-ocr`.
 - `Super+T`: `text-ocr`.
-- `Super+N`: `ocr-combined`.
+- `Super+N`: local `ocr-combined`.
+- `Super+B`: remote `ocr-combined-sauron`.
 - `Ctrl+Shift+N`: Neovide, moved away from `Super+N`.
 - `Ctrl+Shift+T`: old Hyprland `togglesplit` binding.
 - `ocr-combined` is now a Surya-backed probe command.
@@ -546,3 +595,21 @@ Checkpoint 5 implementation notes:
 4. The wrapper uses the same archive root, queue, `latest` symlink, `latest-combined` symlink, and per-attempt `review.md` workflow as the other OCR commands.
 5. Mock validation passed with a fake `surya_ocr` writing `surya/results.json`.
 6. Live validation is still pending: run `nrt`, run `bootstrap-surya-ocr`, then trigger `Super+N` on a simple text+math region.
+
+Checkpoint 8 implementation notes:
+
+1. Surya 2 warm mode depends on `surya-ocr==0.20.0`, which exposes `--keep_server`.
+2. Live testing showed Surya 2 downloads `surya-2.gguf` and asks `llama-server` to load a `qwen35` architecture model.
+3. The current Nix `llama-server` failed with `unknown model architecture: 'qwen35'`, so warm mode cannot work with the current host package.
+4. `ocr-combined-stop` remains useful for clearing `~/.cache/datalab/surya/llamacpp_server.lock` and stale sentinel files after failed Surya 2 startup attempts.
+5. `bootstrap-surya-ocr` is restored to `surya-ocr==0.16.0` to keep the local `ocr-combined` path working.
+6. Next options are either package a newer `llama.cpp` just for Surya 2, or move warm combined OCR to `sauron`.
+
+Checkpoint 9 implementation notes:
+
+1. `OCR_BACKEND=sauron ocr-combined` works through the Sauron OCR API and was validated with a saved screenshot.
+2. `ocr-combined-sauron` is exposed by the Nix package as the explicit remote command.
+3. Active comparison keybinds are `Super+N` for local `ocr-combined` and `Super+B` for remote `ocr-combined-sauron`.
+4. The Sauron API is now an in-memory hot predictor service using Surya 0.16, not Surya 2.
+5. `/warmup` loads the predictors, and the laptop wrapper calls `/warmup` before remote OCR by default.
+6. Sauron currently uses CPU execution; its Quadro M5000 is present, but Torch reports CUDA unavailable because the NVIDIA driver is too old for the installed Torch CUDA build.

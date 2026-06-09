@@ -230,8 +230,8 @@ Purpose:
 Runtime:
 - uses a mutable Surya Python venv at `~/.local/share/ocr-runtimes/surya/.venv`
 - bootstrap with `bootstrap-surya-ocr`
-- local CPU mode depends on Surya's `llama.cpp` backend; the Nix wrapper provides `llama-server`
-- `SURYA_KEEP_SERVER=1 ocr-combined` leaves Surya's inference server running for faster repeated use
+- pinned runtime is `surya-ocr==0.16.0`, because this is the current working local laptop runtime
+- `ocr-combined-stop` clears stale Surya 2 `llama.cpp` server sentinel/lock files if a failed warm-runtime experiment leaves them behind
 
 Archive:
 - uses the same `~/.local/share/ocr-captures` archive and `review.md` correction workflow as `math-ocr` and `text-ocr`
@@ -242,7 +242,13 @@ Archive:
 Notes:
 - output is currently Surya block `html` / `text_lines` joined in reading order
 - the wrapper normalizes Surya `<math>...</math>` tags to Markdown inline math `$...$`
-- `OCR_BACKEND=sauron` and `OCR_BACKEND=auto` are intentionally not implemented yet for `ocr-combined`
+- per-attempt `metadata.json` records `duration_ms`, `keep_server`, `SURYA_INFERENCE_BACKEND`, `SURYA_INFERENCE_URL`, and `SURYA_INFERENCE_KEEP_ALIVE` for cold/warm/backend comparisons
+- local Surya 2 warm mode is blocked for now because the current Nix `llama-server` cannot load Surya 2's `qwen35` GGUF model architecture
+- `OCR_BACKEND=sauron ocr-combined` captures locally, wakes Sauron with `wol-sauron`, waits for SSH, calls `/warmup`, POSTs the screenshot through `ssh sauron 'curl ...'`, and stores the remote response in the same attempt bundle
+- `ocr-combined-sauron` is the convenience wrapper for the same remote path; current hotkey plan is `Super+N` for local `ocr-combined` and `Super+B` for remote `ocr-combined-sauron`
+- Sauron OCR API defaults: host `sauron`, URL `http://127.0.0.1:8011`, request timeout `1200s`; override with `SAURON_HOST`, `SAURON_OCR_API_URL`, and `SAURON_OCR_TIMEOUT_SECONDS`
+- Sauron OCR API is now an in-process Surya 0.16 service: it loads `FoundationPredictor`, `DetectionPredictor`, and `RecognitionPredictor` once, exposes `/warmup`, and keeps the model resident in RAM while the service is alive
+- `OCR_BACKEND=auto` is intentionally not implemented yet for `ocr-combined`
 
 ## `bootstrap-surya-ocr.sh`
 Purpose:

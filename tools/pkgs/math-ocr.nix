@@ -74,29 +74,60 @@ let
     text = builtins.readFile ../scripts/text-ocr.sh;
   };
 
+  combinedRuntimeInputs = [
+    pkgs.grim
+    pkgs.slurp
+    pkgs.wl-clipboard
+    pkgs.libnotify
+    pkgs.bash
+    pkgs.systemd
+    pkgs.jq
+    pkgs.file
+    pkgs.coreutils
+    pkgs.gnused
+    pkgs.gnugrep
+    pkgs.openssh
+    pkgs.llama-cpp
+  ];
+
   ocr-combined = pkgs.writeShellApplication {
     name = "ocr-combined";
 
-    runtimeInputs = [
-      pkgs.grim
-      pkgs.slurp
-      pkgs.wl-clipboard
-      pkgs.libnotify
-      pkgs.bash
-      pkgs.systemd
-      pkgs.jq
-      pkgs.file
-      pkgs.coreutils
-      pkgs.gnused
-      pkgs.gnugrep
-      pkgs.llama-cpp
-    ];
+    runtimeInputs = combinedRuntimeInputs;
 
     runtimeEnv.SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
 
     excludeShellChecks = [ "SC2016" ];
 
     text = builtins.readFile ../scripts/ocr-combined.sh;
+  };
+
+  ocr-combined-sauron = pkgs.writeShellApplication {
+    name = "ocr-combined-sauron";
+
+    runtimeInputs = combinedRuntimeInputs;
+
+    runtimeEnv = {
+      OCR_BACKEND = "sauron";
+      SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
+    };
+
+    excludeShellChecks = [ "SC2016" ];
+
+    text = builtins.readFile ../scripts/ocr-combined.sh;
+  };
+
+  ocr-combined-stop = pkgs.writeShellApplication {
+    name = "ocr-combined-stop";
+
+    runtimeInputs = [
+      pkgs.libnotify
+      pkgs.jq
+      pkgs.coreutils
+      pkgs.procps
+    ];
+
+    text = builtins.readFile ../scripts/ocr-combined-stop.sh;
   };
 
   bootstrap-surya-ocr = pkgs.writeShellApplication {
@@ -141,6 +172,8 @@ pkgs.symlinkJoin {
     ocr-correct-last
     text-ocr
     ocr-combined
+    ocr-combined-sauron
+    ocr-combined-stop
     bootstrap-surya-ocr
     bootstrap-pix2tex
   ];
