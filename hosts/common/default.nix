@@ -195,7 +195,7 @@
 
   users.users.aj = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "input" "video" "scanner" "lp" ];
+    extraGroups = [ "wheel" "networkmanager" "input" "video" "scanner" "lp" "dialout" ];
     shell = pkgs.bash;
     hashedPasswordFile = config.sops.secrets."passwords/aj".path;
     packages = with pkgs; [
