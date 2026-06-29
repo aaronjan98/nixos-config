@@ -7,6 +7,7 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 UPDATE_SCRIPTS=(
   "update-pi.sh"
   "update-openai-codex.sh"
+  "update-antigravity-cli.sh"
 )
 
 log() {
@@ -54,6 +55,7 @@ Behavior:
 Current package set:
   - pi
   - openai-codex
+  - antigravity-cli
 
 Notes:
   - the individual update scripts are run with --no-build so the system is only
@@ -168,7 +170,7 @@ main() {
   printf '  1. Review the diff\n'
   printf '  2. Run: nrs\n'
   printf '     (explicit: sudo nixos-rebuild switch --flake ~/nixos-config#%s)\n' "$flake_host"
-  printf '  3. Verify: pi --version && codex --version\n'
+  printf '  3. Verify: pi --version && codex --version && agy --version\n'
 }
 
 main "$@"

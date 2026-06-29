@@ -270,9 +270,13 @@ This gives:
 - source: `pkgsUnstable.opencode`
 - installation boundary: `modules/opencode.nix`
 
-### Gemini CLI
-- source: `pkgsUnstable.gemini-cli`
+### Antigravity CLI (formerly Gemini CLI)
+- source: local derivation in `pkgs/antigravity-cli/`
+- exposed through the overlay as `pkgs.antigravity-cli`
 - installed directly in `environment.systemPackages`
+- command: `agy`
+- update workflow: `scripts/update-antigravity-cli.sh`
+- note: URL contains an opaque build ID fetched from the upstream manifest API; the update script handles this automatically
 
 ### OpenAI Codex
 - source: local derivation in `pkgs/openai-codex/`

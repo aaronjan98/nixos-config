@@ -188,6 +188,7 @@
       "vscode-extension-ms-toolsai-jupyter-renderers"
       "cursor"
       "burpsuite"
+      "antigravity-cli"
     ];
 
   # Users
@@ -303,7 +304,7 @@
     kitty
     ghostty
     neovide
-    gemini-cli
+    antigravity-cli
     zoxide
     fzf
     yazi

@@ -80,6 +80,116 @@ price points. No self-hostable equivalent exists.
 
 ---
 
+## Modem signal data: dead end (investigated 2026-06-16)
+
+The Spectrum ET2251 leased eMTA modem (at 192.168.100.1) is fully locked from the
+customer/LAN side — confirmed empirically:
+- **Web GUI**: modem answers ICMP (ping ~0.7ms from RPi5, ~2.8ms from LAN once routed)
+  but ports 80/443 serve zero bytes — the diagnostic page is disabled in firmware.
+- **SNMP**: total timeout on v1 and v2c across 8 community strings (public, private, HDC,
+  admin, charter, spectrum, cable, docsis). Charter restricts SNMP to the HFC/CMTS side.
+
+To reach the modem from the RPi5 at all requires an on-link route
+(`ip route add 192.168.100.0/24 dev eth1`) because the default route otherwise sends
+192.168.100.1 to the ISP gateway. Even with the route, both interfaces are locked.
+
+**Conclusion:** raw modem signal (dBmV, SNR) is NOT obtainable for LANtern on this unit.
+Do not re-investigate. Options if signal data becomes important later:
+- My Spectrum app (account-side health, not programmatic)
+- A customer-owned retail DOCSIS modem (exposes full local web page + SNMP)
+- Monitor signal degradation *indirectly* via downstream metrics (latency, packet loss,
+  jitter, throughput) — a bad splitter/signal shows up as rising packet loss anyway.
+
+**Switch SNMP IS a viable data source:** the TL-SG108E is a managed switch with SNMP
+support (per-port traffic counters, link up/down). `snmp-utils-nossl` is installed on
+the RPi5 (10.0.50.1) as of 2026-06-16 for this purpose.
+
+---
+
+## RECURRING real-world detection case: Deco X60 5 GHz degradation over uptime
+### (first seen 2026-06-16 — total SSID drop; recurred 2026-06-28 — partial power/rate degradation)
+
+This is now a **confirmed recurring fault**, not a one-off. It MUST be a built-in,
+first-class check in LANtern. It has manifested two different ways, so the detector
+must catch *degradation*, not just *disappearance* (see "design trap" below).
+
+**Root cause (inferred — the Deco exposes no internals):** a closed-firmware
+resource/state leak in the X60's 5 GHz radio subsystem that accumulates with uptime.
+Diagnostic signature = SSID keeps beaconing + only 5 GHz degrades + 2.4 GHz stays
+fine + a reboot fully restores it + it recurs with uptime. That fingerprint points to
+firmware/state rot (leaking radio driver / mesh-steering daemon, wedged DFS/auto-channel
+state machine, and/or thermal TX-power throttle on the hotter 5 GHz amp), NOT an RF or
+hardware fault. 5 GHz rots and 2.4 GHz doesn't because 5 GHz carries the complex state
+(DFS, high-MCS rate control, most band-steering). The only reset on a locked unit is a
+power cycle — which is why ISP gateways ship scheduled auto-reboots. **Mitigation:
+schedule a periodic reboot of the Deco units (Deco app → Advanced → Reboot Schedule)
+in addition to LANtern detection.** Auto-firmware-updates are already OFF and it still
+recurred, so this is uptime/firmware-leak driven, not update-driven.
+
+**Two observed manifestations (both must be detectable):**
+- *2026-06-16 — total:* main unit's 5 GHz silently stopped advertising `Connect here`
+  (2.4 stayed fine). Devices roamed to distant satellites — 60% loss, 100–250 ms,
+  "connected without internet."
+- *2026-06-28 — partial:* **no SSID drop** — all three units still beaconed `Connect here`
+  on 5 GHz, but degraded: every 5 GHz BSSID sat at -80…-85 dBm, all units jammed onto one
+  channel (40), and clients exhibited **sticky-client-to-far-unit** behavior (laptop clung
+  to the *upstairs* unit at -80 dBm / 108 Mbps instead of the nearer TV-room unit; phone
+  couldn't associate at all from its room). Reboot restored it: clients re-associated with
+  the nearest unit (-69 dBm, 648 Mbps, stable), units re-spread onto channel 48.
+
+**⚠️ Design trap:** a naive "is the `Connect here` SSID present?" check would have PASSED
+the 2026-06-28 incident (SSID was present the whole time). Presence is necessary but not
+sufficient. The detector must alert on **degradation thresholds**, not just absence.
+
+**Built-in check LANtern must implement (no Deco cooperation needed — it's opaque):**
+1. **Per-device latency/loss baseline (primary).** Scheduled pings to known clients;
+   alert on 5–10× latency rise or sustained packet loss vs. per-device/per-hour baseline.
+   Catches BOTH manifestations within minutes. This is the most reliable signal and the
+   collectd WAN-ping deploy (below) is the embryonic version — extend it to per-LAN-device.
+2. **WiFi BSSID census + RF-quality sensor (root-cause localizer).** A cron'd `nmcli`/`iw`
+   scanner (nix laptop or a dedicated Pi w/ WiFi NIC) logging, per Deco BSSID:
+   which SSID/band each advertises, **signal (dBm), channel, and negotiated rate.**
+   Must flag: (a) a 5 GHz BSSID dropping `Connect here` (total case), AND
+   (b) a unit's 5 GHz signal/rate falling well below its rolling baseline, all units
+   collapsing onto one channel, or a client associated to a non-nearest unit at poor RSSI
+   (partial case). Per-unit BSSID→location map is in `Raymer/docs/network.md`
+   (53=main/homelab, 57=TV room, F7=upstairs).
+3. **LLM explanation + action layer.** Correlate 1+2 into a plain-English alert with the
+   known remedy, e.g.: "main Deco 5 GHz degraded (signal -85 dBm, clients stuck on far
+   units, latency tripled) — this is the recurring X60 uptime fault; reboot the unit
+   (10.0.50.212) or rely on the scheduled reboot." Optionally auto-trigger the reboot via
+   the per-unit web UI (maintenance-only page exposes Reboot; creds in `pass`).
+4. **Uptime-aware proactive nudge.** Since the trigger is uptime, track each Deco's
+   time-since-reboot and pre-emptively warn / fire the scheduled reboot before degradation
+   onset, rather than waiting to detect the symptom.
+
+**Design implication:** the Deco is opaque (no SNMP/logs/web config — see modem dead-end
+note), so client→AP association and radio health CANNOT be read from the AP. Rely on
+(a) latency/loss probing from RPi5/sweetpea and (b) a dedicated WiFi-scanning sensor that
+measures RF quality externally. Never depend on the AP self-reporting.
+
+Full incident write-ups: `Raymer/docs/network.md` → Known gotchas.
+
+---
+
+## First data source DEPLOYED (2026-06-17): collectd ping monitoring on the RPi5
+
+`luci-app-statistics` + `collectd-mod-ping` now running on the router (10.0.50.1),
+probing 8.8.8.8, 1.1.1.1, and the Spectrum WAN gateway (104.173.0.1) every 15 s →
+per-target latency + packet-loss RRDs. This is the embryonic version of LANtern's
+"per-device latency/loss baseline" data source, just at the WAN edge for now.
+
+- RRDs live in `/tmp` (RAM); persisted hourly to `/etc/luci_statistics/rrdbackup.tgz`
+  (boot-restore + sysupgrade-survival via the luci_statistics init script).
+- Graphs: LuCI → Statistics → Graphs → Ping.
+- For LANtern proper: this collectd data could be scraped (collectd has a `network`
+  plugin / CSV export) or LANtern can run its own probes. Either way the pattern is
+  proven on-device. Extend the same idea to per-LAN-device probing for the anomaly
+  detector (see the Deco 5 GHz detection case above).
+- Full setup details: `Raymer/docs/network.md` → "WAN / internet health monitoring".
+
+---
+
 ## Data sources enabled by OpenWrt (not possible with Orbi)
 
 - Per-device real-time bandwidth (conntrack + tc)
@@ -141,7 +251,14 @@ This is why router replacement is a prerequisite.
 - ARP scan on cron → catch static-IP devices
 - Speedtest-tracker Docker container → ISP speed history
 - Smokeping or continuous ping → latency/packet loss timeline
-- Grafana dashboard: device list, speed over time, latency graph
+- **Per-device latency/loss baseline + alert** → catches the recurring Deco 5 GHz
+  degradation (see detection-case section). Extend the deployed collectd WAN ping to
+  per-LAN-device probing; alert on 5–10× rise vs. per-device baseline.
+- **WiFi BSSID census + RF-quality sensor** (cron `nmcli`/`iw` scan logging per-BSSID
+  SSID/band/signal/channel/rate) → localizes the degraded Deco unit; alert on signal/rate
+  below baseline OR all units collapsing to one channel, not just SSID absence.
+- **Per-Deco uptime tracking + scheduled-reboot nudge** → the fault is uptime-driven.
+- Grafana dashboard: device list, speed over time, latency graph, per-Deco RF health
 
 ### Phase 2: Per-device traffic + LLM queries
 - netflow ingestion → per-device flow database

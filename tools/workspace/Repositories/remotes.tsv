@@ -8,8 +8,15 @@ experiment/vulnlab	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/vuln
 experiment/vulnlab	local	ssh://git@localhost/srv/git/repos/vulnlab.git
 projects/agent-display	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/claude-display.git
 projects/agent-display	local	ssh://git@localhost/srv/git/repos/claude-display.git
+projects/arduino	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/arduino.git
+projects/arduino	local	ssh://git@localhost/srv/git/repos/arduino.git
 projects/canvas-accessibility-skill	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/canvas-accessibility-skill.git
 projects/canvas-accessibility-skill	local	ssh://git@localhost/srv/git/repos/canvas-accessibility-skill.git
+projects/ipod-dap-sync	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ipod-dap-sync.git
+projects/ipod-dap-sync	local	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
+projects/language-tutor	forgejo	https://git.aaronjanovitch.com/aj/language-tutor.git
+projects/language-tutor	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/language-tutor.git
+projects/language-tutor	local	ssh://git@localhost/srv/git/repos/language-tutor.git
 school/differential_equations/directional_fields	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/directional_fields.git
 school/differential_equations/directional_fields	local	ssh://git@localhost/srv/git/repos/directional_fields.git
 school/differential_equations/phase_portraits	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/phase_portraits.git

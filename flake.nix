@@ -29,6 +29,7 @@
         ];
 
       localOverlay = (final: prev: {
+        antigravity-cli = final.callPackage ./pkgs/antigravity-cli/default.nix { };
         breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
         llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
         models = final.callPackage ./pkgs/models/default.nix { };
@@ -52,7 +53,6 @@
           code-cursor = pkgsUnstable.code-cursor;
           claude-code = pkgsUnstable.claude-code;
           opencode = pkgsUnstable.opencode;
-          gemini-cli = pkgsUnstable.gemini-cli;
           zotero = pkgsUnstable.zotero;
         });
     in
