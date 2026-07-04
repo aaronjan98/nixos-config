@@ -6,12 +6,13 @@ automation/video-summary	local	ssh://git@localhost/srv/git/repos/clipper-video-s
 experiment/claw-code-parity	hub	git@github.com:ultraworkers/claw-code-parity.git
 experiment/vulnlab	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/vulnlab.git
 experiment/vulnlab	local	ssh://git@localhost/srv/git/repos/vulnlab.git
-projects/agent-display	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/claude-display.git
-projects/agent-display	local	ssh://git@localhost/srv/git/repos/claude-display.git
 projects/arduino	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/arduino.git
 projects/arduino	local	ssh://git@localhost/srv/git/repos/arduino.git
 projects/canvas-accessibility-skill	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/canvas-accessibility-skill.git
 projects/canvas-accessibility-skill	local	ssh://git@localhost/srv/git/repos/canvas-accessibility-skill.git
+projects/context-harness	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/context-harness.git
+projects/context-harness	hub	git@github.com:aaronjan98/context-harness.git
+projects/context-harness	local	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ipod-dap-sync.git
 projects/ipod-dap-sync	local	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	forgejo	https://git.aaronjanovitch.com/aj/language-tutor.git

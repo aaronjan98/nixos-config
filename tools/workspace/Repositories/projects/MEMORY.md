@@ -9,7 +9,12 @@ Use this file to point future agents at:
 - any area-level conventions about when to create a new repo
 
 ## Current active repo
-- `agent-display/` — active build in progress
+- `context-harness/` — active Context Forge build in progress
+
+## Agent collaboration preferences
+- For Context Forge debugging, do not keep making commits for speculative
+  fixes. Use WIP commits only when they help safe rollback. Otherwise commit
+  after the user confirms the issue is actually fixed.
 
 ## Future project ideas
 - `project-memory/research-graph-workspace.md` — graph-native mathematical

@@ -394,7 +394,6 @@
     swww
 
     # Applications
-    firefox
     fastfetch
     evince
     libreoffice
@@ -432,6 +431,17 @@
     )
     pkgs.tea
   ];
+  programs.firefox = {
+    enable = true;
+    policies = {
+      ExtensionSettings = {
+        "contextforge-bridge@local" = {
+          installation_mode = "force_installed";
+          install_url = "file:///home/aj/Repositories/projects/context-harness/contextforge-bridge.xpi";
+        };
+      };
+    };
+  };
 
   system.activationScripts.cursorExtensions = {
     deps = [ "users" ];

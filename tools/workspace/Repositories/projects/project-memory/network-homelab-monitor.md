@@ -107,11 +107,33 @@ the RPi5 (10.0.50.1) as of 2026-06-16 for this purpose.
 ---
 
 ## RECURRING real-world detection case: Deco X60 5 GHz degradation over uptime
-### (first seen 2026-06-16 — total SSID drop; recurred 2026-06-28 — partial power/rate degradation)
+### (2026-06-16 total SSID drop; 2026-06-28 + 2026-07-01 partial power/rate degradation)
 
-This is now a **confirmed recurring fault**, not a one-off. It MUST be a built-in,
-first-class check in LANtern. It has manifested two different ways, so the detector
-must catch *degradation*, not just *disappearance* (see "design trap" below).
+This is now a **confirmed recurring fault, accelerating** — 3× in ~2 weeks, interval
+12 days → 3 days. Affected unit = **homelab-room main unit, `10.0.50.216`, MAC `...05:54`,
+"Michelle's Room"** (NOTE: an earlier version of these notes and the network.md table had
+the unit↔room↔IP mapping scrambled; corrected 2026-07-01 — the main unit is `.216`/`...54`,
+NOT `.212`/`...50`). It MUST be a built-in, first-class check in LANtern. It has manifested
+two different ways, so the detector must catch *degradation*, not just *disappearance*
+(see "design trap" below).
+
+**New evidence from occurrence #3 (2026-07-01) that shapes the design:**
+- **Firmware was up to date** → not a stale-build bug, no vendor fix pending. LANtern can't
+  assume "just update it"; it must detect + mitigate (reboot).
+- **The Deco's own System Log is near-useless as a data source**: ~100-line volatile RAM
+  ring buffer (~1.7 h), wiped on reboot. By the time you notice + save it, the failure
+  window is gone. → **Hard confirmation that LANtern cannot rely on the AP self-reporting;
+  out-of-band probing + LANtern's own persistent timeline is mandatory.** If the Deco can be
+  pointed at a remote syslog server (app → Advanced, unconfirmed on this build), capture it
+  continuously to sweetpea — otherwise treat the AP as a black box.
+- **Main unit CPU Load read 67%** in the web UI (elevated for an AP-mode X60). Possible
+  mechanism = a slowly-spinning/leaking process (the mesh-steering daemon `nrd` was the
+  busiest thing in the log). → **Add per-Deco CPU/memory trending as a leading indicator**
+  if the web UI's stats can be scraped (JS/auth-gated SPA — needs the encrypted local API or
+  a headless-browser scrape; hard but high-value: rising CPU over days could *predict* the
+  degradation before users feel it).
+- **5 GHz keeps drifting back to channel 40** where it dies (reboot moves it to 48). Log
+  the mesh's current channel; a unit collapsing onto a congested channel is a signal.
 
 **Root cause (inferred — the Deco exposes no internals):** a closed-firmware
 resource/state leak in the X60's 5 GHz radio subsystem that accumulates with uptime.
