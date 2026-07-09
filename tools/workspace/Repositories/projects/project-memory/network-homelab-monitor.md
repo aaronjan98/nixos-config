@@ -7,6 +7,10 @@ GitHub: https://github.com/aaronjan98/LANtern
 Forgejo: https://git.aaronjanovitch.com/aj/lantern
 Zettelkasten: [[LANtern — home network observability stack]]
 UI spec: `project-memory/lantern-ui-spec.md`
+Idle-automation spec: `project-memory/lantern-idle-automation-spec.md` — **LANtern's first
+working vertical slice** (idle-gated Deco reboot + SnapRAID sync via an "activity oracle").
+Deterministic rules core, AI/smart-speaker layer on top. The smart-speaker is a separate
+downstream project that consumes LANtern's API (device→person identity + "who's online").
 
 ---
 

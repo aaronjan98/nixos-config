@@ -16,6 +16,8 @@ When applying NixOS configuration changes, agents MUST use the following aliases
 
 Always run `nrt` first to verify the configuration builds correctly before applying it with `nrs`.
 
+User preference: for long NixOS verification/apply commands, prepare the fix and tell the user what to run in their own terminal instead of running `nrs` or equivalent long system builds as the agent. The user needs to see the live output directly.
+
 ### `dot` alias for dotfiles
 For any operation on files tracked by the home-directory bare repo (`~/.config/`, `~/.bashrc`, `~/.bash_aliases`, `~/.gitconfig`, `~/.bash_profile`, `~/.dotfiles.gitignore`), use the `dot` shell function — not `g` or plain `git`.
 

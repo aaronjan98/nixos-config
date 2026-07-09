@@ -31,6 +31,15 @@
       localOverlay = (final: prev: {
         antigravity-cli = final.callPackage ./pkgs/antigravity-cli/default.nix { };
         breeze-hacked-cursor = final.callPackage ./pkgs/breeze-hacked-cursor/default.nix { };
+        ctranslate2 = prev.ctranslate2.overrideAttrs (old: {
+          src = final.fetchFromGitHub {
+            owner = "OpenNMT";
+            repo = "CTranslate2";
+            tag = "v${old.version}";
+            fetchSubmodules = true;
+            hash = "sha256-cchwv+esysn/0v6RqD5zp306HfzOjjlCxH5usLETXs0=";
+          };
+        });
         llmfit = final.callPackage ./pkgs/llmfit/default.nix { };
         models = final.callPackage ./pkgs/models/default.nix { };
         openai-codex = final.callPackage ./pkgs/openai-codex/default.nix { };
