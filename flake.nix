@@ -63,6 +63,7 @@
           claude-code = pkgsUnstable.claude-code;
           opencode = pkgsUnstable.opencode;
           zotero = pkgsUnstable.zotero;
+          emacs-pgtk = pkgsUnstable.emacs-pgtk;
         });
     in
     {

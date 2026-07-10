@@ -28,6 +28,7 @@
     ../../modules/podman.nix
     ../../modules/syncthing.nix
     ../../modules/sync-leave-preflight.nix
+    ../../modules/emacs.nix
   ];
 
   aj.syncthing.enable = true;
