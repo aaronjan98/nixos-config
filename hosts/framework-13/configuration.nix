@@ -6,7 +6,14 @@
 # nixos-hardware module (framework-13-7040-amd) is applied in flake.nix,
 # not here, because it comes from an external flake input.
 
-{
+let
+  frameworkWorkspaceRules = lib.concatStringsSep "\n" (
+    map
+      (workspace:
+        "    workspace = ${toString workspace}, monitor:eDP-1, gapsin:13, gapsout:35")
+      (lib.range 1 99)
+  );
+in {
   imports = [
     ./hardware-configuration.nix
     ../common/default.nix
@@ -27,17 +34,19 @@
     env = XCURSOR_SIZE,55
     exec-once = hyprctl setcursor Breeze_Hacked 55
 
+${frameworkWorkspaceRules}
+
     # Samsung external monitor workspace row. Keep laptop spacing compact while
     # giving tiled windows on the ultrawide more breathing room.
-    workspace = 101, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 102, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 103, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 104, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 105, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 106, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 107, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 108, monitor:DP-1, gapsin:8, gapsout:16
-    workspace = 109, monitor:DP-1, gapsin:8, gapsout:16
+    workspace = 101, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 102, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 103, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 104, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 105, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 106, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 107, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 108, monitor:DP-1, gapsin:12, gapsout:36
+    workspace = 109, monitor:DP-1, gapsin:12, gapsout:36
   '';
 
   # Kanata layout — identical to ThinkPad for now; diverge here as needed.
