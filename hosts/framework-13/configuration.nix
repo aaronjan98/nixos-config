@@ -13,6 +13,18 @@ let
         "    workspace = ${toString workspace}, monitor:eDP-1, gapsin:13, gapsout:35")
       (lib.range 1 99)
   );
+  frameworkSizeRules = lib.concatStringsSep "\n" (
+    [
+      "    # Framework-only btop terminal size for Super+P."
+      "    windowrulev2 = size 1730 1040, class:^(btop-scratch)$"
+      ""
+      "    # Framework-only app sizes for Super+P."
+    ]
+    ++ map
+      (workspace:
+        "    windowrulev2 = size 1986 1270, onworkspace:${toString workspace}, class:^(firefox|kitty|com\\.mitchellh\\.ghostty|vesktop|org-jdownloader-update-launcher-JDLauncher|codium|com\\.wolfram\\.Wolfram\\.14\\.3)$")
+      (lib.range 1 99)
+  );
 in {
   imports = [
     ./hardware-configuration.nix
@@ -33,6 +45,8 @@ in {
   environment.etc."hypr/conf.d/99-host.conf".text = ''
     env = XCURSOR_SIZE,55
     exec-once = hyprctl setcursor Breeze_Hacked 55
+
+${frameworkSizeRules}
 
 ${frameworkWorkspaceRules}
 
