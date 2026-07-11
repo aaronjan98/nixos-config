@@ -286,6 +286,9 @@
     enable = true;
     xwayland.enable = true;
   };
+  # Host-specific Hyprland overrides are sourced by ~/.config/hypr/hyprland.conf.
+  # Hosts can override this file; the shared default keeps the include valid.
+  environment.etc."hypr/conf.d/99-host.conf".text = lib.mkDefault "";
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
