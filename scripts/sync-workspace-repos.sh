@@ -32,6 +32,19 @@ has_upstream() {
   git -C "$repo_dir" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1
 }
 
+missing_localhost_remote() {
+  local url="$1"
+  local path=""
+
+  case "$url" in
+    ssh://*@localhost/*) path="/${url#ssh://*@localhost/}" ;;
+    ssh://*@localhost:/*) path="/${url#ssh://*@localhost:/}" ;;
+    *@localhost:/*) path="/${url#*@localhost:/}" ;;
+  esac
+
+  [[ -n "$path" && ! -e "$path" ]]
+}
+
 sync_repo() {
   local target_dir="$1"
   local remote_url="$2"
@@ -55,6 +68,12 @@ sync_repo() {
   local remote
   while IFS= read -r remote; do
     [[ -z "$remote" ]] && continue
+    local url
+    url="$(git -C "$target_dir" remote get-url "$remote" 2>/dev/null || true)"
+    if missing_localhost_remote "$url"; then
+      log "Skipping missing localhost remote '${remote}' in ${target_dir}"
+      continue
+    fi
     if ! git -C "$target_dir" fetch --prune "$remote" 2>&1; then
       warn "Fetch failed for remote '${remote}' in ${target_dir} — continuing"
     fi
