@@ -25,16 +25,14 @@ echo "==> Creating bare repo on sweetpea: ${NAME}.git"
 ssh -t sweetpea "sudo -u git git init --bare ${REPOS_DIR}/${NAME}.git"
 
 echo "==> Installing sync hook"
-ssh sweetpea "sudo ln -sf /srv/git/hooks/forgejo-sync ${REPOS_DIR}/${NAME}.git/hooks/post-receive"
+ssh sweetpea "sudo mkdir -p ${REPOS_DIR}/${NAME}.git/hooks && sudo ln -sf /srv/git/hooks/forgejo-sync ${REPOS_DIR}/${NAME}.git/hooks/post-receive"
 
 echo "==> Creating Forgejo repo"
 PRIVATE_FLAG=""
 [[ "$VISIBILITY" == "--private" ]] && PRIVATE_FLAG="--private"
 
-tea \
-    --url "$FORGEJO_URL" \
-    --token "$FORGEJO_TOKEN" \
-    repos create \
+tea repos create \
+    --login forgejo \
     --name "$NAME" \
     $PRIVATE_FLAG
 
