@@ -9,6 +9,10 @@ let
       mkdir -p $out
       cp -r orchestrator_conversation $out/
     '';
+    passthru = {
+      isHomeAssistantComponent = true;
+      domain = "orchestrator_conversation";
+    };
   };
 in {
   services.home-assistant = {

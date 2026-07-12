@@ -20,7 +20,7 @@
 *.tmp
 
 ### Agent Local Metadata ###
-# .claude/
+.claude
 .codex
 
 ### Local Build Outputs ###
