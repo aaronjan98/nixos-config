@@ -74,7 +74,7 @@ stdenvNoCC.mkDerivation {
             if "stroke:#000000" not in style:
                 style += ";stroke:#000000"
             if "stroke-width:" not in style:
-                style += ";stroke-width:0.25"
+                style += ";stroke-width:0.4"
             if "stroke-linejoin:" not in style:
                 style += ";stroke-linejoin:round"
             if "stroke-linecap:" not in style:

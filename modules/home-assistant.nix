@@ -10,10 +10,14 @@
       "wyoming"              # voice pipeline bridge to Whisper + Piper
       "assist_pipeline"
       "wake_word"
-      "openai_conversation"  # OpenAI-compatible conversation engine → Ollama
+      "openai_conversation"  # OpenAI-compatible shim (kept for fallback)
+      "ollama"               # native Ollama conversation integration
       "met"                  # built-in weather provider
       "radio_browser"
+      "bluetooth"            # lets HA manage BT adapter cleanly instead of fighting rfkill
     ];
+
+    extraPackages = ps: [ ps.ollama ];
 
     config = {
       homeassistant = {
