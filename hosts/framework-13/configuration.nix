@@ -30,6 +30,7 @@ in {
     ./hardware-configuration.nix
     ../common/default.nix
     ../../modules/home-assistant.nix
+    ../../modules/orchestrator.nix
   ];
 
   networking.hostName = "framework-13";
