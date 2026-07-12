@@ -30,6 +30,11 @@ stdenvNoCC.mkDerivation {
   postPatch = ''
     chmod +x ./build.py ./recolor-cursor.sh 2>/dev/null || true
     patchShebangs ./build.py ./recolor-cursor.sh 2>/dev/null || true
+
+    # Upstream only builds 24/36/48px assets. Add larger raster sizes so
+    # XCURSOR_SIZE/HYPRCURSOR_SIZE=72 can resolve to a real cursor image.
+    substituteInPlace ./build.py \
+      --replace-fail "scales = [1, 1.5, 2]" "scales = [1, 1.5, 2, 2.5, 3, 4]"
   '';
 
   preBuild = ''
@@ -42,6 +47,46 @@ stdenvNoCC.mkDerivation {
       --base-color   "#192629" \
       --border-color "#666666" \
       --logo-color   "#E62600"
+
+    python3 - <<'PY'
+    from pathlib import Path
+    import re
+
+    svg = Path("src/cursors.svg")
+    text = svg.read_text()
+
+    # The upstream theme uses separate semi-transparent base shapes underneath
+    # the accent shapes. Hide those filled bases and stroke the accent shapes
+    # directly so the black border follows the visible red body.
+    def rewrite_style(match):
+        style = match.group(1)
+        if "fill:#192629" in style:
+            style = re.sub(r"opacity:[^;]+", "opacity:0", style)
+            style = re.sub(r"fill-opacity:[^;]+", "fill-opacity:0", style)
+            style = style.replace("fill:#192629", "fill:#000000")
+
+        if "fill:#000000" in style and "filter:url" in style:
+            style = re.sub(r"opacity:[^;]+", "opacity:0", style)
+            style = re.sub(r"fill-opacity:[^;]+", "fill-opacity:0", style)
+
+        if "fill:#E62600" in style:
+            style = style.replace("stroke:none", "stroke:#000000")
+            if "stroke:#000000" not in style:
+                style += ";stroke:#000000"
+            if "stroke-width:" not in style:
+                style += ";stroke-width:0.25"
+            if "stroke-linejoin:" not in style:
+                style += ";stroke-linejoin:round"
+            if "stroke-linecap:" not in style:
+                style += ";stroke-linecap:round"
+            if "paint-order:" not in style:
+                style += ";paint-order:stroke fill markers"
+
+        return f'style="{style}"'
+
+    text = re.sub(r'style="([^"]*)"', rewrite_style, text)
+    svg.write_text(text)
+    PY
   '';
 
   # Be explicit: build the theme
@@ -83,4 +128,3 @@ stdenvNoCC.mkDerivation {
     platforms = platforms.linux;
   };
 }
-

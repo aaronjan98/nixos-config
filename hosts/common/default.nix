@@ -256,8 +256,8 @@
   };
   environment.sessionVariables = {
     TERMINAL = "kitty";
-    XCURSOR_THEME = "Adwaita";
-    XCURSOR_SIZE = "24";
+    XCURSOR_THEME = lib.mkDefault "Adwaita";
+    XCURSOR_SIZE = lib.mkDefault "24";
     MOZ_ENABLE_WAYLAND = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     QT_QPA_PLATFORM = "wayland";

@@ -9,6 +9,7 @@ projects/canvas-accessibility-skill	canvas-accessibility-skill	ssh://git@localho
 projects/context-harness	context-harness	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	ipod-dap-sync	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	language-tutor	ssh://git@localhost/srv/git/repos/language-tutor.git
+projects/voice-assistant	voice-assistant	
 school/differential_equations/directional_fields	directional_fields	ssh://git@localhost/srv/git/repos/directional_fields.git
 school/differential_equations/phase_portraits	phase_portraits	ssh://git@localhost/srv/git/repos/phase_portraits.git
 school/egt-graph-cooperation	egt-graph-cooperation	ssh://git@localhost/srv/git/repos/egt-graph-cooperation.git
