@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from homeassistant.components import conversation
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationInput, ConversationResult
 from homeassistant.config_entries import ConfigEntry
@@ -32,12 +34,15 @@ class OrchestratorAgent(AbstractConversationAgent):
         return ["en"]
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
+        now = datetime.now().strftime("%A, %B %-d %Y, %-I:%M %p")
         payload = {
             "model": "orchestrator",
+            "conversation_id": user_input.conversation_id,
             "messages": [
                 {
                     "role": "system",
                     "content": (
+                        f"Current date and time: {now}. "
                         "You are a personal smart home and homelab voice assistant. "
                         "You do NOT have direct knowledge of the user's home infrastructure — "
                         "you must ALWAYS call homelab_query for any question involving live state: "
@@ -60,16 +65,18 @@ class OrchestratorAgent(AbstractConversationAgent):
             async with session.post(
                 f"{self._url}/v1/chat/completions",
                 json=payload,
-                timeout=60,
+                timeout=200,
             ) as resp:
                 data = await resp.json()
                 text = data["choices"][0]["message"]["content"]
+                conv_id = data.get("conversation_id") or user_input.conversation_id
         except Exception as exc:  # noqa: BLE001
             text = f"Sorry, I couldn't reach the orchestrator: {exc}"
+            conv_id = user_input.conversation_id
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
         return ConversationResult(
             response=response,
-            conversation_id=user_input.conversation_id,
+            conversation_id=conv_id,
         )
