@@ -15,7 +15,7 @@ in {
     after = [ "network.target" "home-assistant.service" ];
 
     serviceConfig = {
-      ExecStart = "${python}/bin/uvicorn main:app --host 127.0.0.1 --port 8000";
+      ExecStart = "${python}/bin/uvicorn main:app --host 127.0.0.1 --port 8001";
       WorkingDirectory = repoDir;
       EnvironmentFile = "${repoDir}/.env";
       Environment = "PATH=/run/current-system/sw/bin";
