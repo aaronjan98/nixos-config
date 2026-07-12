@@ -34,7 +34,22 @@ class OrchestratorAgent(AbstractConversationAgent):
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         payload = {
             "model": "orchestrator",
-            "messages": [{"role": "user", "content": user_input.text}],
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a smart home and homelab voice assistant. "
+                        "For any question about the homelab — servers, services, disk, logs, NixOS config, "
+                        "or network devices (LANtern monitors all devices on the Deco router network) — "
+                        "always call the homelab_query tool instead of guessing. "
+                        "For controlling the desk LED strip, use the desk_leds tool "
+                        "(animations: rainbow, fire, pacifica, cylon, pride, demoreel, swell, fireworks, laser, waves; "
+                        "glitter overlays: off, twinkle, drizzle, rain, snow, thunder; brightness 0-255; speed 1-10; mic on/off for audio-reactive mode). "
+                        "Keep spoken responses concise; you are answering via text-to-speech."
+                    ),
+                },
+                {"role": "user", "content": user_input.text},
+            ],
         }
         try:
             session = async_get_clientsession(self.hass)
