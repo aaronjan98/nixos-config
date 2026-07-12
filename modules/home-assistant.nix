@@ -10,11 +10,11 @@
       "wyoming"              # voice pipeline bridge to Whisper + Piper
       "assist_pipeline"
       "wake_word"
-      "openai_conversation"  # OpenAI-compatible shim (kept for fallback)
-      "ollama"               # native Ollama conversation integration
+      "openai_conversation"
+      "ollama"
+      "google_generative_ai_conversation"  # native Gemini integration
       "met"                  # built-in weather provider
       "radio_browser"
-      "bluetooth"            # lets HA manage BT adapter cleanly instead of fighting rfkill
     ];
 
     extraPackages = ps: [ ps.ollama ];
