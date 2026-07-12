@@ -1,6 +1,16 @@
 { config, pkgs, lib, ... }:
 
-{
+let
+  orchestratorConversation = pkgs.stdenvNoCC.mkDerivation {
+    name = "orchestrator-conversation";
+    src = ./ha-custom-components;
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p $out
+      cp -r orchestrator_conversation $out/
+    '';
+  };
+in {
   services.home-assistant = {
     enable = true;
     openFirewall = true;
@@ -18,6 +28,8 @@
     ];
 
     extraPackages = ps: [ ps.ollama ];
+
+    customComponents = [ orchestratorConversation ];
 
     config = {
       homeassistant = {

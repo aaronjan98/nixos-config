@@ -50,16 +50,28 @@ stdenvNoCC.mkDerivation {
 
     python3 - <<'PY'
     from pathlib import Path
+    from copy import deepcopy
+    import xml.etree.ElementTree as ET
     import re
 
     svg = Path("src/cursors.svg")
-    text = svg.read_text()
+    namespaces = []
+    for _, ns in ET.iterparse(svg, events=("start-ns",)):
+        if ns not in namespaces:
+            namespaces.append(ns)
+    for prefix, uri in namespaces:
+        ET.register_namespace(prefix, uri)
 
     # The upstream theme uses separate semi-transparent base shapes underneath
-    # the accent shapes. Hide those filled bases and stroke the accent shapes
-    # directly so the black border follows the visible red body.
-    def rewrite_style(match):
-        style = match.group(1)
+    # the accent shapes. Hide those filled bases, add a light halo behind each
+    # accent shape for dark-background contrast, then stroke the accent shape
+    # itself in black so the border follows the visible red body.
+    def upsert(style, key, value):
+        if re.search(rf"(^|;){re.escape(key)}:", style):
+            return re.sub(rf"(^|;){re.escape(key)}:[^;]*", lambda m: f"{m.group(1)}{key}:{value}", style)
+        return f"{style};{key}:{value}"
+
+    def hide_base_style(style):
         if "fill:#192629" in style:
             style = re.sub(r"opacity:[^;]+", "opacity:0", style)
             style = re.sub(r"fill-opacity:[^;]+", "fill-opacity:0", style)
@@ -68,24 +80,53 @@ stdenvNoCC.mkDerivation {
         if "fill:#000000" in style and "filter:url" in style:
             style = re.sub(r"opacity:[^;]+", "opacity:0", style)
             style = re.sub(r"fill-opacity:[^;]+", "fill-opacity:0", style)
+        return style
 
+    def accent_style(style):
         if "fill:#E62600" in style:
-            style = style.replace("stroke:none", "stroke:#000000")
-            if "stroke:#000000" not in style:
-                style += ";stroke:#000000"
-            if "stroke-width:" not in style:
-                style += ";stroke-width:0.4"
-            if "stroke-linejoin:" not in style:
-                style += ";stroke-linejoin:round"
-            if "stroke-linecap:" not in style:
-                style += ";stroke-linecap:round"
-            if "paint-order:" not in style:
-                style += ";paint-order:stroke fill markers"
+            style = upsert(style, "stroke", "#000000")
+            style = upsert(style, "stroke-width", "0.8")
+            style = upsert(style, "stroke-linejoin", "round")
+            style = upsert(style, "stroke-linecap", "round")
+            style = upsert(style, "paint-order", "stroke fill markers")
+        return style
 
-        return f'style="{style}"'
+    def halo_style(style):
+        style = upsert(style, "fill", "none")
+        style = upsert(style, "fill-opacity", "0")
+        style = upsert(style, "stroke", "#f2f0e8")
+        style = upsert(style, "stroke-opacity", "0.95")
+        style = upsert(style, "stroke-width", "1.45")
+        style = upsert(style, "stroke-linejoin", "round")
+        style = upsert(style, "stroke-linecap", "round")
+        style = upsert(style, "paint-order", "stroke fill markers")
+        return style
 
-    text = re.sub(r'style="([^"]*)"', rewrite_style, text)
-    svg.write_text(text)
+    tree = ET.parse(svg)
+    root = tree.getroot()
+
+    for parent in root.iter():
+        children = list(parent)
+        inserts = []
+        for index, child in enumerate(children):
+            style = child.get("style")
+            if not style:
+                continue
+
+            child.set("style", hide_base_style(style))
+            style = child.get("style")
+
+            if "fill:#E62600" in style:
+                halo = deepcopy(child)
+                halo.set("style", halo_style(style))
+                halo.set("id", f"{child.get('id', 'cursor-shape')}-halo")
+                child.set("style", accent_style(style))
+                inserts.append((index, halo))
+
+        for offset, (index, halo) in enumerate(inserts):
+            parent.insert(index + offset, halo)
+
+    tree.write(svg, encoding="utf-8", xml_declaration=True)
     PY
   '';
 

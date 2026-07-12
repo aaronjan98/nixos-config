@@ -20,6 +20,7 @@ projects/ipod-dap-sync	local	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	forgejo	https://git.aaronjanovitch.com/aj/language-tutor.git
 projects/language-tutor	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/language-tutor.git
 projects/language-tutor	local	ssh://git@localhost/srv/git/repos/language-tutor.git
+projects/voice-assistant	home	git@sweetpea-git:/srv/git/repos/voice-assistant.git
 school/differential_equations/directional_fields	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/directional_fields.git
 school/differential_equations/directional_fields	local	ssh://git@localhost/srv/git/repos/directional_fields.git
 school/differential_equations/phase_portraits	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/phase_portraits.git

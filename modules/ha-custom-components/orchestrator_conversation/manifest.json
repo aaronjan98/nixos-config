@@ -1,0 +1,11 @@
+{
+  "domain": "orchestrator_conversation",
+  "name": "Orchestrator Conversation",
+  "version": "1.0.0",
+  "codeowners": [],
+  "dependencies": ["conversation"],
+  "documentation": "",
+  "integration_type": "conversation",
+  "iot_class": "local_polling",
+  "requirements": []
+}

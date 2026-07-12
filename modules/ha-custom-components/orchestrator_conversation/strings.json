@@ -1,0 +1,15 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Orchestrator Conversation",
+        "data": {
+          "url": "Orchestrator URL"
+        },
+        "data_description": {
+          "url": "Base URL of the voice orchestrator (e.g. http://localhost:8001)"
+        }
+      }
+    }
+  }
+}
