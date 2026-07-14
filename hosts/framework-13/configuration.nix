@@ -107,9 +107,16 @@ ${frameworkWorkspaceRules}
   };
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
 
-  # Lid close should not suspend — machine runs headless with lid shut.
-  services.logind.lidSwitch = "ignore";
-  services.logind.lidSwitchExternalPower = "ignore";
+  # This machine stays available as a home-service host. Let Hyprland/hypridle
+  # black out displays, but do not let logind suspend the system itself.
+  services.logind.settings.Login = {
+    HandleLidSwitch = "ignore";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
+    HandleSuspendKey = "ignore";
+    HandleHibernateKey = "ignore";
+    IdleAction = "ignore";
+  };
 
   # Set at initial install — update this to match the actual NixOS installer version used.
   system.stateVersion = "25.11";
