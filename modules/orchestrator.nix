@@ -9,6 +9,12 @@ let
   ]);
   repoDir = "/home/aj/Repositories/projects/voice-assistant/orchestrator";
 in {
+  # adb for the media actuator (bin/kodi-play.sh) — wakes the Fire TV Stick and
+  # launches Kodi before issuing JSON-RPC. Installed system-wide so it lands on
+  # /run/current-system/sw/bin, which is the orchestrator service's pinned PATH
+  # (and thus inherited by the claude -p subprocess that runs the actuator).
+  environment.systemPackages = [ pkgs.android-tools ];
+
   systemd.services.voice-orchestrator = {
     description = "Voice Assistant Orchestrator";
     wantedBy = [ "multi-user.target" ];
