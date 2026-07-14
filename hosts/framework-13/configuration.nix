@@ -31,12 +31,14 @@ in {
     ../common/default.nix
     ../../modules/home-assistant.nix
     ../../modules/orchestrator.nix
+    ../../modules/wifi-reliability.nix
   ];
 
   networking.hostName = "framework-13";
 
-  # Framework 13 AMD does not need pcie_aspm=off (ThinkPad-specific).
-  # Add Framework-specific kernel params here if needed after install.
+  # MT7925 wifi reliability (L1 ASPM disable + connectivity watchdog) lives in
+  # ../../modules/wifi-reliability.nix. That targets ASPM per-device rather than
+  # the system-wide pcie_aspm=off kernel param, so no reboot is needed.
 
   # Quickshell UI scale — compensates for higher DPI at Hyprland scale=1.
   # ThinkPad uses the QML fallback (1.25); adjust this value to taste.
