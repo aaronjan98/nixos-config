@@ -86,15 +86,26 @@ ${frameworkWorkspaceRules}
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBpHu1YwxlgUENahANYgmkk2cNEGOEcurdNJQMIVR8PF aj@framework-13"
   ];
 
+  # SSH public keys for logging in as aj on this machine.
+  users.users.aj.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDGb60AEnOZcVGE+gU1ogT8Hen4VKFj/t+Y+/8tKyldvEf3gDpsdQk0q0QQUrmSCIsXATwItxebzGw/LIwTLN0YyRD55dF34UkRvVTHFJNSBnCQnpvlozbr6Q3u1ZHtETzX43ypGbHp7SfSjYFZIxjYQGlP7oXJkiL0kUvrFqh7cslIZl62/FzCsZIxJLojlWlscHMnYIqxlgSs5EZZ02sVp4/q85YkfNqL+j00rzD634bLTE/AbsKrcr37jLQkvlWMZU25B2owOjPFg0zb7G0dOE7q7g688MqUkWl/my4L6giKo27pov7abLJWEuvRYvViMGMegcPbSA4IpoRtYUMiBV1G9jIUgPxjfovdZzIh5OkqoFjawa299VaY/G6ZPc9GYVuy8w+gLBF+LQZfyDojBEIKSlx/JtDOQd90iepr6eoQZrX6G6AsswhWOswtWY8vXOHohGVUuAjHujKLxv212c1G1LIhBYLGRtV5wxVnR4wMcEc9gUL9iVScwmM/Ohs= aaronjan98@gmail.com"
+  ];
+
   # SSH — open for remote access now that this machine stays home as a server.
   services.openssh = {
     enable = true;
+    listenAddresses = lib.mkForce [
+      { addr = "127.0.0.1"; port = 22; }
+      { addr = "::1"; port = 22; }
+      { addr = "0.0.0.0"; port = 22; }
+    ];
     settings = {
       PasswordAuthentication = false;
       PermitRootLogin = "no";
     };
   };
-  networking.firewall.allowedTCPPorts = [ 22 ];
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
 
   # Lid close should not suspend — machine runs headless with lid shut.
   services.logind.lidSwitch = "ignore";

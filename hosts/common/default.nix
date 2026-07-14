@@ -60,6 +60,7 @@
   networking = {
     networkmanager = {
       enable = true;
+      unmanaged = [ "interface-name:tailscale0" ];
       settings = {
         connection = {
           "wifi.powersave" = 2;
@@ -97,6 +98,7 @@
     };
     resolved = {
       enable = true;
+      fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
       extraConfig = ''
         [Resolve]
         DNS=100.97.56.82
@@ -152,7 +154,12 @@
       path = "/run/sops-nix/passwords_root";
       neededForUsers = true;
     };
-    "hf_token" = { sopsFile = ../../secrets/hf-token.yaml; key = "hf_token"; };
+    "hf_token" = {
+      sopsFile = ../../secrets/hf-token.yaml;
+      key = "hf_token";
+      group = "users";
+      mode = "0640";
+    };
     "context7_api_key" = {
       sopsFile = ../../secrets/context7.yaml;
       key = "context7-secret-key";
