@@ -264,7 +264,7 @@
   environment.sessionVariables = {
     TERMINAL = "kitty";
     XCURSOR_THEME = lib.mkDefault "Breeze_Hacked";
-    XCURSOR_SIZE = lib.mkDefault "24";
+    XCURSOR_SIZE = lib.mkDefault "32";
     MOZ_ENABLE_WAYLAND = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     QT_QPA_PLATFORM = "wayland";
