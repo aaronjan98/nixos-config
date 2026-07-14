@@ -35,6 +35,29 @@ Root cause:
 
 Relevant file: `modules/hypr-idle-lock.nix`
 
+### Breeze_Hacked pointer cursor still appears double-outlined live
+Status: unresolved, needs runtime verification before more asset edits
+
+Problem:
+- The custom red `Breeze_Hacked` cursor is now correctly sized across machines:
+  - ThinkPad shared default: size 32
+  - Framework override: size 72
+- The pointer/finger cursor still appears to have a thick or double black outline in live Hyprland clients, especially around the fingertip and lower finger curve.
+- Several asset edits were tried, including raster post-processing of the generated `pointer` cursor to keep only the red hand silhouette and draw a single 1px black outer outline.
+- Extracted/generated test frames looked clean, but the live cursor still appeared unchanged to the user.
+
+Likely next diagnosis:
+- First prove which cursor file/name the client is actually rendering. The visible pointer may not be the edited `pointer` asset; it may be another cursor name or alias such as `hand2`.
+- Verify the live store asset after `nrt` / `nrs` with `xcur2png` against `/run/current-system/sw/share/icons/Breeze_Hacked_Black/cursors/*`.
+- Test a deliberately obvious pointer asset under a fresh theme name to rule out Hyprland, GTK, Qt, browser, or app-side cursor caching.
+- Only after runtime selection is proven, continue visual polish on the per-cursor raster asset.
+
+Relevant files:
+- `pkgs/breeze-hacked-cursor/default.nix`
+- `hosts/common/default.nix`
+- `hosts/framework-13/configuration.nix`
+- `~/.config/hypr/conf.d/00-env.conf`
+
 ---
 
 ## Future features
