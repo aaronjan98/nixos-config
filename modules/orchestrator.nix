@@ -6,6 +6,7 @@ let
     ps.uvicorn
     ps.httpx
     ps.python-dotenv
+    ps.python-kasa
   ]);
   repoDir = "/home/aj/Repositories/projects/voice-assistant/orchestrator";
 in {
