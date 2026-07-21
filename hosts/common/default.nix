@@ -114,8 +114,15 @@
     addAjToGitGroup = true;
   };
 
-  # Time zone and locale
-  time.timeZone = "America/Los_Angeles";
+  # Time zone follows physical location. automatic-timezoned uses GeoClue2
+  # (WiFi geolocation via BeaconDB) + systemd-timedated to update the zone at
+  # runtime as these laptops travel — event-driven off network changes, no reboot.
+  # The module itself sets `time.timeZone = null`; mkDefault keeps this literal as
+  # a lower-priority fallback (used only if the service is disabled) so the two
+  # don't conflict. Note: Home Assistant keeps its own LA time_zone in
+  # modules/home-assistant.nix — home-automation schedules stay on home time.
+  services.automatic-timezoned.enable = true;
+  time.timeZone = lib.mkDefault "America/Los_Angeles";
   i18n.defaultLocale = "en_US.UTF-8";
 
   console = {
