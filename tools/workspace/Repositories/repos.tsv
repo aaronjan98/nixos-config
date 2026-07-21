@@ -5,7 +5,7 @@ experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-co
 experiment/vulnlab	vulnlab	ssh://git@localhost/srv/git/repos/vulnlab.git
 projects/arduino	arduino	ssh://git@localhost/srv/git/repos/arduino.git
 projects/canvas-accessibility-skill	canvas-accessibility-skill	ssh://git@localhost/srv/git/repos/canvas-accessibility-skill.git
-projects/context-harness	context-harness	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/context-harness.git
+projects/context-harness	context-harness	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	ipod-dap-sync	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	language-tutor	ssh://git@localhost/srv/git/repos/language-tutor.git
 projects/voice-assistant	voice-assistant	git@sweetpea-git:/srv/git/repos/voice-assistant.git

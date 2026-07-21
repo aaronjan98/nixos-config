@@ -12,6 +12,7 @@ projects/canvas-accessibility-skill	home	ssh://git@ssh.aaronjanovitch.com:2222/s
 projects/canvas-accessibility-skill	local	ssh://git@localhost/srv/git/repos/canvas-accessibility-skill.git
 projects/context-harness	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/context-harness.git
 projects/context-harness	hub	git@github.com:aaronjan98/context-harness.git
+projects/context-harness	local	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ipod-dap-sync.git
 projects/ipod-dap-sync	local	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	forgejo	https://git.aaronjanovitch.com/aj/language-tutor.git
