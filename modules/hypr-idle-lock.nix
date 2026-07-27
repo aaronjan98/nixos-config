@@ -98,12 +98,6 @@ in
 
   # System-wide hyprlock config
   environment.etc."xdg/hypr/hyprlock.conf".text = ''
-    general {
-      no_fade_in = false
-      grace = 0
-      disable_loading = true
-    }
-
     animations {
       enabled = true
       bezier = linear, 1, 1, 0, 0
@@ -114,10 +108,16 @@ in
 
     background {
       monitor =
-      path = screenshot
+      # Static wallpaper instead of a live screenshot. `path = screenshot` made
+      # hyprlock wait on a wlr-screencopy of every output before it could grab the
+      # session lock (~10s with the panel + external monitor). That raced logind's
+      # suspend inhibitor timeout on lid close: the system suspended mid-lock, the
+      # lock got "yeeten", hyprlock exited, and Hyprland showed its "lockscreen app
+      # died" screen (TTY recovery required). A static image loads instantly.
+      path = /home/aj/Pictures/Wallpapers/current.png
       color = rgba(25, 20, 20, 0.45)
-      
-      # Now that path is 'screenshot', blur will work
+
+      # Blur still applies — now to the static image.
       blur_passes = 1
       blur_size = 4
       
@@ -188,6 +188,13 @@ in
 
   # Required for hyprlock to work on NixOS
   security.pam.services.hyprlock = {};
+
+  # Give the before-sleep lock time to fully engage before logind suspends.
+  # logind's default delay-inhibitor cap (~5s) let the system suspend while
+  # hyprlock was still acquiring the session lock, racing it into the
+  # "lockscreen app died" state. hyprlock now locks fast (static background), so
+  # this is headroom rather than the primary fix.
+  services.logind.settings.Login.InhibitDelayMaxSec = "20s";
 
   # Start hypridle on login
   systemd.user.services.hypridle = {
