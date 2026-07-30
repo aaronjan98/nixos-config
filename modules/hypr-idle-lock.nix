@@ -71,8 +71,19 @@ in
   environment.etc."xdg/hypr/hypridle.conf".text = ''
     general {
       lock_cmd = pidof hyprlock || /run/current-system/sw/bin/hyprlock
-      before_sleep_cmd = /run/current-system/sw/bin/screen-blackout-on; loginctl lock-session
-      after_sleep_cmd = hyprctl dispatch dpms on && /run/current-system/sw/bin/screen-blackout-off
+      # Lock on WAKE, not before suspend. Launching hyprlock during the suspend
+      # transition raced the compositor (which stops producing frames on
+      # PrepareForSleep): hyprlock stalled ~10s waiting for a screencopy frame,
+      # lost the session lock ("yeeten"), and Hyprland showed its "lockscreen app
+      # died" screen. On resume the compositor is fully awake, so hyprlock locks
+      # instantly and reliably.
+      #
+      # No desktop flash: brightness is held at 0 (blackout) across sleep AND the
+      # wake-lock window. On resume we lock first, then briefly wait for hyprlock
+      # to paint, and only then restore brightness — so the desktop is never
+      # visible before the lock is up.
+      before_sleep_cmd = /run/current-system/sw/bin/screen-blackout-on
+      after_sleep_cmd = loginctl lock-session; hyprctl dispatch dpms on; sleep 0.5; /run/current-system/sw/bin/screen-blackout-off
     }
   
     # 5 mins: Screensaver (Blackout) - only if no player is playing
@@ -108,16 +119,12 @@ in
 
     background {
       monitor =
-      # Static wallpaper instead of a live screenshot. `path = screenshot` made
-      # hyprlock wait on a wlr-screencopy of every output before it could grab the
-      # session lock (~10s with the panel + external monitor). That raced logind's
-      # suspend inhibitor timeout on lid close: the system suspended mid-lock, the
-      # lock got "yeeten", hyprlock exited, and Hyprland showed its "lockscreen app
-      # died" screen (TTY recovery required). A static image loads instantly.
-      path = /home/aj/Pictures/Wallpapers/current.png
+      # Live screenshot of the desktop, blurred. This is reliable again now that
+      # hyprlock only runs while the compositor is awake (lock-on-wake); the ~10s
+      # screencopy stall only happened when locking mid-suspend.
+      path = screenshot
       color = rgba(25, 20, 20, 0.45)
 
-      # Blur still applies — now to the static image.
       blur_passes = 1
       blur_size = 4
       
@@ -188,13 +195,6 @@ in
 
   # Required for hyprlock to work on NixOS
   security.pam.services.hyprlock = {};
-
-  # Give the before-sleep lock time to fully engage before logind suspends.
-  # logind's default delay-inhibitor cap (~5s) let the system suspend while
-  # hyprlock was still acquiring the session lock, racing it into the
-  # "lockscreen app died" state. hyprlock now locks fast (static background), so
-  # this is headroom rather than the primary fix.
-  services.logind.settings.Login.InhibitDelayMaxSec = "20s";
 
   # Start hypridle on login
   systemd.user.services.hypridle = {
