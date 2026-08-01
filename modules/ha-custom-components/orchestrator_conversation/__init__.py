@@ -8,10 +8,51 @@ from homeassistant.components.conversation import AbstractConversationAgent, Con
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import intent
+from homeassistant.helpers import entity_registry as er, intent
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_URL, DOMAIN
+
+
+def _resolve_location(hass: HomeAssistant, device_id: str | None) -> str:
+    """Best-effort physical location of the device that asked.
+
+    A phone (HA Companion app) carries its own location entities, so a question
+    asked from it should be answered relative to wherever the phone is. A fixed
+    satellite (Atom Echo) has none, so we fall back to HA's configured home.
+    Preference order: geocoded human-readable address > device GPS coordinates >
+    home. This lets place/time-relative questions ("what's in the sky", local
+    time/weather) follow the user as they travel — without hardcoding a city.
+    """
+    if device_id:
+        entries = er.async_entries_for_device(
+            er.async_get(hass), device_id, include_disabled_entities=False
+        )
+        # 1) Companion "geocoded location" sensor -> human-readable address.
+        for entry in entries:
+            if entry.entity_id.startswith("sensor.") and "geocoded_location" in entry.entity_id:
+                state = hass.states.get(entry.entity_id)
+                if state and state.state not in ("unknown", "unavailable", "", "None"):
+                    return state.state
+        # 2) A device_tracker on the device with live GPS coordinates.
+        for entry in entries:
+            if entry.entity_id.startswith("device_tracker."):
+                state = hass.states.get(entry.entity_id)
+                if not state:
+                    continue
+                lat = state.attributes.get("latitude")
+                lon = state.attributes.get("longitude")
+                if lat is not None and lon is not None:
+                    zone = state.state if state.state not in ("not_home", "unknown", "unavailable") else None
+                    coords = f"latitude {lat}, longitude {lon}"
+                    return f"{zone} ({coords})" if zone and zone != "home" else coords
+    # 3) Fixed device / unknown -> HA's configured home location.
+    parts = [hass.config.location_name or "home"]
+    if hass.config.latitude and hass.config.longitude:
+        parts.append(f"latitude {hass.config.latitude}, longitude {hass.config.longitude}")
+    if hass.config.time_zone:
+        parts.append(f"timezone {hass.config.time_zone}")
+    return ", ".join(parts)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -42,6 +83,7 @@ class OrchestratorAgent(AbstractConversationAgent):
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         now = datetime.now().strftime("%A, %B %-d %Y, %-I:%M %p")
+        location = _resolve_location(self.hass, user_input.device_id)
         payload = {
             "model": "orchestrator",
             "conversation_id": user_input.conversation_id,
@@ -50,6 +92,10 @@ class OrchestratorAgent(AbstractConversationAgent):
                     "role": "system",
                     "content": (
                         f"Current date and time: {now}. "
+                        f"The user is asking from this location: {location}. "
+                        "Use it for any place- or time-relative question — local time, "
+                        "weather, sunrise/sunset, what's in the sky, nearby places — "
+                        "rather than assuming home. "
                         "You are a personal smart home and homelab voice assistant. "
                         "For general knowledge, translations, definitions, calculations, or anything "
                         "you can answer from your own knowledge or web search — answer directly, no tools needed. "
