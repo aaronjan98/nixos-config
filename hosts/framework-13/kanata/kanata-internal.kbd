@@ -83,7 +83,7 @@
   dmet (tap-hold-press $hrm_tt $hrm_ht d     lmet)
 
   kmet (tap-hold-press $hrm_tt $hrm_ht k     rmet)
-  lalt (tap-hold-press $hrm_tt $hrm_ht l     ralt)
+  lalt (tap-hold-press $hrm_tt $hrm_ht l     lalt)  ;; hold = LEFT alt; RIGHT alt is reserved for AltGr (XKB)
   rsft (tap-hold-press $hrm_tt $hrm_ht scln  rsft)
   rctl (tap-hold-press $hrm_tt $hrm_ht apos  rctl)
 
@@ -94,13 +94,13 @@
   dmetU (tap-hold-press $hrm_tt $hrm_ht S-d     lmet)
 
   kmetU (tap-hold-press $hrm_tt $hrm_ht S-k     rmet)
-  laltU (tap-hold-press $hrm_tt $hrm_ht S-l     ralt)
+  laltU (tap-hold-press $hrm_tt $hrm_ht S-l     lalt)
 
   ;; ===== majlayer / nums: digit-on-tap while preserving mods =====
   saltM (tap-hold-press $hrm_tt $hrm_ht 0 lalt)  ;; s -> 0
   dmetM (tap-hold-press $hrm_tt $hrm_ht 1 lmet)  ;; d -> 1
   kmetM (tap-hold-press $hrm_tt $hrm_ht 7 rmet)  ;; k -> 7
-  laltM (tap-hold-press $hrm_tt $hrm_ht 5 ralt)  ;; l -> 5
+  laltM (tap-hold-press $hrm_tt $hrm_ht 5 lalt)  ;; l -> 5
 
   ;; ===== special chord mod-taps =====
   ;; F/J share the same chord (Ctrl+Alt+Super) when held

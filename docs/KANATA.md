@@ -210,10 +210,14 @@ So in sticky modes, Caps acts as both:
 
 - `l`:
 
-      lalt (tap-hold-press ... l ralt)
+      lalt (tap-hold-press ... l lalt)
 
   - tap → `l`
-  - hold → `ralt`
+  - hold → `lalt` (left Alt)
+
+  > Note: this mod holds **left** Alt, not right. The physical **Right Alt**
+  > key is intentionally left untouched by kanata so the compositor (XKB
+  > `kb_variant = altgr-intl`) can use it as **AltGr** for typing accents.
 
 - `;`:
 
@@ -271,7 +275,7 @@ Examples:
   - hold → `rmet`
 - `laltM`
   - tap → `5`
-  - hold → `ralt`
+  - hold → `lalt` (left Alt)
 
 ---
 
@@ -520,9 +524,12 @@ The actual action is expected to happen outside Kanata.
 
 For example:
 
-    lalt (tap-hold-press ... l ralt)
+    lalt (tap-hold-press ... l lalt)
 
-Here `lalt` is an alias name, not a literal physical left-alt key definition. When reading the config, alias names should be interpreted in context.
+Here the first `lalt` is an **alias name**; the trailing `lalt` is the **built-in
+left-Alt key** used as the hold action. They are the same word but different things:
+alias references require a leading `@` (`@lalt`), so the un-prefixed `lalt` is always
+the physical modifier. When reading the config, interpret names in context.
 
 ---
 
