@@ -412,6 +412,7 @@
     libinput-gestures
     libnotify
     wtype
+    bemoji        # emoji picker (fuzzel + wtype/wl-copy) — bound to Super+. in Hyprland
     quickshell
     swww
 
