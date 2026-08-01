@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from homeassistant.components import conversation
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationInput, ConversationResult
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import MATCH_ALL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -30,8 +32,13 @@ class OrchestratorAgent(AbstractConversationAgent):
         self._url = entry.data.get("url", DEFAULT_URL)
 
     @property
-    def supported_languages(self) -> list[str]:
-        return ["en"]
+    def supported_languages(self) -> list[str] | Literal["*"]:
+        # The orchestrator forwards to Gemini, which is fully multilingual, so
+        # accept any language HA hands us. This lets HA pair this agent with a
+        # non-English Assist pipeline (e.g. a Portuguese one) — without it, HA
+        # rejects the agent for any pipeline whose language isn't English, even
+        # though Whisper (small-int8) already understands the speech.
+        return MATCH_ALL
 
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         now = datetime.now().strftime("%A, %B %-d %Y, %-I:%M %p")
@@ -55,6 +62,8 @@ class OrchestratorAgent(AbstractConversationAgent):
                         "For controlling the desk LED strip, use the desk_leds tool "
                         "(animations: rainbow, fire, pacifica, cylon, pride, demoreel, swell, fireworks, laser, waves; "
                         "glitter overlays: off, twinkle, drizzle, rain, snow, thunder; brightness 0-255; speed 1-10; mic on/off for audio-reactive mode). "
+                        "Always respond in the same language the user spoke or wrote in "
+                        "(e.g. reply in Portuguese if the user spoke Portuguese). "
                         "Keep spoken responses concise; you are answering via text-to-speech."
                     ),
                 },

@@ -64,4 +64,13 @@ in {
     voice = "en_US-lessac-medium";
     uri = "tcp://127.0.0.1:10200";
   };
+
+  # Wyoming Piper — Brazilian Portuguese voice, used by the "Português" Assist
+  # pipeline so Portuguese answers are spoken naturally. STT needs no change:
+  # the existing small-int8 Whisper is multilingual and advertises pt already.
+  services.wyoming.piper.servers."pt-br" = {
+    enable = true;
+    voice = "pt_BR-faber-medium";
+    uri = "tcp://127.0.0.1:10201";
+  };
 }
