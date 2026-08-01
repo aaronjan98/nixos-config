@@ -272,6 +272,10 @@
     TERMINAL = "kitty";
     XCURSOR_THEME = lib.mkDefault "Breeze_Hacked";
     XCURSOR_SIZE = lib.mkDefault "32";
+    # NixOS has no /usr/share/X11/locale, so libxkbcommon can't find the Compose
+    # file and dead-key sequences (AltGr+~ then a → ã, AltGr+6 then e → ê, etc.)
+    # silently fail in Wayland terminals. Point apps at the Compose data directly.
+    XCOMPOSEFILE = "${pkgs.xorg.libX11}/share/X11/locale/en_US.UTF-8/Compose";
     MOZ_ENABLE_WAYLAND = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "wayland";
     QT_QPA_PLATFORM = "wayland";
