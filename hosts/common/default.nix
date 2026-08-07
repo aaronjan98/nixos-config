@@ -94,7 +94,12 @@
     tailscale = {
       enable = true;
       useRoutingFeatures = "client";
-      extraUpFlags = [ "--accept-routes" "--operator=aj" ];
+      # extraUpFlags only applies when authKeyFile is set (it feeds the
+      # `tailscale up` in tailscaled-autoconnect). Without an auth key that
+      # never runs, so a reauth/`tailscale up` can silently drop these prefs.
+      # extraSetFlags drives the tailscaled-set unit, which runs `tailscale
+      # set` on every boot unconditionally — so --accept-routes actually sticks.
+      extraSetFlags = [ "--accept-routes" "--operator=aj" ];
     };
     resolved = {
       enable = true;
