@@ -130,3 +130,28 @@ When adding a new local domain (e.g., `photos.local`):
    - Run `nrs` to apply and switch.
    - *Note:* Simply restarting the `caddy` service is insufficient because `/etc/hosts` needs to be updated by NixOS to resolve the new `.local` domain.
 3. **Verification:** Check the domain in a browser or use `curl -I http://domain.local`.
+
+---
+
+## Keyboard input: AltGr accents, emoji, and host-scaled dotfiles
+
+Full detail: `memory/2026-08-01 keyboard accents emoji and host-scaled dotfiles.md`.
+
+- **Accents**: Right Alt = AltGr via Hyprland `kb_variant = altgr-intl`; kanata's `l`
+  home-row mod moved `ralt`→`lalt` so physical Right Alt is the sole AltGr. Direct
+  single-keysym accents (á é í ó ú, `AltGr+n`=ñ, **`AltGr+,`=ç**) work in every app.
+- **Dead keys are unreliable** (ã â à ü): composition is per-toolkit — OK in kitty
+  (needs `XCOMPOSEFILE`; NixOS lacks `/usr/share/X11/locale`), **broken in ghostty**
+  (GTK runtime). So the primary path is a **fuzzel popup + wtype** accent picker
+  (`~/.config/hypr/scripts/accent-pick`), bound on **MOD5** (=AltGr) + vowel — universal,
+  no compose. A bare `bind = , aacute` won't fire; AltGr sets Mod5, so bind `MOD5, a`.
+- **Caret-anchored popups** (GTK `Ctrl+;`) are impossible for external tools (need the
+  IME/text-input protocol; terminals/nvim don't implement it) → universal centered
+  popups are the deliberate trade-off.
+- **Emoji**: `bemoji`+fuzzel+wtype on `Super+.` / `Super+Shift+.` (multi).
+- **Host-scaling shared dotfiles** (ThinkPad vs Framework): two discriminators —
+  `$(hostname)` (`nixos` vs `framework-13`) and `QS_UI_SCALE` (ThinkPad default 1.25 /
+  Framework 1.75, read as `C.Appearance.uiScale`). fuzzel size via the
+  `~/.config/hypr/scripts/fz` hostname-gated wrapper (covers launcher, bemoji via
+  `BEMOJI_PICKER_CMD`, accent-pick); quickshell notif-center size gated on
+  `uiScale >= 1.5`. Reusable pattern for any per-host size divergence in dotfiles.

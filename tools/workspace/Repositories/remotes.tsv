@@ -15,7 +15,6 @@ projects/context-harness	hub	git@github.com:aaronjan98/context-harness.git
 projects/context-harness	local	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/ipod-dap-sync.git
 projects/ipod-dap-sync	local	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
-projects/language-tutor	forgejo	https://git.aaronjanovitch.com/aj/language-tutor.git
 projects/language-tutor	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/language-tutor.git
 projects/language-tutor	local	ssh://git@localhost/srv/git/repos/language-tutor.git
 projects/voice-assistant	home	git@sweetpea-git:/srv/git/repos/voice-assistant.git
