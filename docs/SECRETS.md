@@ -262,3 +262,55 @@ This setup intentionally assumes that the first trust bootstrap is manual.
 For now, do not rely on the new machine being able to fetch its own GPG secret keys automatically from the homelab.
 
 Use an existing trusted machine to transfer/import those keys first.
+
+---
+
+## Adding a WiFi network
+
+NetworkManager WiFi profiles are managed declaratively via `modules/networkmanager-profiles.nix`: each network's `.nmconnection` file is SOPS-encrypted under `secrets/networkmanager/`, decrypted at boot into `/run/secrets/nm/<secret>`, and copied into `/etc/NetworkManager/system-connections/` as a real file before NetworkManager starts.
+
+To add a network you must already have connected to (or otherwise saved) it once — NetworkManager writes the plaintext profile to `/etc/NetworkManager/system-connections/<name>.nmconnection` regardless of whether you are currently connected.
+
+### 1. Make `sops` available
+
+`sops` is not installed system-wide. Get it (and `age`) in an ephemeral shell:
+
+    nix shell nixpkgs#sops nixpkgs#age
+    export SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt
+
+### 2. Copy the plaintext profile into the repo
+
+The profile is root-owned (contains `psk=`), so read it with `sudo`. The `>` redirect runs as your user, so the copy lands owned by you:
+
+    sudo cat "/etc/NetworkManager/system-connections/<SSID>.nmconnection" \
+      > secrets/networkmanager/<secret-name>.nmconnection
+
+Pick a clean `<secret-name>` (lowercase kebab-case, e.g. `my-home-wifi`, to match the existing profiles). It is the SOPS filename and is independent of the SSID.
+
+### 3. Encrypt it in place
+
+    sops -e -i --input-type binary --output-type binary \
+      secrets/networkmanager/<secret-name>.nmconnection
+
+Verify before committing — the file must start with `{"data":"ENC[` or you would commit the plaintext password:
+
+    head -c 15 secrets/networkmanager/<secret-name>.nmconnection
+
+### 4. Register it in the module
+
+Add a line to the `nmProfiles` list in `modules/networkmanager-profiles.nix`:
+
+    { secret = "<secret-name>"; target = "<Exact NM filename>.nmconnection"; }
+
+`target` must exactly match the on-disk filename NetworkManager uses in `/etc/NetworkManager/system-connections/`, including spaces and capitalization (e.g. `VIRUS PERIGOSO_5G.nmconnection`). The activation script installs the decrypted secret to exactly that name.
+
+### 5. Rebuild
+
+    sudo nixos-rebuild switch --flake .#<hostname>
+
+### Gotchas
+
+- **`sops: command not found`** — SOPS is not installed system-wide; use the `nix shell` in step 1.
+- **`error loading config: no matching creation rules found`** — SOPS matches its creation rule against the *input* path. Do **not** pipe plaintext through `/dev/stdin` with a `>` redirect: SOPS sees `/dev/stdin`, which does not match the `^secrets/` rule in `.sops.yaml`. Copy the file under `secrets/` first (step 2), then encrypt in place (step 3), so the path matches.
+- The `secret` value may use any casing, but lowercase kebab-case is the convention here.
+- Encrypted files are safe to commit and can be world-readable ciphertext; `chmod 600` only for cosmetic consistency with the older profiles.

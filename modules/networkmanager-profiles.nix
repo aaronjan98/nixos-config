@@ -6,6 +6,8 @@ let
     { secret = "connect-here"; target = "Connect here.nmconnection"; }
     { secret = "hello-there";  target = "Hello There!.nmconnection"; }
     { secret = "eduroam";      target = "eduroam.nmconnection"; }
+    { secret = "virus-perigoso-5G"; target = "VIRUS PERIGOSO_5G.nmconnection"; }
+    { secret = "CONEKTAR-NDA-5G";   target = "CONEKTAR-NDA-5G.nmconnection"; }
   ];
 
   # Generate sops secrets that land in /run/secrets/nm/<secret>
