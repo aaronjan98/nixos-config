@@ -9,7 +9,7 @@ SYSTEMD_RUN="${SYSTEMD_RUN:-systemd-run}"
 JQ="${JQ:-jq}"
 TESSERACT="${TESSERACT:-tesseract}"
 
-TEXT_OCR_LANG="${TEXT_OCR_LANG:-eng}"
+TEXT_OCR_LANG="${TEXT_OCR_LANG:-eng+por+spa+fra+deu+ita}"
 TEXT_OCR_PSM="${TEXT_OCR_PSM:-6}"
 OCR_BACKEND="${OCR_BACKEND:-local}"
 
