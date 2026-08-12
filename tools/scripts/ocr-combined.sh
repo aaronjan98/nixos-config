@@ -12,6 +12,12 @@ WOL_SAURON="${WOL_SAURON:-wol-sauron}"
 
 OCR_BACKEND="${OCR_BACKEND:-local}"
 SURYA_KEEP_SERVER="${SURYA_KEEP_SERVER:-0}"
+CURL="${CURL:-curl}"
+SYSTEMCTL="${SYSTEMCTL:-systemctl}"
+SURYA_LOCAL_SERVER_URL="${SURYA_LOCAL_SERVER_URL:-http://127.0.0.1:8012}"
+SURYA_LOCAL_SERVER_UNIT="${SURYA_LOCAL_SERVER_UNIT:-surya-ocr-server.service}"
+SURYA_LOCAL_SERVER_WAIT_SECONDS="${SURYA_LOCAL_SERVER_WAIT_SECONDS:-60}"
+SURYA_LOCAL_TIMEOUT_SECONDS="${SURYA_LOCAL_TIMEOUT_SECONDS:-600}"
 SAURON_HOST="${SAURON_HOST:-sauron}"
 SAURON_OCR_API_URL="${SAURON_OCR_API_URL:-http://127.0.0.1:8011}"
 SAURON_WAKE="${SAURON_WAKE:-1}"
@@ -418,12 +424,12 @@ is_truthy() {
 
 validate_backend() {
   case "$OCR_BACKEND" in
-    local | sauron)
+    local | sauron | warm)
       return 0
       ;;
     *)
       logln "Unsupported combined OCR backend: $OCR_BACKEND"
-      logln "Supported backends: local, sauron."
+      logln "Supported backends: local, sauron, warm."
       write_metadata "failed" 64 "$(elapsed_ms)" 0
       write_attempt_review "failed"
       append_review_queue_entry "failed"
@@ -524,6 +530,64 @@ run_sauron_ocr() {
 
   if ! "$JQ" -e '.status == "ok" and ((.text // "") | length > 0)' "$response_json" >/dev/null 2>>"$log"; then
     logln "Sauron OCR API returned an invalid response:"
+    cat "$response_json" >>"$log"
+    return 73
+  fi
+
+  return 0
+}
+
+ensure_warm_server() {
+  local deadline
+  if "$CURL" -fsS --max-time 3 "$SURYA_LOCAL_SERVER_URL/health" >/dev/null 2>>"$log"; then
+    return 0
+  fi
+
+  logln "local surya server not responding; starting user service $SURYA_LOCAL_SERVER_UNIT"
+  "$SYSTEMCTL" --user start "$SURYA_LOCAL_SERVER_UNIT" >>"$log" 2>&1 \
+    || logln "could not start $SURYA_LOCAL_SERVER_UNIT via systemctl --user"
+
+  deadline=$((SECONDS + SURYA_LOCAL_SERVER_WAIT_SECONDS))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if "$CURL" -fsS --max-time 3 "$SURYA_LOCAL_SERVER_URL/health" >/dev/null 2>>"$log"; then
+      logln "local surya server is ready"
+      return 0
+    fi
+    sleep 1
+  done
+
+  logln "local surya server did not become ready within ${SURYA_LOCAL_SERVER_WAIT_SECONDS}s"
+  return 70
+}
+
+run_warm_ocr() {
+  local response_json="$attempt_dir/warm-response.json"
+
+  if ! ensure_warm_server; then
+    return 70
+  fi
+
+  logln "posting image to local surya server at $SURYA_LOCAL_SERVER_URL"
+  logln "(first request after idle reloads the model and is slower)"
+  if ! "$CURL" -sS --max-time "$SURYA_LOCAL_TIMEOUT_SECONDS" \
+      -X POST "$SURYA_LOCAL_SERVER_URL/ocr/combined" \
+      -H 'Content-Type: image/png' --data-binary @"$img" >"$response_json" 2>>"$log"; then
+    logln "local surya server request failed."
+    [ -f "$response_json" ] && cat "$response_json" >>"$log"
+    return 72
+  fi
+
+  cp "$response_json" "$out"
+  if ! "$JQ" -r '.text // empty' "$response_json" >"$normalized_out" 2>>"$log"; then
+    logln "local surya server returned non-JSON output:"
+    cat "$response_json" >>"$log"
+    return 73
+  fi
+
+  "$JQ" '.raw_output // empty' "$response_json" >"$surya_results" 2>>"$log" || : >"$surya_results"
+
+  if ! "$JQ" -e '.status == "ok" and ((.text // "") | length > 0)' "$response_json" >/dev/null 2>>"$log"; then
+    logln "local surya server returned an invalid response:"
     cat "$response_json" >>"$log"
     return 73
   fi
@@ -641,6 +705,10 @@ logln ""
 case "$OCR_BACKEND" in
   local)
     run_local_ocr
+    rc=$?
+    ;;
+  warm)
+    run_warm_ocr
     rc=$?
     ;;
   sauron)

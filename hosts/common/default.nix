@@ -18,6 +18,7 @@
     ../../modules/screenshot-tools.nix
     ../../modules/imgview.nix
     ../../modules/cliphist.nix
+    ../../modules/surya-ocr-server.nix
     ../../modules/obsidian-ipc.nix
     ../../modules/ollama.nix
     ../../modules/claude-code.nix

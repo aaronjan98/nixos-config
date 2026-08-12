@@ -7,6 +7,8 @@ let
 
   suryaLibraryPath = lib.makeLibraryPath [
     pkgs.stdenv.cc.cc.lib
+    pkgs.zlib
+    pkgs.libGL
   ];
 
   math-ocr = pkgs.writeShellApplication {
@@ -128,7 +130,42 @@ let
     pkgs.gnugrep
     pkgs.openssh
     pkgs.llama-cpp
+    pkgs.curl
   ];
+
+  # Persistent, model-resident Surya server for warm local combined OCR.
+  surya-ocr-server = pkgs.writeShellApplication {
+    name = "surya-ocr-server";
+
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.bash
+    ];
+
+    runtimeEnv.SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
+
+    text = ''
+      if [ -z "''${HOME:-}" ] || [ "''${HOME:-}" = "/homeless-shelter" ]; then
+        HOME="/home/$(id -un)"
+        export HOME
+      fi
+
+      SURYA_RUNTIME_DIR="''${SURYA_RUNTIME_DIR:-$HOME/.local/share/ocr-runtimes/surya}"
+      SURYA_VENV_DIR="''${SURYA_VENV_DIR:-$SURYA_RUNTIME_DIR/.venv}"
+
+      if [ -n "''${SURYA_EXTRA_LIBRARY_PATH:-}" ]; then
+        export LD_LIBRARY_PATH="''${SURYA_EXTRA_LIBRARY_PATH}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+      fi
+      export TORCH_DEVICE="''${TORCH_DEVICE:-cpu}"
+
+      if [ ! -x "$SURYA_VENV_DIR/bin/python" ]; then
+        echo "surya venv not found at $SURYA_VENV_DIR; run bootstrap-surya-ocr" >&2
+        exit 127
+      fi
+
+      exec "$SURYA_VENV_DIR/bin/python" ${../scripts/surya-ocr-server.py} "$@"
+    '';
+  };
 
   ocr-combined = pkgs.writeShellApplication {
     name = "ocr-combined";
@@ -149,6 +186,21 @@ let
 
     runtimeEnv = {
       OCR_BACKEND = "sauron";
+      SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
+    };
+
+    excludeShellChecks = [ "SC2016" ];
+
+    text = builtins.readFile ../scripts/ocr-combined.sh;
+  };
+
+  ocr-combined-warm = pkgs.writeShellApplication {
+    name = "ocr-combined-warm";
+
+    runtimeInputs = combinedRuntimeInputs;
+
+    runtimeEnv = {
+      OCR_BACKEND = "warm";
       SURYA_EXTRA_LIBRARY_PATH = suryaLibraryPath;
     };
 
@@ -215,7 +267,9 @@ pkgs.symlinkJoin {
     ocr-custom-split-sauron
     ocr-combined
     ocr-combined-sauron
+    ocr-combined-warm
     ocr-combined-stop
+    surya-ocr-server
     bootstrap-surya-ocr
     bootstrap-pix2tex
   ];
