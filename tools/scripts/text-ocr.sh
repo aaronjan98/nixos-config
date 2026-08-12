@@ -8,10 +8,19 @@ NOTIFY="${NOTIFY:-notify-send}"
 SYSTEMD_RUN="${SYSTEMD_RUN:-systemd-run}"
 JQ="${JQ:-jq}"
 TESSERACT="${TESSERACT:-tesseract}"
+CONVERT="${CONVERT:-magick}"
 
 TEXT_OCR_LANG="${TEXT_OCR_LANG:-eng+por+spa+fra+deu+ita}"
 TEXT_OCR_PSM="${TEXT_OCR_PSM:-6}"
 OCR_BACKEND="${OCR_BACKEND:-local}"
+
+# Auto-preprocess: also OCR an upscaled + locally-adaptive-thresholded copy of the
+# capture and keep whichever result tesseract is more confident about. This rescues
+# low-resolution / low-contrast text (e.g. video subtitles) where the raw image merges
+# words together, without hurting clean high-contrast text (raw wins there on confidence).
+TEXT_OCR_AUTO_PREPROCESS="${TEXT_OCR_AUTO_PREPROCESS:-1}"
+TEXT_OCR_SCALE="${TEXT_OCR_SCALE:-400}"
+TEXT_OCR_LAT="${TEXT_OCR_LAT:-40x40+8%}"
 
 real_home="$(getent passwd "$(id -un)" | cut -d: -f6 || true)"
 if [ -z "${HOME:-}" ] || [ "${HOME:-}" = "/homeless-shelter" ]; then
@@ -306,6 +315,23 @@ normalize_text_output() {
   '
 }
 
+is_truthy() {
+  case "${1:-}" in
+    1 | true | TRUE | yes | YES | on | ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+run_ocr_text() {
+  ( cd "$work_dir" && "$TESSERACT" "$1" stdout -l "$TEXT_OCR_LANG" --psm "$TEXT_OCR_PSM" 2>>"$log" )
+}
+
+# Mean tesseract word confidence (0-100), weighted by word length. 0 when no words found.
+run_ocr_conf() {
+  ( cd "$work_dir" && "$TESSERACT" "$1" stdout -l "$TEXT_OCR_LANG" --psm "$TEXT_OCR_PSM" tsv 2>>"$log" ) \
+    | awk -F'\t' 'NR>1 && $12!="" && $11>=0 { n=length($12); s+=$11*n; w+=n } END { if (w>0) printf "%.1f", s/w; else print "0" }'
+}
+
 write_metadata "started"
 write_attempt_review "started"
 
@@ -359,18 +385,53 @@ logln "image info:"
 (file "$img" >>"$log" 2>&1) || true
 logln ""
 
-cmd=( "$TESSERACT" "$img" stdout -l "$TEXT_OCR_LANG" --psm "$TEXT_OCR_PSM" )
+# Optionally build a preprocessed variant (upscale + local adaptive threshold) that
+# recovers low-res / low-contrast text. Kept alongside the raw image; the higher-
+# confidence OCR result wins below.
+proc="$attempt_dir/processed.png"
+preprocess_ok=0
+if is_truthy "$TEXT_OCR_AUTO_PREPROCESS"; then
+  if command -v "$CONVERT" >/dev/null 2>&1; then
+    logln "preprocessing (upscale ${TEXT_OCR_SCALE}%, local adaptive threshold ${TEXT_OCR_LAT}) -> $proc"
+    if "$CONVERT" "$img" -colorspace Gray -filter Lanczos -resize "${TEXT_OCR_SCALE}%" -lat "$TEXT_OCR_LAT" "$proc" 2>>"$log"; then
+      preprocess_ok=1
+    else
+      logln "preprocess command failed; using raw image only"
+    fi
+  else
+    logln "preprocess enabled but '$CONVERT' not found; using raw image only"
+  fi
+fi
 
-logln "running (cwd=$work_dir): ${cmd[*]}"
-logln ""
+logln "running OCR on raw image (cwd=$work_dir): $TESSERACT -l $TEXT_OCR_LANG --psm $TEXT_OCR_PSM"
 
 set +e
-(
-  cd "$work_dir"
-  "${cmd[@]}" >"$out" 2>>"$log"
-)
+raw_text="$(run_ocr_text "$img")"
 rc=$?
+raw_conf="$(run_ocr_conf "$img")"
 set -e
+logln "raw exit: $rc  raw mean-confidence: $raw_conf"
+
+chosen="raw"
+chosen_conf="$raw_conf"
+chosen_text="$raw_text"
+
+if [ "$preprocess_ok" -eq 1 ]; then
+  set +e
+  proc_text="$(run_ocr_text "$proc")"
+  proc_conf="$(run_ocr_conf "$proc")"
+  set -e
+  logln "processed mean-confidence: $proc_conf"
+  if awk -v a="$proc_conf" -v b="$raw_conf" 'BEGIN { exit !(a + 0 > b + 0) }'; then
+    chosen="processed"
+    chosen_conf="$proc_conf"
+    chosen_text="$proc_text"
+    rc=0
+  fi
+fi
+
+logln "chosen variant: $chosen (confidence $chosen_conf)"
+printf '%s' "$chosen_text" >"$out"
 
 logln ""
 logln "exit: $rc"
@@ -418,4 +479,4 @@ else
   logln "clipboard holder started"
 fi
 
-"$NOTIFY" "Text OCR" "Copied text to clipboard"
+"$NOTIFY" "Text OCR" "Copied text to clipboard ($chosen, conf $chosen_conf)"

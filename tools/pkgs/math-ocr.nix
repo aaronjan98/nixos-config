@@ -67,6 +67,7 @@ let
       pkgs.gnugrep
       pkgs.gawk
       pkgs.tesseract
+      pkgs.imagemagick
     ];
 
     excludeShellChecks = [ "SC2016" ];
