@@ -50,7 +50,6 @@ stdenvNoCC.mkDerivation {
 
     python3 - <<'PY'
     from pathlib import Path
-    from copy import deepcopy
     import xml.etree.ElementTree as ET
     import re
 
@@ -63,9 +62,15 @@ stdenvNoCC.mkDerivation {
         ET.register_namespace(prefix, uri)
 
     # The upstream theme uses separate semi-transparent base shapes underneath
-    # the accent shapes. Hide those filled bases, add a light halo behind each
-    # accent shape for dark-background contrast, then stroke the accent shape
+    # the accent shapes. Hide those filled bases, then stroke the accent shape
     # itself in black so the border follows the visible red body.
+    #
+    # A light halo (a duplicate copy of each accent shape, stroked near-white,
+    # inserted behind it) used to live here for dark-background contrast. It's
+    # gone: its stroke padding inflated the rasterized canvas ~25% beyond each
+    # size's declared nominal dimensions (e.g. cursors tagged "size 72" were
+    # actually 90x90px), which is a real correctness bug, not just a cosmetic
+    # halo nobody asked for anymore.
     def upsert(style, key, value):
         if re.search(rf"(^|;){re.escape(key)}:", style):
             return re.sub(rf"(^|;){re.escape(key)}:[^;]*", lambda m: f"{m.group(1)}{key}:{value}", style)
@@ -91,24 +96,11 @@ stdenvNoCC.mkDerivation {
             style = upsert(style, "paint-order", "stroke fill markers")
         return style
 
-    def halo_style(style):
-        style = upsert(style, "fill", "none")
-        style = upsert(style, "fill-opacity", "0")
-        style = upsert(style, "stroke", "#f2f0e8")
-        style = upsert(style, "stroke-opacity", "0.95")
-        style = upsert(style, "stroke-width", "1.45")
-        style = upsert(style, "stroke-linejoin", "round")
-        style = upsert(style, "stroke-linecap", "round")
-        style = upsert(style, "paint-order", "stroke fill markers")
-        return style
-
     tree = ET.parse(svg)
     root = tree.getroot()
 
     for parent in root.iter():
-        children = list(parent)
-        inserts = []
-        for index, child in enumerate(children):
+        for child in list(parent):
             style = child.get("style")
             if not style:
                 continue
@@ -117,14 +109,7 @@ stdenvNoCC.mkDerivation {
             style = child.get("style")
 
             if "fill:#E62600" in style:
-                halo = deepcopy(child)
-                halo.set("style", halo_style(style))
-                halo.set("id", f"{child.get('id', 'cursor-shape')}-halo")
                 child.set("style", accent_style(style))
-                inserts.append((index, halo))
-
-        for offset, (index, halo) in enumerate(inserts):
-            parent.insert(index + offset, halo)
 
     tree.write(svg, encoding="utf-8", xml_declaration=True)
     PY

@@ -276,6 +276,9 @@
   };
   environment.sessionVariables = {
     TERMINAL = "kitty";
+    # Cursor theme/size for the user graphical session (reaches Hyprland). Note
+    # the SDDM greeter runs before any session and does NOT see sessionVariables,
+    # so its cursor size is not controlled here.
     XCURSOR_THEME = lib.mkDefault "Breeze_Hacked";
     XCURSOR_SIZE = lib.mkDefault "32";
     # NixOS has no /usr/share/X11/locale, so libxkbcommon can't find the Compose

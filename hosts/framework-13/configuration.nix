@@ -44,16 +44,28 @@ in {
   # ThinkPad uses the QML fallback (1.25); adjust this value to taste.
   environment.sessionVariables = {
     QS_UI_SCALE = "1.75";
+    # Cursor for the user session (Hyprland). Overrides the common mkDefault 32
+    # for this host's HiDPI panel.
     XCURSOR_THEME = "Breeze_Hacked";
-    XCURSOR_SIZE = "72";
+    XCURSOR_SIZE = "48";
   };
 
-  # Hyprland per-host overrides — loaded last (99-) so they win over dotfiles defaults.
-  # Keep this in sync with the session cursor variables above.
+  # Hyprland per-host overrides — loaded last (99-) so they win over dotfiles
+  # defaults. `env =` registers the cursor theme/size for spawned clients;
+  # `exec-once = hyprctl setcursor` applies it inside Hyprland itself.
+  #
+  # Known issue (not fixed here — it's upstream): the cursor renders oversized at
+  # the greeter and at early desktop, self-correcting only once a scale-change
+  # redraw occurs. Confirmed via reboot tests to be independent of theme, of
+  # every XCURSOR_SIZE/theme setting, of the external monitor, and unaffected by
+  # no_hardware_cursors / enable_hyprcursor / use_cpu_buffer — i.e. a Hyprland
+  # 0.52.1 HiDPI cursor-scaling bug, not a config error. Size is set to 48 (down
+  # from 72) partly to reduce how jarring that startup cursor is. Full writeup:
+  # memory/2026-08-17 framework cursor oversized at boot.md.
   environment.etc."hypr/conf.d/99-host.conf".text = ''
     env = XCURSOR_THEME,Breeze_Hacked
-    env = XCURSOR_SIZE,72
-    exec-once = hyprctl setcursor Breeze_Hacked 72
+    env = XCURSOR_SIZE,48
+    exec-once = hyprctl setcursor Breeze_Hacked 48
 
 ${frameworkSizeRules}
 
