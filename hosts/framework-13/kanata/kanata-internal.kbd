@@ -1,5 +1,11 @@
 (defcfg
   process-unmapped-keys yes
+  ;; Pin kanata to the internal keyboard only, so it doesn't also grab other
+  ;; keyboard-like devices. The module's `devices` option is ignored because
+  ;; this host uses a raw configFile, so the restriction must live here in the
+  ;; defcfg. Verify this path on the Framework with
+  ;; `ls -l /dev/input/by-path/ | grep kbd` before relying on it.
+  linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd
 )
 
 (defvar

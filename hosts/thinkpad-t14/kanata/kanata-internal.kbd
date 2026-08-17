@@ -1,5 +1,10 @@
 (defcfg
   process-unmapped-keys yes
+  ;; Pin kanata to the internal keyboard only. Without this it also grabs other
+  ;; keyboard-like devices (e.g. "ThinkPad Extra Buttons"), which it has no
+  ;; business owning. The module's `devices` option is ignored because this host
+  ;; uses a raw configFile, so the restriction must live here in the defcfg.
+  linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd
 )
 
 (defvar
