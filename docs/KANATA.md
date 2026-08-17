@@ -533,6 +533,66 @@ the physical modifier. When reading the config, interpret names in context.
 
 ---
 
+# Deploying & operating
+
+## Applying a config change
+
+The `.kbd` file is delivered to `/etc/kanata/kanata-internal.kbd` via
+`environment.etc` (see each host's `configuration.nix`). **Important:** changing
+the *contents* of that file does not change the systemd unit, and the service has
+no `restartTrigger` on it — so `nrs` (`nixos-rebuild switch`) deploys the new file
+but leaves the **old config running in memory**. After a `nrs` that touched the
+`.kbd`, the change only takes effect once you restart the service (or reboot):
+
+    sudo systemctl restart kanata-internal
+
+To confirm the live process actually picked up the change, check which devices it
+registered this boot — it should list only the intended keyboards:
+
+    journalctl -u kanata-internal -b | grep registering
+
+(If you'd rather have `nrs` alone apply `.kbd` edits, add a `restartTriggers` on the
+config file to the service in `modules/kanata.nix`. Deliberately not done — a manual
+restart avoids kanata dropping your keyboard grab mid-rebuild unexpectedly.)
+
+## Validate before deploying
+
+The config parses without touching any devices:
+
+    kanata --cfg hosts/<host>/kanata/kanata-internal.kbd --check
+
+## Device selection differs per host
+
+`services.kanata.keyboards.*.devices` in `modules/kanata.nix` is **inert** because
+both hosts supply a raw `configFile`; the module only honors `devices` when it
+generates the config itself. So the device restriction lives in each host's
+`defcfg`:
+
+- **ThinkPad** — `linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd`
+  (internal keyboard only).
+- **Framework** — `linux-dev-names-include ("AT Translated Set 2 keyboard" "SONiX
+  USB DEVICE")` so both the internal and the external SONiX keyboard get the same
+  layers. Name matching survives USB-port and event-number changes; it is only
+  honored when `linux-dev` is omitted. Match is exact, and the external keyboard's
+  live keystrokes come through its boot-keyboard interface (the `event*` node whose
+  name is exactly `SONiX USB DEVICE`, carrying the `leds` handler).
+
+## Troubleshooting: kanata at ~100% CPU
+
+If kanata pegs a core and remaps don't work, and keyboard IRQs are **flat**
+(`grep i8042 /proc/interrupts` twice — counts don't move), it is almost certainly a
+**stuck key latched in the kernel** at boot, not a config bug. kanata busy-polls
+`EVIOCGKEY` waiting for a release that never arrives. Find the key and clear it:
+
+    PID=$(pgrep -x kanata)
+    sudo timeout 1 strace -p "$PID" 2>&1 | grep -o 'EVIOCGKEY([0-9]*), \[[^]]*\]' | sort | uniq -c
+    sudo systemctl stop kanata-internal   # then firmly press+release the named key
+    sudo systemctl start kanata-internal
+
+See `memory/2026-08-16 kanata 100pct cpu stuck-key.md` for the full diagnosis.
+
+---
+
 # Suggested repo placement
 
 Given the current repo structure, this organization makes sense:
