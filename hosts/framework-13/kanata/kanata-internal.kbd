@@ -1,11 +1,17 @@
 (defcfg
   process-unmapped-keys yes
-  ;; Pin kanata to the internal keyboard only, so it doesn't also grab other
-  ;; keyboard-like devices. The module's `devices` option is ignored because
-  ;; this host uses a raw configFile, so the restriction must live here in the
-  ;; defcfg. Verify this path on the Framework with
-  ;; `ls -l /dev/input/by-path/ | grep kbd` before relying on it.
-  linux-dev /dev/input/by-path/platform-i8042-serio-0-event-kbd
+  ;; Match keyboards by NAME so kanata applies the same layers to BOTH the
+  ;; internal keyboard and the external SONiX USB keyboard. Names are used
+  ;; instead of by-path because the external keyboard's by-path is tied to a
+  ;; specific USB port, whereas the name is stable across ports and event-number
+  ;; reshuffles. `linux-dev-names-include` is only honored when `linux-dev` is
+  ;; omitted, so we drop `linux-dev` here. List items are quoted because the
+  ;; names contain spaces; names come from `cat /sys/class/input/event*/device/name`.
+  ;; The module's `devices` option is inert because this host uses a raw configFile.
+  linux-dev-names-include (
+    "AT Translated Set 2 keyboard"
+    "SONiX USB DEVICE"
+  )
 )
 
 (defvar
