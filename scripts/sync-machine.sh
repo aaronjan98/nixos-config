@@ -64,7 +64,35 @@ dotfiles_is_dirty() {
 
 # ─── commands ────────────────────────────────────────────────────────────────
 
+# repos.tsv/remotes.tsv are pure mechanical output of export-workspace-state.sh
+# (regenerated hourly from each repo's `git remote -v`) — always safe to discard
+# and re-derive later. Everything else under the snapshot tree (CONTEXT.md,
+# MEMORY.md, memory/) is a mirror of hand-authored docs from the live tree, so
+# it is never discarded automatically — just flagged for the user to commit.
+reconcile_generated_snapshot_files() {
+    local snapshot_dir="${NIXOS_CONFIG}/tools/workspace/Repositories"
+    [[ -d "${NIXOS_CONFIG}/.git" ]] || return
+
+    local f
+    for f in "${snapshot_dir}/repos.tsv" "${snapshot_dir}/remotes.tsv"; do
+        [[ -f "$f" ]] || continue
+        if ! git -C "${NIXOS_CONFIG}" diff --quiet -- "$f" 2>/dev/null; then
+            log "Discarding local regeneration of $(basename "$f") (mechanical — safe to re-derive)"
+            git -C "${NIXOS_CONFIG}" checkout -- "$f"
+        fi
+    done
+
+    local other_dirty
+    other_dirty="$(git -C "${NIXOS_CONFIG}" status --porcelain -- "${snapshot_dir}" \
+        | grep -v -e 'repos\.tsv' -e 'remotes\.tsv' || true)"
+    if [[ -n "$other_dirty" ]]; then
+        warn "Hand-authored changes under tools/workspace/Repositories/ — commit these yourself, pull may fail otherwise:"
+        printf '%s\n' "$other_dirty" | sed 's/^/    /' >&2
+    fi
+}
+
 cmd_arrive() {
+    reconcile_generated_snapshot_files
     git_pull "nixos-config" "${NIXOS_CONFIG}"
 
     log "Restoring workspace routing files from snapshot..."
