@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 
 let
+  cfg = config.aj.hyprIdle;
+
   blackoutOn = pkgs.writeShellScriptBin "screen-blackout-on" ''
     #!/usr/bin/env bash
     set -eu
@@ -56,8 +58,37 @@ let
       rm -rf "$state_dir" >/dev/null 2>&1
     fi
   '';
+
+  # The 5-min blackout command, plus any host-specific extras (e.g. cut the desk
+  # speakers on the Framework). Empty extras => byte-identical to plain blackout,
+  # so hosts that set nothing (ThinkPad) are unaffected.
+  blackoutCmd = "/run/current-system/sw/bin/screen-blackout-on"
+    + lib.optionalString (cfg.extraBlackoutCmd != "") " ; ${cfg.extraBlackoutCmd}";
+  unblackoutCmd = "/run/current-system/sw/bin/screen-blackout-off"
+    + lib.optionalString (cfg.extraResumeCmd != "") " ; ${cfg.extraResumeCmd}";
 in
 {
+  options.aj.hyprIdle = {
+    extraBlackoutCmd = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = ''
+        Extra shell command run (as the user, via hypridle) when the 5-minute
+        idle blackout fires and no media is playing — e.g. turn the desk
+        speakers off. Empty on hosts with nothing to add.
+      '';
+    };
+    extraResumeCmd = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = ''
+        Extra shell command run when the blackout is lifted (screen un-blanks),
+        e.g. turn the desk speakers back on. Empty leaves resume unchanged.
+      '';
+    };
+  };
+
+  config = {
   environment.systemPackages = with pkgs; [
     hypridle
     hyprlock
@@ -89,8 +120,8 @@ in
     # 5 mins: Screensaver (Blackout) - only if no player is playing
     listener {
       timeout = 300
-      on-timeout = playerctl status 2>/dev/null | grep -q "Playing" || /run/current-system/sw/bin/screen-blackout-on
-      on-resume = /run/current-system/sw/bin/screen-blackout-off
+      on-timeout = playerctl status 2>/dev/null | grep -q "Playing" || ( ${blackoutCmd} )
+      on-resume = ${unblackoutCmd}
     }
 
     # 10 mins: Lock Screen - only if no player is playing
@@ -206,6 +237,7 @@ in
       Restart = "on-failure";
       RestartSec = 1;
     };
+  };
   };
 }
 
