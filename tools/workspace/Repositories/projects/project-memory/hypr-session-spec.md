@@ -87,6 +87,9 @@ domain 3:
 - `skip` = keep the entry but don't launch it on restore.
 - `float WxH@pos` = launch floating and apply geometry (Phase C). `W`/`H` are
   monitor-relative percentages; `pos` is `center` or `x%,y%`.
+- `app=<class>` = the window class, written by `save` only when it isn't obvious
+  from the command (used by restore's "already open" check, below). Optional on
+  hand-added lines — restore falls back to the command's basename.
 - Slot → workspace id uses the standard formula (`domain 1` special-cased).
 
 ## Commands
@@ -118,14 +121,17 @@ All invocation is from the terminal — no keybind, no picker.
 
 ## How restore works
 
-For the requested (or current) domain, per non-`skip` entry:
+First, snapshot the app classes already open on each target workspace (once, up
+front). Then, for the requested (or current) domain, per non-`skip` entry:
 
-1. `hyprctl dispatch exec [workspace <id> silent] <cmd>` for **every** entry —
-   places at spawn, no focus steal. Duplicates are intentional: three saved
-   kitty windows relaunch as three. There is **no** class-based dedup, so apps
-   that restore their own windows (browsers, etc.) may double up — `skip` those
-   in the file if it bothers you (decision #1).
-2. Phase C only, for `float` entries: subscribe to the Hyprland `openwindow`
+1. If that entry's app class was already present on its target workspace in the
+   up-front snapshot, **skip** it — don't re-open what you already have
+   (decision #1). The class comes from the entry's `app=` value, else the
+   command's basename; live classes come from `hyprctl clients`.
+2. Otherwise `hyprctl dispatch exec [workspace <id> silent] <cmd>` — places at
+   spawn, no focus steal. Duplicates saved on a *fresh* workspace still all
+   spawn, because the snapshot is taken before any launches.
+3. Phase C only, for `float` entries: subscribe to the Hyprland `openwindow`
    IPC event (socket2), match the new window by class/initialTitle, then apply
    `movewindowpixel exact` / `resizewindowpixel exact` (percent → pixels for
    the actual monitor). Bounded timeout so a slow/never-appearing app can't

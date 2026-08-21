@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import socket
 import subprocess
 import sys
@@ -57,6 +58,16 @@ def workspace_id(domain: int, slot: int) -> int:
     return slot if domain == 1 else domain * 10 + slot
 
 
+def cmd_appkey(cmd: str) -> str:
+    """Best-effort window-class guess from a command (basename of argv[0])."""
+    try:
+        first = shlex.split(cmd)[0]
+    except (ValueError, IndexError):
+        parts = cmd.split()
+        first = parts[0] if parts else ""
+    return os.path.basename(first).lower()
+
+
 # --- hyprctl ---------------------------------------------------------------
 
 def hyprctl_json(*args):
@@ -81,6 +92,26 @@ def cmdline_of(pid: int):
     return " ".join(shlex.quote(p) for p in parts)
 
 
+def launch_command(pid: int, cls: str):
+    """Best launch command for a window: usually its /proc cmdline, but for
+    wrapped Electron apps (Obsidian, etc.) the cmdline is `.../electron
+    .../app.asar` — not runnable on its own — so prefer a clean PATH binary
+    named after the window class (e.g. `obsidian`)."""
+    raw = cmdline_of(pid)
+    if not raw:
+        return cls or ""
+    try:
+        argv0 = shlex.split(raw)[0]
+    except (ValueError, IndexError):
+        parts = raw.split()
+        argv0 = parts[0] if parts else ""
+    if os.path.basename(argv0).lower().startswith("electron"):
+        cand = (cls or "").rsplit(".", 1)[-1].lower()
+        if cand and shutil.which(cand):
+            return cand
+    return raw
+
+
 # --- entry <-> text --------------------------------------------------------
 
 _FLOAT_RE = re.compile(r"\s+float(?:\s+(\S+))?$")
@@ -93,6 +124,7 @@ def parse_entry(line: str):
         return None
     skip = False
     floatspec = None
+    appclass = None
     changed = True
     while changed:
         changed = False
@@ -112,15 +144,26 @@ def parse_entry(line: str):
             s = s[: m.start()].rstrip()
             changed = True
             continue
+        m = re.search(r"\s+app=(\S+)$", s)
+        if m:
+            appclass = m.group(1)
+            s = s[: m.start()].rstrip()
+            changed = True
+            continue
     if not s:
         return None
-    return {"cmd": s, "skip": skip, "float": floatspec}
+    return {"cmd": s, "skip": skip, "float": floatspec, "class": appclass}
 
 
 def format_entry(e) -> str:
     flags = []
     if e.get("float") is not None:
         flags.append("float" + (f" {e['float']}" if e["float"] else ""))
+    # Record class only when it isn't obvious from the command, so restore can
+    # tell "already open" reliably without cluttering every line.
+    cls = e.get("class")
+    if cls and cls.lower() != cmd_appkey(e["cmd"]):
+        flags.append(f"app={cls}")
     if e.get("skip"):
         flags.append("skip")
     body = e["cmd"]
@@ -213,11 +256,17 @@ def collect(target_domains):
         d = domain_of(wid)
         if target_domains is not None and d not in target_domains:
             continue
-        cmd = cmdline_of(c.get("pid", -1)) or c.get("class", "")
+        cls = c.get("class") or ""
+        cmd = launch_command(c.get("pid", -1), cls)
         if not cmd:
             continue
         model[d][slot_of(wid)].append(
-            {"cmd": cmd, "skip": False, "float": "" if c.get("floating") else None}
+            {
+                "cmd": cmd,
+                "skip": False,
+                "float": "" if c.get("floating") else None,
+                "class": c.get("class") or "",
+            }
         )
     return model
 
@@ -256,7 +305,19 @@ def cmd_restore(args):
     else:
         domains = [current_domain()]
 
+    # Snapshot which app classes are already open on each workspace, ONCE, before
+    # launching anything. An entry is skipped only if its app is already present
+    # on its target workspace at this point — so duplicates saved on a fresh
+    # workspace still all spawn, but we never re-open something you already have
+    # open (e.g. a terminal you restored a tmux session into yourself).
+    present = defaultdict(set)
+    for c in hyprctl_json("clients"):
+        wid = c.get("workspace", {}).get("id", 0)
+        if wid >= 1:
+            present[wid].add((c.get("class") or "").lower())
+
     launched = 0
+    skipped = 0
     for d in domains:
         if d not in blocks:
             print(f"domain {d}: nothing saved, skipping", file=sys.stderr)
@@ -267,17 +328,24 @@ def cmd_restore(args):
             for e in slots[slot]:
                 if e["skip"]:
                     continue
-                spec = f"[workspace {wid} silent] {e['cmd']}"
+                key = (e.get("class") or cmd_appkey(e["cmd"])).lower()
+                if key and key in present[wid]:
+                    print(f"ws {wid}: {e['cmd']}  [already open — skip]")
+                    skipped += 1
+                    continue
                 if args.dry_run:
                     print(f"ws {wid}: {e['cmd']}")
                 else:
                     subprocess.run(
-                        ["hyprctl", "dispatch", "exec", spec], check=False
+                        ["hyprctl", "dispatch", "exec",
+                         f"[workspace {wid} silent] {e['cmd']}"],
+                        check=False,
                     )
                     time.sleep(SPAWN_GAP)
                 launched += 1
     verb = "would restore" if args.dry_run else "restored"
-    print(f"{verb} {launched} window(s) from {len(domains)} domain(s)")
+    tail = f" (skipped {skipped} already-open)" if skipped else ""
+    print(f"{verb} {launched} window(s) from {len(domains)} domain(s){tail}")
 
 
 def cmd_edit(args):
