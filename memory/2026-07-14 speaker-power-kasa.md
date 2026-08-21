@@ -1,5 +1,14 @@
 # 2026-07-14 — Voice assistant speaker power via Kasa
 
+> **CORRECTION / SUPERSEDED (2026-08-19):** This `python-kasa` approach never actually
+> worked. The plug is a KP125M whose firmware uses **`TPAP`** encryption, which
+> `python-kasa` does not implement, so it could never authenticate locally — the
+> "validation" below was only an import/syntax check, never a live toggle. Speaker
+> control now goes through **Home Assistant's Matter integration** (entity
+> `switch.kasa_smart_wi_fi_plug`); `matter-server` is enabled in
+> `modules/home-assistant.nix`. Full details in the voice-assistant repo:
+> `memory/2026-08-19 speaker-power-via-ha-matter.md`. The `KASA_*` env vars are gone.
+
 Added a first-class `speaker_power` tool to the voice-assistant orchestrator for the Sony receiver / desk speakers.
 
 - Receiver Kasa plug IP: `10.0.50.124`.

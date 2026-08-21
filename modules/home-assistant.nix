@@ -21,6 +21,7 @@ in {
 
     extraComponents = [
       "esphome"              # auto-discovers ESPHome satellites on the LAN
+      "matter"               # local Matter control (KP125M speaker plug, etc.)
       "wyoming"              # voice pipeline bridge to Whisper + Piper
       "assist_pipeline"
       "wake_word"
@@ -48,6 +49,12 @@ in {
       };
     };
   };
+
+  # Matter server — local controller the HA "matter" integration connects to
+  # (ws://localhost:5580/ws). Lets HA commission and drive Matter devices like
+  # the KP125M speaker plug directly on the LAN, bypassing python-kasa (which
+  # cannot speak the plug's newer TPAP encryption).
+  services.matter-server.enable = true;
 
   # Wyoming Faster-Whisper — speech-to-text
   services.wyoming.faster-whisper.servers."en-us" = {
