@@ -14,6 +14,48 @@
   # pcie_aspm=off works around a suspend/resume instability on this hardware.
   boot.kernelParams = [ "pcie_aspm=off" ];
 
+  # --- Lid close: lock, THEN suspend -----------------------------------------
+  # Problem: with logind's default HandleLidSwitch=suspend, closing the lid
+  # suspended the machine while hypridle was still launching hyprlock. During
+  # that transition the panel powers off and the compositor stops servicing the
+  # lock surface, so hyprlock stalled ~10s, lost the session lock ("yeeten") and
+  # Hyprland showed its "lockscreen app died" screen. hyprlock only locks
+  # reliably while the compositor is fully awake.
+  #
+  # Fix: tell logind to IGNORE the lid, and have Hyprland bind the lid switch to
+  # `lock-and-suspend` (see ~/.config/hypr/conf.d/20-binds.conf). That locks
+  # while everything is awake (fast + reliable) and only then suspends — so the
+  # machine is already locked before it sleeps, with no race and no typing
+  # window on wake.
+  services.logind.settings.Login.HandleLidSwitch = "ignore";
+  services.logind.settings.Login.HandleLidSwitchExternalPower = "ignore";
+  services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
+
+  environment.systemPackages = [
+    (pkgs.writeShellScriptBin "lock-and-suspend" ''
+      set -eu
+      export PATH=/run/current-system/sw/bin:$PATH
+
+      # Hide the desktop up front so nothing flashes while we lock/suspend.
+      screen-blackout-on || true
+
+      # Lock now, while the compositor is awake — this is the reliable path.
+      loginctl lock-session
+
+      # Don't suspend until hyprlock is actually up, so we never sleep mid-lock.
+      # Bounded so a wedged hyprlock can't block suspend forever.
+      for _ in $(seq 1 50); do
+        pidof hyprlock >/dev/null 2>&1 && break
+        sleep 0.1
+      done
+      # Brief settle so hyprlock finishes grabbing the session lock.
+      sleep 0.4
+
+      systemctl suspend
+    '')
+  ];
+  # ---------------------------------------------------------------------------
+
   # Expose the mic-mute LED sysfs node to the video group so wpctl can toggle it.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="leds", KERNEL=="platform::micmute", RUN+="${pkgs.bash}/bin/bash -c 'chgrp video /sys/class/leds/platform::micmute/brightness && chmod g+w /sys/class/leds/platform::micmute/brightness'"
