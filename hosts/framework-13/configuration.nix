@@ -31,10 +31,24 @@ in {
     ../common/default.nix
     ../../modules/home-assistant.nix
     ../../modules/orchestrator.nix
+    ../../modules/speakers-suspend-off.nix
     ../../modules/wifi-reliability.nix
   ];
 
   networking.hostName = "framework-13";
+
+  # Cut power to the desk speakers when the laptop suspends (see the module).
+  # NOTE: this host is an always-on home server (logind ignores lid/idle/suspend),
+  # so it effectively only ever suspends on an explicit `systemctl suspend`. The
+  # real "I've walked away" signal here is hypridle's 5-min blackout, so the
+  # speaker-off is primarily driven from there (below).
+  aj.speakersSuspendOff.enable = true;
+
+  # Turn the desk speakers off when hypridle blanks the screen at 5-min idle.
+  # (Turn-back-on when the screen wakes is intentionally not wired — set
+  # aj.hyprIdle.extraResumeCmd to "${config.aj.speakersSuspendOff.script} on" if
+  # you later want that.)
+  aj.hyprIdle.extraBlackoutCmd = "${config.aj.speakersSuspendOff.script} off";
 
   # MT7925 wifi reliability (L1 ASPM disable + connectivity watchdog) lives in
   # ../../modules/wifi-reliability.nix. That targets ASPM per-device rather than
