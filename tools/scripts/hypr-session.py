@@ -28,14 +28,25 @@ STATE_DIR = (
 # Delay between spawns so windows tile in a stable order.
 SPAWN_GAP = 0.15
 
-# Single-instance apps: relaunching the binary won't create a placeable window,
-# so instead of `[workspace N silent] cmd` we spawn a window and MOVE it. `save`
-# records the spawn command + `move=<class>`; `restore` runs it, waits for the
-# new window of that class, and moves it. Keyed by window class.
-MANAGED = {
-    "firefox": {"spawn": "firefox --new-window", "move": "firefox"},
-    "obsidian": {"spawn": "obsidian-remote new-window", "move": "obsidian"},
-}
+# Apps that restore their own tabs/windows on launch. For these we don't launch
+# per-window: `save` records which window (by its active tab/note) belongs on
+# each workspace (`restore=<class>`), and `restore` lets the app reopen its
+# windows, then moves each to the workspace whose saved identity matches.
+MATCH_APPS = {"firefox", "obsidian"}
+
+# How to start each match-app so it restores its session.
+MATCH_START = {"firefox": ["firefox"], "obsidian": ["obsidian-remote"]}
+
+
+def window_identity(cls: str, title: str) -> str:
+    """A stable per-window identity from its title: the active tab/note, with the
+    app's constant suffix stripped. Used to match saved windows to restored ones."""
+    t = (title or "").strip()
+    if cls == "firefox":
+        t = re.sub(r"\s+[—–-]\s+Mozilla Firefox$", "", t)
+    elif cls == "obsidian":
+        t = re.sub(r"\s+-\s+Obsidian(\s+[\d.]+)?$", "", t)  # -> "<note> - <vault>"
+    return t.strip()
 
 
 def state_file() -> Path:
@@ -191,6 +202,52 @@ def obsidian_ensure_running():
             return
 
 
+def windows_of_class_detailed(cls: str):
+    cls = cls.lower()
+    return [
+        (c["address"], c.get("title") or "")
+        for c in hyprctl_json("clients")
+        if (c.get("class") or "").lower() == cls
+    ]
+
+
+def start_match_app(cls: str):
+    cmd = MATCH_START.get(cls)
+    if cmd:
+        subprocess.Popen(cmd, start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def match_and_move(cls, items):
+    """items = [(ws, identity)]. The app restores its own windows; wait for them,
+    then move each to the workspace whose saved identity matches its active
+    tab/note. Returns how many windows were placed."""
+    if not windows_of_class(cls):
+        start_match_app(cls)
+    target = len(items)
+    end = time.monotonic() + 25
+    while time.monotonic() < end:
+        ready = [t for _, t in windows_of_class_detailed(cls)
+                 if window_identity(cls, t)]
+        if len(ready) >= target:
+            break
+        time.sleep(0.5)
+    time.sleep(0.5)  # let late titles settle
+    wanted = list(items)
+    used = [False] * len(wanted)
+    moved = 0
+    for addr, title in windows_of_class_detailed(cls):
+        ident = window_identity(cls, title)
+        for i, (ws, wident) in enumerate(wanted):
+            if not used[i] and wident == ident:
+                subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                                f"{ws},address:{addr}"], check=False)
+                used[i] = True
+                moved += 1
+                break
+    return moved
+
+
 # --- entry <-> text --------------------------------------------------------
 
 _FLOAT_RE = re.compile(r"\s+float(?:\s+(\S+))?$")
@@ -205,6 +262,7 @@ def parse_entry(line: str):
     floatspec = None
     appclass = None
     moveclass = None
+    restoreclass = None
     changed = True
     while changed:
         changed = False
@@ -236,17 +294,26 @@ def parse_entry(line: str):
             s = s[: m.start()].rstrip()
             changed = True
             continue
+        m = re.search(r"\s+restore=(\S+)$", s)
+        if m:
+            restoreclass = m.group(1)
+            s = s[: m.start()].rstrip()
+            changed = True
+            continue
     if not s:
         return None
     return {"cmd": s, "skip": skip, "float": floatspec,
-            "class": appclass, "move": moveclass}
+            "class": appclass, "move": moveclass, "restore": restoreclass}
 
 
 def format_entry(e) -> str:
     flags = []
     if e.get("float") is not None:
         flags.append("float" + (f" {e['float']}" if e["float"] else ""))
-    if e.get("move"):
+    if e.get("restore"):
+        # The text is the window's active tab/note identity, not a command.
+        flags.append(f"restore={e['restore']}")
+    elif e.get("move"):
         # move= carries the class and marks this as a spawn-and-move entry.
         flags.append(f"move={e['move']}")
     else:
@@ -348,13 +415,14 @@ def collect(target_domains):
         if target_domains is not None and d not in target_domains:
             continue
         cls = c.get("class") or ""
-        managed = MANAGED.get(cls.lower())
-        if managed:
-            cmd = managed["spawn"]
-            move = managed["move"]
+        restore = None
+        if cls.lower() in MATCH_APPS:
+            # The app restores its own tabs; record which window (by active
+            # tab/note) belongs here, and match+move it on restore.
+            cmd = window_identity(cls.lower(), c.get("title"))
+            restore = cls.lower()
         else:
             cmd = launch_command(c.get("pid", -1), cls)
-            move = None
         if not cmd:
             continue
         model[d][slot_of(wid)].append(
@@ -363,7 +431,8 @@ def collect(target_domains):
                 "skip": False,
                 "float": "" if c.get("floating") else None,
                 "class": cls,
-                "move": move,
+                "move": None,
+                "restore": restore,
             }
         )
     return model
@@ -427,16 +496,26 @@ def cmd_restore(args):
                 if not e["skip"]:
                     plan.append((wid, e))
 
-    # Obsidian is single-instance and restores its own windows: clear its popout
-    # list so a fresh launch opens only the main window, then let us own the rest.
-    if not args.dry_run and any(e.get("move") == "obsidian" for _, e in plan):
+    # `restore=` entries are matched to app-restored windows by identity (grouped,
+    # handled after the loop); everything else is placed/spawned directly.
+    direct = []
+    match_groups = defaultdict(list)  # class -> [(ws, identity)]
+    for wid, e in plan:
+        if e.get("restore"):
+            match_groups[e["restore"]].append((wid, e["cmd"]))
+        else:
+            direct.append((wid, e))
+
+    # Manual move=obsidian (blank-window) path clears Obsidian's popouts so a
+    # fresh launch opens only the main window. (restore=obsidian keeps them.)
+    if not args.dry_run and any(e.get("move") == "obsidian" for _, e in direct):
         obsidian_clear_floating()
         obsidian_ensure_running()
 
     launched = 0
     skipped = 0
     obsidian_main_used = False
-    for wid, e in plan:
+    for wid, e in direct:
         key = (e.get("move") or e.get("class") or cmd_appkey(e["cmd"])).lower()
         if key and key in present[wid]:
             print(f"ws {wid}: {e['cmd']}  [already open — skip]")
@@ -474,6 +553,20 @@ def cmd_restore(args):
         present[wid].add(key)
         launched += 1
         time.sleep(SPAWN_GAP)
+
+    # restore= groups: let each app reopen its own windows, then move each to the
+    # workspace whose saved active-tab/note identity matches.
+    for cls, items in match_groups.items():
+        if args.dry_run:
+            for ws, ident in items:
+                print(f"ws {ws}: match {cls} window [{ident}]")
+                launched += 1
+            continue
+        moved = match_and_move(cls, items)
+        launched += moved
+        if moved < len(items):
+            print(f"{cls}: matched {moved}/{len(items)} window(s)",
+                  file=sys.stderr)
 
     verb = "would restore" if args.dry_run else "restored"
     tail = f" (skipped {skipped} already-open)" if skipped else ""

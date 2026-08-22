@@ -1,8 +1,10 @@
 # hypr-session Spec
 
-**Status:** Phase A/B implemented (save/restore/edit, dedup guard, `move=`
-spawn-and-move for Firefox/Obsidian). Obsidian cold-start orchestration needs a
-real-reboot validation. Phase C (float geometry) not started.
+**Status:** Phase A/B implemented (save/restore/edit, dedup guard). Firefox &
+Obsidian handled by `restore=` identity-match (app restores its own tabs; we
+match+move by active tab/note) — verified live for warm windows; cold-start
+(app not yet running) validated at reboot. `move=` spawn-and-move kept as a
+blank-window alternative. Phase C (float geometry) not started.
 **Target hosts:** thinkpad-t14, framework-13 (+ external monitors)
 **Tool home:** `nixos-config` (Nix-packaged), state per-device
 
@@ -92,9 +94,11 @@ domain 3:
 - `app=<class>` = the window class, written by `save` only when it isn't obvious
   from the command (used by restore's "already open" check, below). Optional on
   hand-added lines — restore falls back to the command's basename.
-- `move=<class>` = spawn-and-move entry (single-instance apps): run the command,
-  wait for a new window of `<class>`, then move it here — instead of
-  `[workspace N silent]`. See the Firefox/Obsidian section below.
+- `restore=<class>` = identity-match entry (Firefox/Obsidian): the line text is
+  the window's active tab/note; the app restores its own windows and restore
+  moves the matching one here. What `save` auto-writes for these apps.
+- `move=<class>` = spawn-and-move alternative: run the command, wait for a new
+  window of `<class>`, move it here. For fresh/blank windows; not auto-written.
 - Slot → workspace id uses the standard formula (`domain 1` special-cased).
 
 ## Commands
@@ -173,43 +177,49 @@ front). Then, for the requested (or current) domain, per non-`skip` entry:
   is attached is an open implementation detail.
 - **Tiled arrangement** drifts with spawn-order timing; consciously not chased.
 
-## Multi-window single-instance apps (Firefox, Obsidian) — `move=`
+## Multi-window single-instance apps (Firefox, Obsidian) — `restore=`
 
-Single-instance apps can't be placed by relaunching: `[workspace N silent]
-firefox` only works for the *first* window; a second launch hands off to the
-running process and that window ignores the rule. The fix (implemented) is
-**spawn-and-move**, marked by a `move=<class>` flag: `restore` runs the spawn
-command, waits for a *new* window of that class to appear, then
-`movetoworkspacesilent`s it. Done **one entry at a time**, so the new window is
-never ambiguous — fully deterministic, and no profiles or windowrules needed.
+Single-instance apps can't be placed by relaunching, and we don't need to: they
+**restore their own tabs/windows** on launch (Firefox "Open previous windows and
+tabs"; Obsidian's `workspace.json`). So the tool doesn't capture tab *content* —
+it captures the **placement mapping** and matches by each window's **active
+tab/note** (read from the window title), which survives a restart.
 
-`save` auto-detects these apps (the `MANAGED` table) and writes a spawn template:
+The `restore=<class>` flag marks these entries. The line text is the window's
+**identity** (its active tab/note, app suffix stripped), not a command:
 
-- **Firefox** → `firefox --new-window   move=firefox`. `--new-window` makes a real
-  new window inside your *existing* session (shared logins), which we then move.
-  Blank by default — **edit in the URLs** you want per window:
-  `firefox --new-window https://a.com https://b.com   move=firefox`. (Turn off
-  Firefox's "restore previous session" so a window opens with *only* those tabs.)
-- **Obsidian** → `obsidian-remote new-window   move=obsidian`, using the user's
-  Local REST API wrapper (`modules/obsidian-ipc.nix`) which fires the
-  `workspace:new-window` command → a blank placeable window. Hand-edit to
-  `obsidian-remote open-note "Note"` for a specific note.
+```
+    slot 2:                      # -> workspace 2
+        Settings                                   restore=firefox
+    slot 3:                      # -> workspace 3
+        youtube watch later videos - zettelkasten  restore=obsidian
+```
 
-### Obsidian's own restore has to be neutralised
-Obsidian reopens the main window **plus** everything in the vault's
-`.obsidian/workspace.json` → `floating.children` (its popout windows) on every
-launch — there's no settings toggle for it. So before launching, restore
-**empties `floating.children`** in the open vault's `workspace.json` (leaving all
-other settings intact), so a fresh launch opens only the main window. Then:
+- **`save`** (auto, for classes in `MATCH_APPS`): records `window_identity` —
+  Firefox `"<tab> — Mozilla Firefox"` → `<tab>`; Obsidian
+  `"<note> - <vault> - Obsidian <ver>"` → `<note> - <vault>`.
+- **`restore`**: groups `restore=` entries by class, starts the app if it isn't
+  running (it reopens its own windows via `MATCH_START`), waits for the windows
+  and their titles to populate, then moves each to the workspace whose saved
+  identity matches. Identity-based, **not order-based** — respects "which window
+  where." No profiles, no windowrules, no manual URLs.
 
-- the **first** Obsidian slot reuses that main window (just moves it),
-- **later** Obsidian slots spawn new windows via `obsidian-remote new-window`.
+Caveat: needs each window's active tab/note to be **distinct** (two windows with
+the same active tab are matched in file order among the duplicates). Verified
+live: a real `restore --all` matched all 6 Firefox/Obsidian windows and placed
+each correctly. Cold-start (app not yet running) is validated at reboot.
 
-Same-vault windows are interchangeable (blank), so "which window goes where"
-doesn't matter — order-of-open is fine here.
+### `move=` — the blank-window alternative (secondary)
+A `move=<class>` entry instead *spawns* a window and moves it (e.g.
+`firefox --new-window <urls>  move=firefox`, or `obsidian-remote new-window
+move=obsidian`). Used only if you want fresh/blank windows rather than your
+restored session; `save` no longer emits it. For `move=obsidian`, restore first
+empties the vault's `workspace.json` `floating.children` so only a blank main
+window opens, reuses it for the first slot, and spawns the rest via the Local
+REST API wrapper (`modules/obsidian-ipc.nix`).
 
-Rule of thumb: for native single-window apps, direct `[workspace N silent]`
-placement; for single-instance multi-window apps, `move=` spawn-and-move.
+Rule of thumb: native single-window apps → direct `[workspace N silent]`;
+single-instance apps with their own session → `restore=` (identity match).
 
 ## Deferred / future enhancements
 
