@@ -1,10 +1,10 @@
 # hypr-session Spec
 
 **Status:** Phase A/B implemented (save/restore/edit, dedup guard). Firefox &
-Obsidian handled by `restore=` identity-match (app restores its own tabs; we
-match+move by active tab/note) — verified live for warm windows; cold-start
-(app not yet running) validated at reboot. `move=` spawn-and-move kept as a
-blank-window alternative. Phase C (float geometry) not started.
+Obsidian via `restore=` identity-match (app restores its own tabs; match+move by
+active tab/note). Terminals via `move=` spawn-and-move, reattaching to their tmux
+session (title = session name). All verified via the tool; cold-start runs at
+reboot. Phase C (float geometry) not started.
 **Target hosts:** thinkpad-t14, framework-13 (+ external monitors)
 **Tool home:** `nixos-config` (Nix-packaged), state per-device
 
@@ -219,7 +219,20 @@ window opens, reuses it for the first slot, and spawns the rest via the Local
 REST API wrapper (`modules/obsidian-ipc.nix`).
 
 Rule of thumb: native single-window apps → direct `[workspace N silent]`;
-single-instance apps with their own session → `restore=` (identity match).
+single-instance apps with their own session → `restore=` (identity match);
+single-instance apps we spawn (terminals) → `move=`.
+
+### Terminals (ghostty + tmux)
+ghostty is single-instance too, so terminals use `move=` spawn-and-move. tmux
+`set-titles-string '#S'` (added to `modules/tmux.nix`) makes each terminal's
+window title its **tmux session name** — the only per-window signal, since all
+ghostty windows share one PID. So `save` records
+`ghostty -e tmux new -As <session>  move=com.mitchellh.ghostty`; on restore it
+spawns the terminal, which reattaches to that session (tmux-continuum has already
+restored the session's content) and is moved into place. Plain (non-tmux)
+terminals save as bare `ghostty`. Verified end-to-end via the tool. Not handled:
+reattaching an *existing* terminal that's on the wrong session (would need
+keystroke injection) — restore just spawns the right ones and dedups the rest.
 
 ## Deferred / future enhancements
 
@@ -229,14 +242,10 @@ single-instance apps with their own session → `restore=` (identity match).
   `openwindow` IPC event and sweep matching windows to their slot as the app
   restores them (same socket2 machinery as Phase C geometry). This is the only
   robust way to place same-vault Obsidian windows.
-- **tmux-session-aware terminal restore** (wanted, but parked). Instead of
-  relaunching a bare `kitty`, detect which tmux session each terminal has
-  attached and reattach it, e.g. `kitty -e tmux new -As <session>`. The window
-  gets its actual working context back, not an empty shell. Capture is the hard
-  part: map each terminal window → its pid → the tmux client attached on that
-  terminal's tty (`tmux list-clients -F '#{client_tty} #{session_name}'` joined
-  against the terminal's controlling tty), then emit the reattach command in
-  place of the bare one. Non-trivial matching; deferred, not dropped.
+- **tmux-session-aware terminal restore** — *implemented*, see "Terminals
+  (ghostty + tmux)" above. (The tty/pid correlation originally sketched here was
+  unworkable because ghostty is single-instance; solved instead by putting the
+  session name in the window title via tmux `set-titles-string '#S'`.)
 - **cwd restore for plain terminals** — a shell with no tmux loses its working
   directory (`/proc` cmdline has no cwd). Could read `/proc/<pid>/cwd`, but this
   is subsumed by the tmux work above for the common case. Deferred.

@@ -37,6 +37,23 @@ MATCH_APPS = {"firefox", "obsidian"}
 # How to start each match-app so it restores its session.
 MATCH_START = {"firefox": ["firefox"], "obsidian": ["obsidian-remote"]}
 
+# Terminal: single-instance, so it needs spawn-and-move (move=). If a terminal's
+# title is a tmux session name (tmux `set-titles-string '#S'`), we record a
+# reattach command so restore reopens it on that session (continuum restores the
+# session's content); otherwise a plain terminal.
+GHOSTTY_CLASS = "com.mitchellh.ghostty"
+
+
+def tmux_sessions():
+    try:
+        out = subprocess.run(
+            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return set()
+    return {ln for ln in out.splitlines() if ln}
+
 
 def window_identity(cls: str, title: str) -> str:
     """A stable per-window identity from its title: the active tab/note, with the
@@ -410,6 +427,7 @@ def collect(target_domains):
     target_domains=None means every domain that has windows.
     """
     model = defaultdict(lambda: defaultdict(list))
+    sessions = tmux_sessions()
     for c in hyprctl_json("clients"):
         wid = c.get("workspace", {}).get("id", 0)
         if wid < 1:  # special/scratchpad/invalid
@@ -419,11 +437,19 @@ def collect(target_domains):
             continue
         cls = c.get("class") or ""
         restore = None
+        move = None
         if cls.lower() in MATCH_APPS:
             # The app restores its own tabs; record which window (by active
             # tab/note) belongs here, and match+move it on restore.
             cmd = window_identity(cls.lower(), c.get("title"))
             restore = cls.lower()
+        elif cls == GHOSTTY_CLASS:
+            title = (c.get("title") or "").strip()
+            if title in sessions:  # title is a tmux session name → reattach
+                cmd = f"ghostty -e tmux new -As {shlex.quote(title)}"
+            else:
+                cmd = "ghostty"
+            move = cls  # single-instance → spawn-and-move
         else:
             cmd = launch_command(c.get("pid", -1), cls)
         if not cmd:
@@ -434,7 +460,7 @@ def collect(target_domains):
                 "skip": False,
                 "float": "" if c.get("floating") else None,
                 "class": cls,
-                "move": None,
+                "move": move,
                 "restore": restore,
             }
         )

@@ -133,6 +133,13 @@ in
       set -ga terminal-features ",xterm-ghostty:ccolour,cstyle"
       set -ga terminal-features ",ghostty:ccolour,cstyle"
 
+      ##### Window titles #####
+      # Put the session name in the terminal window title so hypr-session can see
+      # which tmux session each terminal is attached to (ghostty is single-instance,
+      # so the title is the only per-window signal from outside).
+      set -g set-titles on
+      set -g set-titles-string '#S'
+
       ##### Resurrect / Continuum #####
       set -g @resurrect-dir '~/.config/tmux/resurrect'
       set -g @resurrect-strategy-nvim 'session'
