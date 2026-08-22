@@ -94,6 +94,7 @@ in
     hyprlock
     brightnessctl
     playerctl
+    wayland-pipewire-idle-inhibit
     blackoutOn
     blackoutOff
   ];
@@ -117,23 +118,32 @@ in
       after_sleep_cmd = loginctl lock-session; hyprctl dispatch dpms on; sleep 0.5; /run/current-system/sw/bin/screen-blackout-off
     }
   
-    # 5 mins: Screensaver (Blackout) - only if no player is playing
+    # Idle is inhibited at the compositor level while audio is actually playing
+    # through PipeWire (see the wayland-pipewire-idle-inhibit user service below),
+    # so these timers no longer need to poll `playerctl`. The old
+    # `playerctl status | grep Playing ||` guard was evaluated only at the instant
+    # each timeout crossed and never retried — so if music was playing then and
+    # ended later with no further input, the stage stayed latched-off and the
+    # machine never idled. The inhibitor releases the moment sound stops, letting
+    # these fire normally on the next crossing.
+
+    # 5 mins: Screensaver (Blackout)
     listener {
       timeout = 300
-      on-timeout = playerctl status 2>/dev/null | grep -q "Playing" || ( ${blackoutCmd} )
+      on-timeout = ${blackoutCmd}
       on-resume = ${unblackoutCmd}
     }
 
-    # 10 mins: Lock Screen - only if no player is playing
+    # 10 mins: Lock Screen
     listener {
       timeout = 600
-      on-timeout = playerctl status 2>/dev/null | grep -q "Playing" || loginctl lock-session
+      on-timeout = loginctl lock-session
     }
-  
+
     # 15 mins: Turn off display (DPMS)
     listener {
       timeout = 900
-      on-timeout = playerctl status 2>/dev/null | grep -q "Playing" || hyprctl dispatch dpms off
+      on-timeout = hyprctl dispatch dpms off
       on-resume = hyprctl dispatch dpms on
     }
   '';
@@ -234,6 +244,25 @@ in
     serviceConfig = {
       Environment = [ "PATH=/run/current-system/sw/bin" ];
       ExecStart = "${pkgs.hypridle}/bin/hypridle";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+  };
+
+  # Hold a Wayland idle inhibitor while sound is actually playing through
+  # PipeWire, so hypridle's timers above stay paused during playback and resume
+  # the instant audio stops. Replaces the old per-listener `playerctl` guard,
+  # which latched off when playback outlasted the idle thresholds. Only media
+  # longer than 5s (the tool's default) inhibits, so notification dings don't
+  # keep the screen awake. Mirrors the hypridle user service so it inherits the
+  # same session Wayland env.
+  systemd.user.services.wayland-pipewire-idle-inhibit = {
+    description = "Inhibit Wayland idle while audio plays through PipeWire";
+    wantedBy = [ "default.target" ];
+    after = [ "pipewire.service" ];
+    serviceConfig = {
+      Environment = [ "PATH=/run/current-system/sw/bin" ];
+      ExecStart = "${pkgs.wayland-pipewire-idle-inhibit}/bin/wayland-pipewire-idle-inhibit --wayland";
       Restart = "on-failure";
       RestartSec = 1;
     };
