@@ -13,6 +13,7 @@
     ../../modules/hypr-dispatch.nix
     ../../modules/wol-sauron.nix
     ../../modules/hypr-idle-lock.nix
+    ../../modules/hypr-session-autosave.nix
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix

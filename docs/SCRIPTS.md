@@ -347,12 +347,19 @@ hypr-session restore --dry-run    # print what restore would do, without doing i
 
 Typical workflow:
 ```bash
-# arrange your windows how you like them, then RIGHT BEFORE a reboot:
-hypr-session save --all
+# your session is autosaved every 15 min (see below), so a reboot usually only
+# needs the restore. Run `save --all` by hand only if you want the freshest
+# snapshot right before rebooting:
+hypr-session save --all       # optional: capture the very latest arrangement
 sudo reboot
 # after logging back in:
 hypr-session restore --all
 ```
+
+Automatic saving:
+- A systemd **user** timer (`modules/hypr-session-autosave.nix`) runs `hypr-session save --all` every 15 min while Hyprland is up — the same idea as tmux-continuum. So the state file is normally already current at reboot; the manual `save --all` above is just for capturing changes made in the last few minutes.
+- Because autosave overwrites the file (last-write-wins), it's a live snapshot, not a hand-curated doc. If you want a curated `edit`, pause the timer first: `systemctl --user stop hypr-session-save.timer` (re-enable with `start`).
+- Inspect it: `systemctl --user list-timers hypr-session-save.timer`.
 
 State file:
 - `~/.local/state/hypr-session/<hostname>.conf` — machine-local, hand-editable, grouped domain → slot → windows. `save` (re)writes it; `edit` opens it.
