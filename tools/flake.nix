@@ -12,6 +12,7 @@
       packages.${system} = {
         math-ocr = pkgs.callPackage ./pkgs/math-ocr.nix { };
         record-session = pkgs.callPackage ./pkgs/record-session.nix { };
+        hypr-session = pkgs.callPackage ./pkgs/hypr-session.nix { };
       };
 
       # convenience

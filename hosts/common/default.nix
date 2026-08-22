@@ -454,6 +454,7 @@
     breeze-hacked-cursor
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.math-ocr
     nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.record-session
+    nix-tools.packages.${pkgs.stdenv.hostPlatform.system}.hypr-session
 
     # System commands
     (pkgs.writeShellScriptBin "seed-local-git-server"
