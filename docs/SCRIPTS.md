@@ -331,6 +331,49 @@ Notes:
 - WAV files are kept (not deleted) so the audio can be re-transcribed later with a different model if quality matters.
 - Source script: `tools/scripts/record-session.sh`; package wrapper: `tools/pkgs/record-session.nix`; wired into `hosts/common/default.nix` via `nix-tools.packages.<system>.record-session`.
 
+## `hypr-session` (system command)
+Purpose:
+- save and restore the 2D Hyprland workspace layout — which apps/windows sit on which workspace — so a reboot no longer means reopening everything and dragging it back into place.
+
+Usage:
+```bash
+hypr-session save                 # snapshot the current domain (its row of slots)
+hypr-session save --all           # snapshot the whole 2D grid
+hypr-session edit                 # open the session file in $EDITOR
+hypr-session restore [domain]     # restore one domain (default: the one you're on)
+hypr-session restore --all        # restore every domain
+hypr-session restore --dry-run    # print what restore would do, without doing it
+```
+
+Typical workflow:
+```bash
+# arrange your windows how you like them, then RIGHT BEFORE a reboot:
+hypr-session save --all
+sudo reboot
+# after logging back in:
+hypr-session restore --all
+```
+
+State file:
+- `~/.local/state/hypr-session/<hostname>.conf` — machine-local, hand-editable, grouped domain → slot → windows. `save` (re)writes it; `edit` opens it.
+
+How each app is brought back:
+- **Native single-window apps** (evince, etc.) — launched directly onto their workspace.
+- **Firefox / Obsidian** (`restore=` lines) — the app restores its own tabs/notes; hypr-session matches each window by its active tab/note and moves it to the right workspace. Nothing to type in.
+- **Terminals** (`move=` lines) — a new ghostty window is spawned running `tmux new -As <session>`, reattaching to that tmux session, then moved into place.
+- `skip` on a line keeps it in the file as a menu item without launching it.
+
+Prerequisites (already configured on this system):
+- **Firefox**: "Open previous windows and tabs" enabled, so windows come back with their tabs.
+- **Obsidian**: the Local REST API wrapper (`modules/obsidian-ipc.nix` → `obsidian-remote`).
+- **tmux**: `set-titles-string '#S'` (`modules/tmux.nix`) so each terminal's title is its session name; tmux-continuum restores the session contents on boot.
+
+Notes:
+- Firefox/Obsidian are matched by their **active tab/note** — so run `save --all` right before rebooting, and don't switch a window's active tab afterward, or that window won't be recognised.
+- Terminals: on a cold boot let tmux/continuum finish restoring sessions before `restore --all` (e.g. open one terminal first), or a terminal may attach to an empty session instead of your restored one.
+- `restore` never re-opens an app already on its target workspace (dedup), so it is safe to re-run.
+- Source script: `tools/scripts/hypr-session.py`; package wrapper: `tools/pkgs/hypr-session.nix`; wired into `hosts/common/default.nix` via `nix-tools.packages.<system>.hypr-session`. Design spec: `projects/project-memory/hypr-session-spec.md` in the workspace.
+
 ## `doc-scan.py`
 Purpose:
 - turn a phone photo of a document into a flatbed-style scan
