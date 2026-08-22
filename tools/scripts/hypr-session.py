@@ -28,6 +28,15 @@ STATE_DIR = (
 # Delay between spawns so windows tile in a stable order.
 SPAWN_GAP = 0.15
 
+# Single-instance apps: relaunching the binary won't create a placeable window,
+# so instead of `[workspace N silent] cmd` we spawn a window and MOVE it. `save`
+# records the spawn command + `move=<class>`; `restore` runs it, waits for the
+# new window of that class, and moves it. Keyed by window class.
+MANAGED = {
+    "firefox": {"spawn": "firefox --new-window", "move": "firefox"},
+    "obsidian": {"spawn": "obsidian-remote new-window", "move": "obsidian"},
+}
+
 
 def state_file() -> Path:
     return STATE_DIR / f"{socket.gethostname()}.conf"
@@ -112,6 +121,76 @@ def launch_command(pid: int, cls: str):
     return raw
 
 
+def windows_of_class(cls: str):
+    cls = cls.lower()
+    return {
+        c["address"]
+        for c in hyprctl_json("clients")
+        if (c.get("class") or "").lower() == cls
+    }
+
+
+def spawn_and_move(cmd: str, cls: str, wid: int):
+    """Run cmd, wait for a NEW window of class `cls`, move it to workspace wid.
+    Sequential (one window at a time) so the new window is unambiguous."""
+    before = windows_of_class(cls)
+    subprocess.Popen(cmd, shell=True, start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(30):  # up to ~15s
+        time.sleep(0.5)
+        fresh = windows_of_class(cls) - before
+        if fresh:
+            addr = sorted(fresh)[0]
+            subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                            f"{wid},address:{addr}"], check=False)
+            return addr
+    return None
+
+
+def obsidian_open_vault():
+    cfg = Path.home() / ".config" / "obsidian" / "obsidian.json"
+    try:
+        vaults = json.loads(cfg.read_text()).get("vaults", {})
+    except (OSError, ValueError):
+        return None
+    openv = [v.get("path") for v in vaults.values() if v.get("open")]
+    if openv:
+        return openv[0]
+    ranked = sorted(vaults.values(), key=lambda v: v.get("ts", 0), reverse=True)
+    return ranked[0].get("path") if ranked else None
+
+
+def obsidian_clear_floating():
+    """Empty the popout-window list so a fresh launch opens only the main
+    window, letting hypr-session own the extra windows. Other settings intact."""
+    vault = obsidian_open_vault()
+    if not vault:
+        return
+    wsf = Path(vault) / ".obsidian" / "workspace.json"
+    try:
+        data = json.loads(wsf.read_text())
+    except (OSError, ValueError):
+        return
+    fl = data.get("floating")
+    if isinstance(fl, dict) and fl.get("children"):
+        fl["children"] = []
+        try:
+            wsf.write_text(json.dumps(data, indent=2))
+        except OSError:
+            pass
+
+
+def obsidian_ensure_running():
+    if windows_of_class("obsidian"):
+        return
+    subprocess.Popen(["obsidian-remote"], start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(40):  # up to ~20s for cold start
+        time.sleep(0.5)
+        if windows_of_class("obsidian"):
+            return
+
+
 # --- entry <-> text --------------------------------------------------------
 
 _FLOAT_RE = re.compile(r"\s+float(?:\s+(\S+))?$")
@@ -125,6 +204,7 @@ def parse_entry(line: str):
     skip = False
     floatspec = None
     appclass = None
+    moveclass = None
     changed = True
     while changed:
         changed = False
@@ -150,20 +230,31 @@ def parse_entry(line: str):
             s = s[: m.start()].rstrip()
             changed = True
             continue
+        m = re.search(r"\s+move=(\S+)$", s)
+        if m:
+            moveclass = m.group(1)
+            s = s[: m.start()].rstrip()
+            changed = True
+            continue
     if not s:
         return None
-    return {"cmd": s, "skip": skip, "float": floatspec, "class": appclass}
+    return {"cmd": s, "skip": skip, "float": floatspec,
+            "class": appclass, "move": moveclass}
 
 
 def format_entry(e) -> str:
     flags = []
     if e.get("float") is not None:
         flags.append("float" + (f" {e['float']}" if e["float"] else ""))
-    # Record class only when it isn't obvious from the command, so restore can
-    # tell "already open" reliably without cluttering every line.
-    cls = e.get("class")
-    if cls and cls.lower() != cmd_appkey(e["cmd"]):
-        flags.append(f"app={cls}")
+    if e.get("move"):
+        # move= carries the class and marks this as a spawn-and-move entry.
+        flags.append(f"move={e['move']}")
+    else:
+        # Record class only when it isn't obvious from the command, so restore
+        # can tell "already open" reliably without cluttering every line.
+        cls = e.get("class")
+        if cls and cls.lower() != cmd_appkey(e["cmd"]):
+            flags.append(f"app={cls}")
     if e.get("skip"):
         flags.append("skip")
     body = e["cmd"]
@@ -257,7 +348,13 @@ def collect(target_domains):
         if target_domains is not None and d not in target_domains:
             continue
         cls = c.get("class") or ""
-        cmd = launch_command(c.get("pid", -1), cls)
+        managed = MANAGED.get(cls.lower())
+        if managed:
+            cmd = managed["spawn"]
+            move = managed["move"]
+        else:
+            cmd = launch_command(c.get("pid", -1), cls)
+            move = None
         if not cmd:
             continue
         model[d][slot_of(wid)].append(
@@ -265,7 +362,8 @@ def collect(target_domains):
                 "cmd": cmd,
                 "skip": False,
                 "float": "" if c.get("floating") else None,
-                "class": c.get("class") or "",
+                "class": cls,
+                "move": move,
             }
         )
     return model
@@ -316,8 +414,8 @@ def cmd_restore(args):
         if wid >= 1:
             present[wid].add((c.get("class") or "").lower())
 
-    launched = 0
-    skipped = 0
+    # Flatten to an ordered plan so spawn-and-move entries run sequentially.
+    plan = []  # (wid, entry)
     for d in domains:
         if d not in blocks:
             print(f"domain {d}: nothing saved, skipping", file=sys.stderr)
@@ -326,26 +424,60 @@ def cmd_restore(args):
         for slot in sorted(slots):
             wid = workspace_id(d, slot)
             for e in slots[slot]:
-                if e["skip"]:
-                    continue
-                key = (e.get("class") or cmd_appkey(e["cmd"])).lower()
-                if key and key in present[wid]:
-                    print(f"ws {wid}: {e['cmd']}  [already open — skip]")
-                    skipped += 1
-                    continue
-                if args.dry_run:
-                    print(f"ws {wid}: {e['cmd']}")
-                else:
-                    subprocess.run(
-                        ["hyprctl", "dispatch", "exec",
-                         f"[workspace {wid} silent] {e['cmd']}"],
-                        check=False,
-                    )
-                    time.sleep(SPAWN_GAP)
+                if not e["skip"]:
+                    plan.append((wid, e))
+
+    # Obsidian is single-instance and restores its own windows: clear its popout
+    # list so a fresh launch opens only the main window, then let us own the rest.
+    if not args.dry_run and any(e.get("move") == "obsidian" for _, e in plan):
+        obsidian_clear_floating()
+        obsidian_ensure_running()
+
+    launched = 0
+    skipped = 0
+    obsidian_main_used = False
+    for wid, e in plan:
+        key = (e.get("move") or e.get("class") or cmd_appkey(e["cmd"])).lower()
+        if key and key in present[wid]:
+            print(f"ws {wid}: {e['cmd']}  [already open — skip]")
+            skipped += 1
+            continue
+
+        move_cls = e.get("move")
+        if args.dry_run:
+            how = f"spawn+move[{move_cls}]" if move_cls else "place"
+            print(f"ws {wid}: {how}: {e['cmd']}")
+            launched += 1
+            continue
+
+        # First Obsidian slot reuses the main window the fresh launch already
+        # opened; later slots spawn new windows via obsidian-remote.
+        if move_cls == "obsidian" and not obsidian_main_used:
+            existing = sorted(windows_of_class("obsidian"))
+            if existing:
+                subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                                f"{wid},address:{existing[0]}"], check=False)
+                obsidian_main_used = True
+                present[wid].add("obsidian")
                 launched += 1
+                time.sleep(SPAWN_GAP)
+                continue
+
+        if move_cls:
+            spawn_and_move(e["cmd"], move_cls, wid)
+        else:
+            subprocess.run(
+                ["hyprctl", "dispatch", "exec",
+                 f"[workspace {wid} silent] {e['cmd']}"],
+                check=False,
+            )
+        present[wid].add(key)
+        launched += 1
+        time.sleep(SPAWN_GAP)
+
     verb = "would restore" if args.dry_run else "restored"
     tail = f" (skipped {skipped} already-open)" if skipped else ""
-    print(f"{verb} {launched} window(s) from {len(domains)} domain(s){tail}")
+    print(f"{verb} {launched} window(s){tail}")
 
 
 def cmd_edit(args):

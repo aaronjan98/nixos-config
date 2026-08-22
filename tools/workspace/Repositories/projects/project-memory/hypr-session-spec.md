@@ -1,6 +1,8 @@
 # hypr-session Spec
 
-**Status:** planned — not yet implemented
+**Status:** Phase A/B implemented (save/restore/edit, dedup guard, `move=`
+spawn-and-move for Firefox/Obsidian). Obsidian cold-start orchestration needs a
+real-reboot validation. Phase C (float geometry) not started.
 **Target hosts:** thinkpad-t14, framework-13 (+ external monitors)
 **Tool home:** `nixos-config` (Nix-packaged), state per-device
 
@@ -90,6 +92,9 @@ domain 3:
 - `app=<class>` = the window class, written by `save` only when it isn't obvious
   from the command (used by restore's "already open" check, below). Optional on
   hand-added lines — restore falls back to the command's basename.
+- `move=<class>` = spawn-and-move entry (single-instance apps): run the command,
+  wait for a new window of `<class>`, then move it here — instead of
+  `[workspace N silent]`. See the Firefox/Obsidian section below.
 - Slot → workspace id uses the standard formula (`domain 1` special-cased).
 
 ## Commands
@@ -168,48 +173,43 @@ front). Then, for the requested (or current) domain, per non-`skip` entry:
   is attached is an open implementation detail.
 - **Tiled arrangement** drifts with spawn-order timing; consciously not chased.
 
-## Multi-window single-instance apps (Firefox, Obsidian)
+## Multi-window single-instance apps (Firefox, Obsidian) — `move=`
 
-hypr-session launches *commands* and places the *windows those commands spawn*.
-It cannot open a "tab" — a tab is neither a window nor a process. And it can only
-reliably place the **first** window of a single-instance app: the first launch
-becomes the process (placeable), but a second launch hands off to the
-already-running process, so `[workspace N silent] <relaunch>` doesn't attach and
-that window opens on the current workspace. The app's own session-restore makes
-it worse by spawning a burst of windows hypr-session never placed. This is the
-"click Firefox and every window sprays out, none where I want them" problem.
+Single-instance apps can't be placed by relaunching: `[workspace N silent]
+firefox` only works for the *first* window; a second launch hands off to the
+running process and that window ignores the rule. The fix (implemented) is
+**spawn-and-move**, marked by a `move=<class>` flag: `restore` runs the spawn
+command, waits for a *new* window of that class to appear, then
+`movetoworkspacesilent`s it. Done **one entry at a time**, so the new window is
+never ambiguous — fully deterministic, and no profiles or windowrules needed.
 
-Two shapes of fix, by app:
+`save` auto-detects these apps (the `MANAGED` table) and writes a spawn template:
 
-- **Firefox → separate profiles + `--no-remote`** (fits Phase A cleanly). A
-  distinct profile with `--no-remote` starts a genuinely separate process, so
-  `[workspace N silent]` places it, and each profile restores its own session.
-  One entry per profile-window:
+- **Firefox** → `firefox --new-window   move=firefox`. `--new-window` makes a real
+  new window inside your *existing* session (shared logins), which we then move.
+  Blank by default — **edit in the URLs** you want per window:
+  `firefox --new-window https://a.com https://b.com   move=firefox`. (Turn off
+  Firefox's "restore previous session" so a window opens with *only* those tabs.)
+- **Obsidian** → `obsidian-remote new-window   move=obsidian`, using the user's
+  Local REST API wrapper (`modules/obsidian-ipc.nix`) which fires the
+  `workspace:new-window` command → a blank placeable window. Hand-edit to
+  `obsidian-remote open-note "Note"` for a specific note.
 
-      slot 3:                     # -> ws 13
-          firefox -P work --no-remote --new-window https://a.com https://b.com
-      slot 4:                     # -> ws 14
-          firefox -P reading --no-remote
+### Obsidian's own restore has to be neutralised
+Obsidian reopens the main window **plus** everything in the vault's
+`.obsidian/workspace.json` → `floating.children` (its popout windows) on every
+launch — there's no settings toggle for it. So before launching, restore
+**empties `floating.children`** in the open vault's `workspace.json` (leaving all
+other settings intact), so a fresh launch opens only the main window. Then:
 
-  List explicit URLs for deterministic tabs, or let each profile's own restore
-  handle it. No windowrules needed.
+- the **first** Obsidian slot reuses that main window (just moves it),
+- **later** Obsidian slots spawn new windows via `obsidian-remote new-window`.
 
-- **Obsidian → title-based windowrule** (no profile equivalent). Obsidian's
-  extra windows are all one process, so relaunching can't place them; route each
-  by title instead (Obsidian is `class:electron, title:.*Obsidian.*` here):
+Same-vault windows are interchangeable (blank), so "which window goes where"
+doesn't matter — order-of-open is fine here.
 
-      windowrulev2 = workspace 13 silent, class:^(electron)$, title:.*<Vault>.*
-
-  Works for restore-spawned and fuzzel-spawned windows alike, BUT needs stable,
-  distinguishable titles. That holds for *different vaults*; it does **not** hold
-  for multiple windows of the **same vault** (title varies only by active note).
-  Same-vault multi-window is the genuinely hard case — needs the placement-entry
-  idea below. (This user almost always works in one vault, so plain relaunch of
-  Obsidian will only reliably place one window; the rest need placement-entries.)
-
-Rule of thumb: keep each app's own tab/session memory — that's the feature.
-hypr-session's job is placement, not content; disabling an app's restore rarely
-helps and usually costs you the tabs.
+Rule of thumb: for native single-window apps, direct `[workspace N silent]`
+placement; for single-instance multi-window apps, `move=` spawn-and-move.
 
 ## Deferred / future enhancements
 
