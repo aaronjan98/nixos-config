@@ -219,33 +219,36 @@ def start_match_app(cls: str):
 
 
 def match_and_move(cls, items):
-    """items = [(ws, identity)]. The app restores its own windows; wait for them,
-    then move each to the workspace whose saved identity matches its active
-    tab/note. Returns how many windows were placed."""
+    """items = [(ws, identity)]. The app restores its own windows; as each one
+    appears AND its title populates, move it to the workspace whose saved
+    identity matches. Re-scans until all are placed or the deadline, so windows
+    that open late during a slow cold-start restore still get caught (a single
+    pass would miss them). Returns how many were placed."""
     if not windows_of_class(cls):
         start_match_app(cls)
-    target = len(items)
-    end = time.monotonic() + 25
-    while time.monotonic() < end:
-        ready = [t for _, t in windows_of_class_detailed(cls)
-                 if window_identity(cls, t)]
-        if len(ready) >= target:
+    wanted = list(items)
+    placed = [False] * len(wanted)
+    moved_addrs = set()
+    end = time.monotonic() + 30  # generous for cold-start session restore
+    while time.monotonic() < end and not all(placed):
+        for addr, title in windows_of_class_detailed(cls):
+            if addr in moved_addrs:
+                continue
+            ident = window_identity(cls, title)
+            if not ident:  # title not loaded yet — try again next scan
+                continue
+            for i, (ws, wident) in enumerate(wanted):
+                if not placed[i] and wident == ident:
+                    subprocess.run(
+                        ["hyprctl", "dispatch", "movetoworkspacesilent",
+                         f"{ws},address:{addr}"], check=False)
+                    placed[i] = True
+                    moved_addrs.add(addr)
+                    break
+        if all(placed):
             break
         time.sleep(0.5)
-    time.sleep(0.5)  # let late titles settle
-    wanted = list(items)
-    used = [False] * len(wanted)
-    moved = 0
-    for addr, title in windows_of_class_detailed(cls):
-        ident = window_identity(cls, title)
-        for i, (ws, wident) in enumerate(wanted):
-            if not used[i] and wident == ident:
-                subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
-                                f"{ws},address:{addr}"], check=False)
-                used[i] = True
-                moved += 1
-                break
-    return moved
+    return sum(placed)
 
 
 # --- entry <-> text --------------------------------------------------------
