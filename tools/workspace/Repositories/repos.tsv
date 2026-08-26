@@ -3,6 +3,7 @@ automation/pix2tex	pix2tex	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/p
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
 experiment/vulnlab	vulnlab	ssh://git@localhost/srv/git/repos/vulnlab.git
+lantern-dev	lantern-dev	sweetpea:/opt/lantern
 projects/arduino	arduino	ssh://git@localhost/srv/git/repos/arduino.git
 projects/canvas-accessibility-skill	canvas-accessibility-skill	ssh://git@localhost/srv/git/repos/canvas-accessibility-skill.git
 projects/context-harness	context-harness	ssh://git@localhost/srv/git/repos/context-harness.git
