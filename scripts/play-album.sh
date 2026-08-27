@@ -24,6 +24,12 @@ set -euo pipefail
 #   http://music.home/app/#/album/7xwaC1nzZ6ZyL9sN987JXS/show
 #                                  \____________________/  <- this
 
+# mpv lives in the per-user Nix profile, which the morning alarm's restricted
+# systemd PATH doesn't include (that's why the 6am run failed with "mpv: not
+# found"). Prepend it so we can find mpv whether run from a login shell or the
+# service. Harmless interactively.
+export PATH="/etc/profiles/per-user/$(id -un)/bin:${PATH}"
+
 ENV_FILE="${NAVIDROME_ENV:-$HOME/Repositories/projects/voice-assistant/orchestrator/.env}"
 
 get() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
