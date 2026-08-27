@@ -30,6 +30,7 @@ in {
     ./hardware-configuration.nix
     ../common/default.nix
     ../../modules/home-assistant.nix
+    ../../modules/morning-alarm.nix
     ../../modules/orchestrator.nix
     ../../modules/speakers-suspend-off.nix
     ../../modules/wifi-reliability.nix
@@ -49,6 +50,16 @@ in {
   # aj.hyprIdle.extraResumeCmd to "${config.aj.speakersSuspendOff.script} on" if
   # you later want that.)
   aj.hyprIdle.extraBlackoutCmd = "${config.aj.speakersSuspendOff.script} off";
+
+  # Morning alarm: turn the desk speakers on and stream a Navidrome album to
+  # them at a set time (see modules/morning-alarm.nix). Speakers are wired to
+  # this host's audio-out, so the alarm lives here only. The album/playlist is
+  # set by MORNING_ALBUM_ID in the orchestrator .env (change on the fly, no
+  # rebuild); only the time is declared here.
+  aj.morningAlarm = {
+    enable = true;
+    time = "06:00";   # every day at 6am
+  };
 
   # MT7925 wifi reliability (L1 ASPM disable + connectivity watchdog) lives in
   # ../../modules/wifi-reliability.nix. That targets ASPM per-device rather than
