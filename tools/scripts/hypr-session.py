@@ -43,6 +43,13 @@ MATCH_START = {"firefox": ["firefox"], "obsidian": ["obsidian-remote"]}
 # session's content); otherwise a plain terminal.
 GHOSTTY_CLASS = "com.mitchellh.ghostty"
 
+# Single-instance apps that only ever have ONE window (chat clients, etc.).
+# Relaunching them just focuses the existing window instead of spawning a new
+# one, so they can't be placed by launch. Instead we move the sole existing
+# window by class (no title identity needed — there's only one). Recorded as
+# `move=<class>`; restore uses move_existing_or_spawn. Extend as needed.
+SOLO_APPS = {"vesktop"}
+
 
 def tmux_sessions():
     try:
@@ -173,6 +180,18 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
                             f"{wid},address:{addr}"], check=False)
             return addr
     return None
+
+
+def move_existing_or_spawn(cmd: str, cls: str, wid: int):
+    """For single-instance single-window apps (SOLO_APPS, e.g. vesktop): move the
+    sole existing window of `cls` to workspace wid. Relaunching wouldn't make a
+    new window, so if none exists yet, spawn and wait for the first one."""
+    existing = sorted(windows_of_class(cls))
+    if existing:
+        subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                        f"{wid},address:{existing[0]}"], check=False)
+        return existing[0]
+    return spawn_and_move(cmd, cls, wid)
 
 
 def obsidian_open_vault():
@@ -450,6 +469,11 @@ def collect(target_domains):
             else:
                 cmd = "ghostty"
             move = cls  # single-instance → spawn-and-move
+        elif cls.lower() in SOLO_APPS:
+            # Single-instance, single-window → move the existing window on
+            # restore; keep a launch command for the case it isn't running yet.
+            cmd = launch_command(c.get("pid", -1), cls)
+            move = cls.lower()
         else:
             cmd = launch_command(c.get("pid", -1), cls)
         if not cmd:
@@ -552,8 +576,12 @@ def cmd_restore(args):
             continue
 
         move_cls = e.get("move")
+        # A single-instance single-window app is solo whether it was saved with a
+        # `move=` marker or as a bare command (older saves) — key catches both.
+        solo = key in SOLO_APPS
         if args.dry_run:
-            how = f"spawn+move[{move_cls}]" if move_cls else "place"
+            how = "move-existing" if solo else (
+                f"spawn+move[{move_cls}]" if move_cls else "place")
             print(f"ws {wid}: {how}: {e['cmd']}")
             launched += 1
             continue
@@ -571,7 +599,9 @@ def cmd_restore(args):
                 time.sleep(SPAWN_GAP)
                 continue
 
-        if move_cls:
+        if solo:
+            move_existing_or_spawn(e["cmd"], key, wid)
+        elif move_cls:
             spawn_and_move(e["cmd"], move_cls, wid)
         else:
             subprocess.run(

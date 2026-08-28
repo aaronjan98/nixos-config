@@ -368,6 +368,7 @@ How each app is brought back:
 - **Native single-window apps** (evince, etc.) — launched directly onto their workspace.
 - **Firefox / Obsidian** (`restore=` lines) — the app restores its own tabs/notes; hypr-session matches each window by its active tab/note and moves it to the right workspace. Nothing to type in.
 - **Terminals** (`move=` lines) — a new ghostty window is spawned running `tmux new -As <session>`, reattaching to that tmux session, then moved into place.
+- **Single-instance single-window apps** (vesktop, etc. — `SOLO_APPS`) — relaunching only focuses the one existing window, so hypr-session moves that window into place instead (spawning it only if it isn't running).
 - `skip` on a line keeps it in the file as a menu item without launching it.
 
 Prerequisites (already configured on this system):
