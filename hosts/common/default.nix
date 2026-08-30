@@ -475,7 +475,7 @@
       ExtensionSettings = {
         "contextforge-bridge@local" = {
           installation_mode = "force_installed";
-          install_url = "file:///home/aj/Repositories/projects/context-harness/d3daf66dd98445f98929-0.1.0.xpi";
+          install_url = "file:///home/aj/Repositories/projects/context-harness/contextforge-bridge-signed.xpi";
         };
       };
     };

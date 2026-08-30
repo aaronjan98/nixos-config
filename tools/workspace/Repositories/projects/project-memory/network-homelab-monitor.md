@@ -173,6 +173,17 @@ recurred, so this is uptime/firmware-leak driven, not update-driven.
   ONCE (2026-07-06); there is NO cron / systemd timer / idle-gate scheduling it, so `.216` has been up
   ~44 days — far past the accelerating 12d→3d degradation interval. The recurrence was expected.
   **Scheduling the reboot (+ uptime tracking) is higher-leverage than any new detector.**
+- *2026-08-29 — RESOLVED: idle-gated soft-reboot automation is LIVE (end-to-end verified).*
+  The mitigation now runs on **sweetpea via the Deco's own encrypted local API** (a **soft reboot**),
+  NOT the Kasa plug. Why the pivot: python-kasa can't drive the KP125M (TPAP firmware), and a
+  power-cut can't self-recover (the plug rides the mesh it reboots) — but the 5 GHz-rot fault leaves the
+  unit alive/manageable, which is the soft-reboot-friendly case. sweetpea logs into `.216`'s local API
+  (ported ha-tplink-deco's RSA+AES login → `~/deco-reboot/deco_soft_reboot.py`, cryptography+stdlib) and
+  reboots the master `58-04-4F-35-05-54`. Chain: LANtern brain (approval-gated backstop every 3d, suggests
+  an overnight slot) → `deco-reboot-runner` **systemd timer** (every 10 min) claims the ready job →
+  `deco-reboot-soft.sh` soft-reboots + confirms recovery by wired ping. Verified 2026-08-29: `.216` went
+  down and recovered in 113s, marked succeeded. Consequence: the Kasa plug is reclaimed,
+  `switch.deco_router` decommissioned from HA, and the `router_power` voice tool retired.
 
 **⚠️ Design trap:** a naive "is the `Connect here` SSID present?" check would have PASSED
 the 2026-06-28 incident (SSID was present the whole time). Presence is necessary but not
@@ -334,6 +345,8 @@ This is why router replacement is a prerequisite.
   13-container lantern stack runs on sweetpea (netflow, dnsmasq, nginx, kuma, security, inventory,
   speedtest, connectivity, activity-shadow, prune, api, mcp, ui).
 - Current gaps (see Deco 5 GHz case): (1) no per-LAN-device latency/loss probing, (2) no external WiFi
-  RF sensor, (3) the mitigation Deco reboot is UNSCHEDULED — fired once 2026-07-06, `.216` now ~44d uptime.
+  RF sensor. (3) ✅ RESOLVED 2026-08-29 — the Deco reboot is now automated end-to-end: idle-gated
+  **soft reboot** via the Deco's local API, `deco-reboot-runner` systemd timer, approval-gated backstop
+  (see the 2026-08-29 RESOLVED note in the Deco 5 GHz section).
 - See `Raymer/project-memory/router-replacement.md` for router plan and hardware list
 - sauron WOL integration already exists; LLM queries can wake sauron on demand
