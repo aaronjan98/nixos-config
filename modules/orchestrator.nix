@@ -4,6 +4,7 @@ let
   python = pkgs.python3.withPackages (ps: [
     ps.fastapi
     ps.uvicorn
+    ps.websockets   # uvicorn's WebSocket server impl — for the browser-player control channel
     ps.httpx
     ps.python-dotenv
     ps.python-kasa

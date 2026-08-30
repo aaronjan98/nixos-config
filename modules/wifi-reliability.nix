@@ -24,7 +24,23 @@
 let
   # MT7925 (wlp192s0). Address is stable for this board; the watchdog and
   # tmpfiles reference it directly.
+  wifiIface = "wlp192s0";
   wifiPciPath = "/sys/bus/pci/devices/0000:c0:00.0";
+
+  # Re-enable IPv6 on the wifi interface. When the MT7925 flaps (or NM/driver is
+  # bounced by the watchdog), a link-local DAD failure can trip the kernel into
+  # auto-disabling IPv6 on the interface (disable_ipv6=1). That silently breaks
+  # Matter: matter-server reaches Kasa plugs over IPv6 link-local, so with IPv6
+  # off, commissioning/operational sessions fail ("Network is unreachable") and
+  # the speaker plug goes unavailable. accept_dad=1 keeps DAD but stops it from
+  # disabling IPv6 on failure.
+  # Full saga: memory/2026-08-29 speaker-plug-matter-recovery.md
+  reenableIpv6 = ''
+    if [ -e "/proc/sys/net/ipv6/conf/${wifiIface}/disable_ipv6" ]; then
+      echo 0 > "/proc/sys/net/ipv6/conf/${wifiIface}/disable_ipv6" 2>/dev/null || true
+      echo 1 > "/proc/sys/net/ipv6/conf/${wifiIface}/accept_dad" 2>/dev/null || true
+    fi
+  '';
 
   netWatchdog = pkgs.writeShellScript "net-watchdog" ''
     export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.iputils pkgs.kmod pkgs.systemd pkgs.util-linux ]}
@@ -56,6 +72,9 @@ let
 
     # Re-assert L1 ASPM off in case the device re-bound during recovery.
     echo 0 > ${wifiPciPath}/link/l1_aspm 2>/dev/null || true
+
+    # Re-enable IPv6 — the flap/reload above is exactly what auto-disables it.
+    ${reenableIpv6}
 
     if ok; then
       logger -t net-watchdog "connectivity restored"
@@ -92,4 +111,21 @@ in {
       AccuracySec = "5s";
     };
   };
+
+  # (3) Keep IPv6 alive on the wifi interface across (re)connections. A flap can
+  # leave the kernel with disable_ipv6=1 on wlp192s0 even after the link is back,
+  # which breaks Matter (IPv6 link-local). NM fires this dispatcher on every
+  # up/change event, so IPv6 is forced back on whenever the interface reconnects.
+  networking.networkmanager.dispatcherScripts = [
+    {
+      type = "basic";
+      source = pkgs.writeShellScript "reenable-ipv6-wifi" ''
+        iface="$1"; action="$2"
+        [ "$iface" = "${wifiIface}" ] || exit 0
+        case "$action" in
+          up|dhcp4-change|dhcp6-change|connectivity-change) ${reenableIpv6} ;;
+        esac
+      '';
+    }
+  ];
 }
