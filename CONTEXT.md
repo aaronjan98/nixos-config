@@ -26,6 +26,7 @@ This repository should be treated as an operational control center for the machi
 ## What to avoid
 - making broad changes without understanding the module or script boundary
 - mixing workspace snapshot concerns with live AI runtime config
+- adding scripts here for behaviour the **voice-assistant orchestrator** drives at runtime. Ownership boundary: a file belongs in this repo only if a Nix module or systemd unit references it by path; anything the orchestrator decides to do at runtime lives in the `voice-assistant` repo as Python. This repo is touched only for a new system package or a systemd unit. See `voice-assistant/project-memory/browser-playback-spec.md`.
 - duplicating responsibilities across scripts
 - storing secrets directly in the repo outside the intended secret management flow
 - editing tracked runtime-generated files when the source-of-truth file is elsewhere

@@ -37,6 +37,16 @@ in {
 
   networking.hostName = "framework-13";
 
+  # This host lives ON 10.0.50.0/24, and sweetpea advertises that same /24 as a
+  # tailnet subnet route (for the travel laptops to reach home devices when
+  # away). Common config enables --accept-routes, which is right for the laptops
+  # but wrong here: framework-13 would accept a route for its OWN LAN and
+  # black-hole local traffic (e.g. the Matter/Kasa plug at .124) into the tunnel.
+  # Override it off — this host reaches its LAN directly and tailnet peers by
+  # their 100.x addresses.
+  # Full saga: memory/2026-08-29 speaker-plug-matter-recovery.md
+  services.tailscale.extraSetFlags = lib.mkForce [ "--accept-routes=false" "--operator=aj" ];
+
   # Cut power to the desk speakers when the laptop suspends (see the module).
   # NOTE: this host is an always-on home server (logind ignores lid/idle/suspend),
   # so it effectively only ever suspends on an explicit `systemctl suspend`. The
@@ -49,6 +59,10 @@ in {
   # aj.hyprIdle.extraResumeCmd to "${config.aj.speakersSuspendOff.script} on" if
   # you later want that.)
   aj.hyprIdle.extraBlackoutCmd = "${config.aj.speakersSuspendOff.script} off";
+
+  # The morning alarm is now owned by the voice-assistant orchestrator (runtime
+  # schedule, plays through the Firefox/Navidrome web player) — not a Nix timer.
+  # See voice-assistant/orchestrator/alarm.py.
 
   # MT7925 wifi reliability (L1 ASPM disable + connectivity watchdog) lives in
   # ../../modules/wifi-reliability.nix. That targets ASPM per-device rather than
