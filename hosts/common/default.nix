@@ -1,4 +1,4 @@
-{ config, lib, pkgs, nix-tools, snippetsDir, ... }:
+{ config, lib, pkgs, pkgsUnstable, nix-tools, snippetsDir, ... }:
 
 # Shared configuration for all hosts. Host-specific files import this module
 # and then layer their own overrides on top (hostname, kernel params, kanata
@@ -389,6 +389,10 @@
     socat
     nautilus
     gvfs
+
+    # Languages
+    pkgsUnstable.R
+    pkgsUnstable.rstudioWrapper
 
     # Nix Development
     nil
