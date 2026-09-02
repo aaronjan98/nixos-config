@@ -481,6 +481,14 @@
           installation_mode = "force_installed";
           install_url = "file:///home/aj/Repositories/projects/context-harness/contextforge-bridge-signed.xpi";
         };
+        # Voice-assistant orchestrator bridge — drives the Navidrome/Jellyfin web
+        # players in AJ's own Firefox tab. Signed via browser-extension/sign.sh
+        # (AMO unlisted); force-installing here makes it survive reboots so the
+        # morning alarm always has a live browser channel to play into.
+        "orchestrator-bridge@aj.home" = {
+          installation_mode = "force_installed";
+          install_url = "file:///home/aj/Repositories/projects/voice-assistant/browser-extension/orchestrator-bridge.xpi";
+        };
       };
     };
   };
