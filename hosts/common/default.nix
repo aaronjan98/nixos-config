@@ -263,7 +263,12 @@
   };
   hardware.bluetooth = {
     enable = true;
-    powerOnBoot = true;
+    # Keep the adapter powered off until manually turned on. powerOnBoot=false
+    # stops it coming up at boot; AutoEnable=false stops BlueZ re-powering it
+    # every time the USB adapter re-enumerates (which was flipping it back on
+    # periodically). Toggle it on by hand (blueman / bluetoothctl power on).
+    powerOnBoot = false;
+    settings.General.AutoEnable = false;
   };
   services.blueman.enable = true;
 
