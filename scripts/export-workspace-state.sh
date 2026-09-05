@@ -32,7 +32,13 @@ sync_dir_if_exists() {
   local src="$1"
   local dst="$2"
 
-  if [[ -d "$src" ]]; then
+  # A directory that is itself a git repo is recorded in the manifest, not
+  # mirrored — repo-local files stay owned by the repo (the snapshot's whole
+  # point is to stop at repo boundaries). Without this guard a repo that happens
+  # to be named `memory`/`project-memory` (e.g. ~/Repositories/projects/project-memory)
+  # gets its full contents and .git copied in, which is exactly the churn this
+  # snapshot is meant to avoid.
+  if [[ -d "$src" && ! -d "$src/.git" ]]; then
     ensure_dir "$dst"
     rsync -a --delete "$src/" "$dst/"
   fi
