@@ -28,14 +28,22 @@ warn() { printf 'WARN: %s\n' "$*" >&2; }
 # ─── git helpers ─────────────────────────────────────────────────────────────
 
 git_pull() {
+    # Always pulls explicitly from 'home' (the Forgejo-backed remote), never
+    # the branch's tracking ref. These repos also have a 'local' bare-repo
+    # mirror on this machine (git-server.nix) that only updates on an
+    # explicit push and is never the sync source — if a branch's upstream
+    # ever gets set to 'local' (as pass's silently was), a plain
+    # `git pull --ff-only` would report "already up to date" while pulling
+    # from that stale mirror instead of Forgejo. See
+    # nixos-config/memory/2026-09-03 pass-sync-tracked-local-mirror.md.
     local name="$1" dir="$2"
     log "Pulling ${name}..."
     if [[ ! -d "${dir}" ]]; then
         warn "${name}: not found at ${dir} — skipping."
         return
     fi
-    git -C "${dir}" pull --ff-only 2>&1 \
-        || warn "${name}: could not fast-forward (diverged?). Pull manually."
+    git -C "${dir}" pull home main --ff-only 2>&1 \
+        || warn "${name}: could not fast-forward from home (diverged?). Pull manually."
 }
 
 dotfiles_pull() {
