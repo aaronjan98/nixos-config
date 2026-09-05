@@ -43,7 +43,7 @@ price points. No self-hostable equivalent exists.
 
 ## Architecture
 
-### Data collection (runs on the RPi5 OpenWrt router — Orbi replaced 2026-05-24; LIVE)
+### Data collection (runs on OpenWrt router, once Orbi is replaced)
 - dnsmasq query logs → per-device DNS history
 - netflow / conntrack export → per-device traffic flows
 - ARP/DHCP events → device presence timeline
@@ -111,7 +111,7 @@ the RPi5 (10.0.50.1) as of 2026-06-16 for this purpose.
 ---
 
 ## RECURRING real-world detection case: Deco X60 5 GHz degradation over uptime
-### (2026-06-16 total SSID drop; 2026-06-28 + 2026-07-01 partial power/rate degradation; 2026-08-19 partial — phone couldn't associate)
+### (2026-06-16 total SSID drop; 2026-06-28 + 2026-07-01 partial power/rate degradation)
 
 This is now a **confirmed recurring fault, accelerating** — 3× in ~2 weeks, interval
 12 days → 3 days. Affected unit = **homelab-room main unit, `10.0.50.216`, MAC `...05:54`,
@@ -162,28 +162,6 @@ recurred, so this is uptime/firmware-leak driven, not update-driven.
   to the *upstairs* unit at -80 dBm / 108 Mbps instead of the nearer TV-room unit; phone
   couldn't associate at all from its room). Reboot restored it: clients re-associated with
   the nearest unit (-69 dBm, 648 Mbps, stable), units re-spread onto channel 48.
-- *2026-08-19 — partial, phone couldn't associate; first occurrence caught via LANtern data:*
-  Phone (`Aaron-s-Z-Flip5`, 10.0.50.132) dropped off WiFi ~16:49–16:56 UTC from its room, then
-  self-recovered. LANtern's `dnsmasq-ingest` **exonerated the server side**: sweetpea answered every
-  DHCPREQUEST with an instant DHCPACK (01:48, 16:46×4, 16:56×3) — no NAK, no pool exhaustion (33/155
-  leased), dnsmasq up a month. The rapid repeat-ACK bursts + a ~7-min association gap localize the
-  fault to the Deco RF layer, matching this partial fingerprint. Self-recovered without a reboot →
-  transient degradation or a band-steer/roam, not a full 5 GHz collapse.
-  **Root-cause finding: the mitigation reboot was never automated.** `deco-reboot.sh` has fired exactly
-  ONCE (2026-07-06); there is NO cron / systemd timer / idle-gate scheduling it, so `.216` has been up
-  ~44 days — far past the accelerating 12d→3d degradation interval. The recurrence was expected.
-  **Scheduling the reboot (+ uptime tracking) is higher-leverage than any new detector.**
-- *2026-08-29 — RESOLVED: idle-gated soft-reboot automation is LIVE (end-to-end verified).*
-  The mitigation now runs on **sweetpea via the Deco's own encrypted local API** (a **soft reboot**),
-  NOT the Kasa plug. Why the pivot: python-kasa can't drive the KP125M (TPAP firmware), and a
-  power-cut can't self-recover (the plug rides the mesh it reboots) — but the 5 GHz-rot fault leaves the
-  unit alive/manageable, which is the soft-reboot-friendly case. sweetpea logs into `.216`'s local API
-  (ported ha-tplink-deco's RSA+AES login → `~/deco-reboot/deco_soft_reboot.py`, cryptography+stdlib) and
-  reboots the master `58-04-4F-35-05-54`. Chain: LANtern brain (approval-gated backstop every 3d, suggests
-  an overnight slot) → `deco-reboot-runner` **systemd timer** (every 10 min) claims the ready job →
-  `deco-reboot-soft.sh` soft-reboots + confirms recovery by wired ping. Verified 2026-08-29: `.216` went
-  down and recovered in 113s, marked succeeded. Consequence: the Kasa plug is reclaimed,
-  `switch.deco_router` decommissioned from HA, and the `router_power` voice tool retired.
 
 **⚠️ Design trap:** a naive "is the `Connect here` SSID present?" check would have PASSED
 the 2026-06-28 incident (SSID was present the whole time). Presence is necessary but not
@@ -340,13 +318,6 @@ This is why router replacement is a prerequisite.
 ## Notes
 
 - Router replacement done (2026-05-24) — RPi5 running OpenWrt 25.12.4, LAN on 10.0.50.0/24
-- ✅ dnsmasq query logging + softflowd/netflow on OpenWrt: DONE (verified 2026-08-19). `lantern-netflow-1`
-  is ingesting NetFlow v9 from 10.0.50.1; `lantern-dnsmasq-ingest-1` tails /var/log/dnsmasq.log. A
-  13-container lantern stack runs on sweetpea (netflow, dnsmasq, nginx, kuma, security, inventory,
-  speedtest, connectivity, activity-shadow, prune, api, mcp, ui).
-- Current gaps (see Deco 5 GHz case): (1) no per-LAN-device latency/loss probing, (2) no external WiFi
-  RF sensor. (3) ✅ RESOLVED 2026-08-29 — the Deco reboot is now automated end-to-end: idle-gated
-  **soft reboot** via the Deco's local API, `deco-reboot-runner` systemd timer, approval-gated backstop
-  (see the 2026-08-29 RESOLVED note in the Deco 5 GHz section).
+- Next blocker: enable dnsmasq query logging + softflowd/netflow on OpenWrt, verify data reaches sweetpea
 - See `Raymer/project-memory/router-replacement.md` for router plan and hardware list
 - sauron WOL integration already exists; LLM queries can wake sauron on demand
