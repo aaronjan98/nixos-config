@@ -393,6 +393,16 @@ write_metadata "captured" "" "$(elapsed_ms)" 0
 logln "saved image: $img"
 logln "image info:"
 (file "$img" >>"$log" 2>&1) || true
+
+CONVERT="${CONVERT:-magick}"
+if command -v "$CONVERT" >/dev/null 2>&1; then
+  mean_val="$("$CONVERT" "$img" -colorspace Gray -format "%[fx:mean]" info: 2>>"$log" || echo "1.0")"
+  logln "image mean brightness: $mean_val"
+  if awk -v m="$mean_val" 'BEGIN { exit !(m + 0 < 0.45) }'; then
+    logln "dark background detected (mean=$mean_val < 0.45); inverting image colors"
+    "$CONVERT" "$img" -negate "$img" 2>>"$log"
+  fi
+fi
 logln ""
 
 # NOTE: we DO NOT pre-seed/copy weights into the cache.

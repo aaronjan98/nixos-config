@@ -26,6 +26,7 @@ let
       pkgs.coreutils
       pkgs.gnused
       pkgs.gnugrep
+      pkgs.imagemagick
     ];
 
     runtimeEnv.PIX2TEX_EXTRA_LIBRARY_PATH = pix2texLibraryPath;
@@ -131,6 +132,7 @@ let
     pkgs.openssh
     pkgs.llama-cpp
     pkgs.curl
+    pkgs.imagemagick
   ];
 
   # Persistent, model-resident Surya server for warm local combined OCR.

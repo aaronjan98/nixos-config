@@ -668,3 +668,10 @@ Checkpoint 9 implementation notes:
 5. `/warmup` loads the predictors, and the laptop wrapper calls `/warmup` before remote OCR by default.
 6. Sauron currently runs the OCR API with CPU fallback. `torch==2.7.1+cu126` is installed because it is compatible with `sm_52`, but PyTorch currently fails CUDA initialization on the Quadro M5000; `nvidia-smi` alone is not enough to prove PyTorch CUDA is usable.
 7. The Sauron API now smoke-tests CUDA before importing Surya settings. If CUDA fails, it sets `TORCH_DEVICE=cpu` before loading predictors, and `/health` reports `device_selected`, `device_requested`, and `device_reason`.
+
+### Dark Background Inversion Fix (2026-09-05)
+
+1. Identified root cause of garbled/empty OCR output on dark mode screenshots: OCR models (Surya, pix2tex) are trained on black text on white paper. When capturing dark mode screens (mean brightness < 0.45), white-on-dark text produces random/garbled output (e.g. `40 \n 2 \n t \n $e^{\circ}$`) or empty text.
+2. `ocr-custom-split.py` already had adaptive color inversion (`OCR_CUSTOM_INVERT_MEAN_THRESHOLD=0.45`), but `ocr-combined.sh`, `surya-ocr-server.py`, and `math-ocr.sh` lacked it.
+3. Added automatic dark background detection and color inversion across `surya-ocr-server.py`, `ocr-combined.sh`, and `math-ocr.sh`. Added `pkgs.imagemagick` to `math-ocr` and `combinedRuntimeInputs` in `tools/pkgs/math-ocr.nix`.
+4. Verification: Tested inverting the exact failed capture screenshot (`2026-09-05T11-38-48`) through `surya-ocr-server`; output was pristine: `$$\left(e^{t^{2}/10}y\right)^{\prime}=\frac{8}{5}e^{t^{2}/10}$$`.

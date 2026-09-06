@@ -87,8 +87,14 @@ class Engine:
         return self._recognition is not None
 
     def ocr(self, png_bytes):
-        from PIL import Image
+        from PIL import Image, ImageOps
+        import numpy as np
         image = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        arr = np.array(image)
+        mean_val = float(np.mean(arr))
+        if mean_val < 115.0:
+            log(f"dark background detected (mean={mean_val:.1f} < 115); inverting colors before OCR")
+            image = ImageOps.invert(image)
         with self._lock:
             self._load_locked()
             self._last_active = time.time()
