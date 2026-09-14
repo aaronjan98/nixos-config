@@ -378,7 +378,8 @@ Prerequisites (already configured on this system):
 
 Notes:
 - Firefox/Obsidian are matched by their **active tab/note** — so run `save --all` right before rebooting, and don't switch a window's active tab afterward, or that window won't be recognised.
-- Terminals: on a cold boot let tmux/continuum finish restoring sessions before `restore --all` (e.g. open one terminal first), or a terminal may attach to an empty session instead of your restored one.
+- Terminals: on a cold boot let tmux/continuum finish restoring sessions before `restore --all` (e.g. open one terminal first), or a terminal may attach to an empty session instead of your restored one. If a shutdown interrupts a continuum save, its `last` pointer can dangle and continuum-restore finds nothing; `modules/tmux-resurrect-repair.nix` runs at login and repoints `last` to the newest valid save so that can't silently wipe your restore.
+- Cold-boot placement: `spawn_and_move` waits up to ~40s (`SPAWN_WAIT_STEPS`) for a launched window to appear, since Electron apps and tmux-backed terminals start slowly when everything boots at once.
 - `restore` never re-opens an app already on its target workspace (dedup), so it is safe to re-run.
 - Source script: `tools/scripts/hypr-session.py`; package wrapper: `tools/pkgs/hypr-session.nix`; wired into `hosts/common/default.nix` via `nix-tools.packages.<system>.hypr-session`. Design spec: `projects/project-memory/hypr-session-spec.md` in the workspace.
 

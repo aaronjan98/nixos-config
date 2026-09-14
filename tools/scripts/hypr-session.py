@@ -27,6 +27,9 @@ STATE_DIR = (
 
 # Delay between spawns so windows tile in a stable order.
 SPAWN_GAP = 0.15
+# How long spawn_and_move waits for a freshly-launched window to appear
+# (steps of 0.5s). Sized for cold-boot restores where apps start slowly.
+SPAWN_WAIT_STEPS = 80  # ~40s
 
 # Apps that restore their own tabs/windows on launch. For these we don't launch
 # per-window: `save` records which window (by its active tab/note) belongs on
@@ -171,7 +174,11 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
     before = windows_of_class(cls)
     subprocess.Popen(cmd, shell=True, start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(30):  # up to ~15s
+    # Generous deadline: on a cold boot everything launches at once, so slow
+    # Electron cold-starts (vesktop) and terminals waiting on tmux/continuum
+    # restore can take well over 15s to show a window. Returns as soon as the
+    # window appears, so the ceiling only bites when a spawn genuinely stalls.
+    for _ in range(SPAWN_WAIT_STEPS):  # up to ~40s (0.5s * 80)
         time.sleep(0.5)
         fresh = windows_of_class(cls) - before
         if fresh:
