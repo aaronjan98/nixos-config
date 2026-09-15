@@ -324,7 +324,9 @@
   # Hosts can override this file; the shared default keeps the include valid.
   environment.etc."hypr/conf.d/99-host.conf".text = lib.mkDefault ''
     # Default pseudo window sizing for shared hosts.
-    windowrulev2 = size 1800 980, class:^(firefox|kitty|com\.mitchellh\.ghostty|vesktop|org-jdownloader-update-launcher-JDLauncher|codium|com\.wolfram\.Wolfram\.14\.3)$
+    windowrulev2 = size 1800 980, class:^(firefox|kitty|com\.mitchellh\.ghostty|vesktop|org-jdownloader-update-launcher-JDLauncher|codium|com\.wolfram\.Wolfram\.14\.3|rstudio)$
+    # Obsidian's WM class has flip-flopped across updates: "electron" (<=1.12.7), "obsidian" (>=1.13.7).
+    windowrulev2 = size 1800 980, class:^(obsidian)$
     windowrulev2 = size 1800 980, class:^(electron)$, title:.*Obsidian.*
   '';
   fonts.packages = with pkgs; [
