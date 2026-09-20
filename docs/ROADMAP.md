@@ -60,6 +60,59 @@ Relevant files:
 
 ---
 
+### hypr-session can autosave displaced float geometry after a monitor hotplug
+Status: known hazard, guard not yet implemented (introduced with Phase C float geometry, 2026-09-20)
+
+Problem:
+- `hypr-session save` now records floating window size and position. Hyprland strips the monitor origin offset from floating windows when a monitor is re-added (see the Bugs section of `~/.config/hypr/ROADMAP.md`), so for a short window after a replug the live geometry is wrong.
+- The autosave timer (`modules/hypr-session-autosave.nix`) fires every 15 min. If it lands in that window it will overwrite good saved geometry with displaced coordinates, and the next restore faithfully reproduces the broken layout.
+- Measured exposure during a deliberate test: the floats were displaced for 55 seconds.
+- Largely mitigated since `modules/hypr-monitor-watch.nix` landed: it repairs floats ~2s after `monitoradded`, so the hotplug path now self-heals well inside the 15 min autosave interval. The guard still matters for the cases that service does not cover — a window dragged to another workspace, or the service being down.
+
+Guard to implement:
+- The displacement has a clean signature — a floating window whose absolute position falls outside the monitor box of its own workspace. `save` can detect that and decline to overwrite the previously saved geometry for that window, rather than recording a position it knows is invalid.
+- Worth logging when the guard trips, so a genuine off-monitor float doesn't get silently ignored forever.
+
+Manual fallback: `hypr-session restore --all --floats-only` reapplies saved float geometry without spawning anything. Idempotent and safe to run at any time — use it if `hypr-monitor-watch` is down or a window wandered workspaces.
+
+Relevant files:
+- `tools/scripts/hypr-session.py` — `collect()` writes the float spec; `monitor_box_for()` already computes the box the guard needs
+- `modules/hypr-session-autosave.nix` — the 15 min timer
+- `docs/SCRIPTS.md` — user-facing float geometry notes
+
+---
+
+### `programs.firefox.autoConfigFiles` silently drops path literals
+Status: confirmed upstream nixpkgs bug, worked around
+
+Problem:
+- Setting `programs.firefox.autoConfigFiles = [ ./firefox-autoconfig.js ];` fails the
+  firefox wrapper build with `cat: /nix/store/<flake-src>/hosts/common/firefox-autoconfig.js:
+  No such file or directory`, even though the file is git-tracked and genuinely present
+  in the flake source snapshot.
+
+Root cause:
+- The wrapper splices the list as `extraPrefsFiles=(${toString extraPrefsFiles})`.
+  `toString` on a **path** returns a bare string with no string context, so the file is
+  never registered as a derivation input and is absent from the build sandbox.
+- A `pkgs.writeText` derivation in the same position works, because `toString` on a
+  derivation keeps its context. Verified both ways on firefox 152.0.4.
+
+Workaround in use:
+- `autoConfig = builtins.readFile ./firefox-autoconfig.js;` — the module pipes that
+  through `pkgs.writeText`, which does get realised.
+
+Possible upstream fix:
+- Change the wrapper to `lib.escapeShellArgs (map (f: "${f}") extraPrefsFiles)` or
+  otherwise interpolate with context preserved, so path literals work as documented.
+
+Relevant files:
+- `hosts/common/default.nix` — the `programs.firefox` block and the comment explaining it
+- `hosts/common/firefox-autoconfig.js`
+- nixpkgs `pkgs/applications/networking/browsers/firefox/wrapper.nix` (~line 548)
+
+---
+
 ## Future features
 
 ### WIP-branch helper for moving uncommitted work between hosts
