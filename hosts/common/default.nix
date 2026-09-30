@@ -251,6 +251,117 @@
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  # nssmdns4 above adds a plain (non-`_minimal`) `mdns4` leg at the end of the
+  # `hosts:` NSS chain as a fallback. On resume from suspend, with WiFi still
+  # reassociating and DNS not yet configured, every hostname lookup that falls
+  # through to it blocks for several real seconds on mDNS multicast timeouts.
+  # nsncd (NixOS's NSS proxy — required plumbing, not safely disable-able:
+  # it's the only thing on NixOS that can dlopen non-glibc NSS modules like
+  # this one and systemd's nss-resolve, since it's the one process handed the
+  # LD_LIBRARY_PATH to find them in the store) hands each incoming request to
+  # a fixed worker pool (default 8) with NO awareness of which NSS database
+  # the request is for until a worker has already claimed it — nsncd's own
+  # accept loop hands off the raw, unparsed socket. So there's no way to
+  # prioritize PAM's fast local getpwnam() ahead of slow hostname lookups;
+  # it's plain FIFO across every database. Several concurrent lookups hitting
+  # the slow mdns4 leg at once exhausted all 8 workers, and PAM's getpwnam()
+  # call for hyprlock's password prompt queued behind them with no available
+  # worker — stalling the whole lock screen (typing looked ignored) for
+  # nsncd's full default handoff_timeout of 10s before it gave up and
+  # restarted. Confirmed via `journalctl -t wake-diag` + `-u nscd` timing
+  # exactly bracketing an observed slow wake (2026-09-29).
+  #
+  # Two independent, additive mitigations (neither is prioritization, since
+  # the daemon has no mechanism for that):
+  # - handoff_timeout down from the 10s default: bounds how long a stalled
+  #   request can wait for a worker before nsncd gives up and restarts.
+  # - worker_count up from the 8 default: makes it statistically much less
+  #   likely that *every* worker is simultaneously stuck on a slow mdns4
+  #   lookup at the exact moment PAM needs one.
+  # NSNCD_IGNORE_HOSTS was considered and rejected: nsncd "ignoring" a
+  # database just returns an empty response instead of running it, and since
+  # NixOS processes can't load mdns4/resolve themselves (see above), that
+  # would break `.local` hostname resolution outright — worse than the
+  # occasional slow wake, and it'd break scanner/printer discovery.
+  systemd.services.nscd.serviceConfig.Environment = lib.mkForce [
+    "NSNCD_HANDOFF_TIMEOUT=2"
+    "NSNCD_WORKER_COUNT=16"
+  ];
+
+  # TEMP DIAGNOSTIC (2026-09-29): even 16 workers weren't enough on the last
+  # observed slow wake — every one was busy at once — so the next question is
+  # *which* processes are flooding nscd's socket with lookups at resume.
+  # nsncd's own per-request debug logging is compiled out in the release
+  # build (slog's debug!/trace! are stripped unless a Cargo feature enables
+  # them — confirmed by every capture so far only ever showing INFO/ERROR
+  # lines from it, never DEBUG), so we can't ask the daemon directly.
+  #
+  # First attempt just ran `ss -x -p` — that turned out to be useless here:
+  # `-p` can only name the process holding a socket that still has a path
+  # bound to it (nscd's own listening socket), so every accepted connection
+  # showed up labeled "nsncd" on BOTH ends. The actual client-side fd is
+  # anonymous and `ss` doesn't resolve it. So this reads the peer's raw
+  # socket inode out of `ss`'s "Peer Address:Port" column and resolves it
+  # via `find /proc/*/fd -lname "socket:\[<inode>\]"` (escaped brackets —
+  # unescaped, `-lname`'s glob syntax treats `[...]` as a character class
+  # and silently never matches; confirmed that was broken, then confirmed
+  # the escaped form works, with live `getent hosts foo.local` calls).
+  # A prior version resolved this with a bash loop forking `readlink` once
+  # per fd across all of /proc instead of one `find` call — thousands of
+  # forks per resolution, which is why the service was measured burning
+  # 5m30s of CPU over a 10-minute run. That version also mostly missed the
+  # live peer (found it already closed/`peer=0` by the time the loop
+  # finished), which was probably the slow forking loop losing the race, not
+  # a fundamentally too-slow poll interval. `find` with escaped brackets
+  # resolves a live one in ~70ms in testing — cheap enough not to matter and
+  # fast enough to usually win the race.
+  #
+  # Also dropped `-p` from the polling `ss` call itself (kept only on the
+  # very first draft): `-p` makes ss cross-reference every socket against
+  # every process to name the *local* side, which costs ~48ms per call
+  # measured on this host (vs ~6ms without) — at a 150ms poll interval
+  # that's the ~30% sustained CPU this service was measured burning even
+  # with zero connections to resolve. We never used that local-side name
+  # anyway (we resolve the peer ourselves via /proc), so it was pure waste.
+  # Revert this whole service once the culprit is found.
+  systemd.services.nscd-conn-diag = {
+    description = "TEMP: log peer processes connecting to nscd's socket";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "nscd.service" ];
+    serviceConfig = {
+      ExecStart = pkgs.writeShellScript "nscd-conn-diag" ''
+        set -eu
+        prev=""
+        while true; do
+          cur="$(${pkgs.iproute2}/bin/ss -x 2>/dev/null | grep -F '/run/nscd/socket' || true)"
+          if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
+            printf '%s\n' "$cur" | while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              peer_inode="$(printf '%s\n' "$line" | ${pkgs.gawk}/bin/awk '{for(i=1;i<=NF;i++) if ($i=="*"){print $(i+1); exit}}')"
+              if [ -n "''${peer_inode:-}" ] && [ "$peer_inode" != "0" ]; then
+                fdpath="$(find /proc/[0-9]*/fd -lname "socket:\[$peer_inode\]" 2>/dev/null | head -1 || true)"
+                if [ -n "$fdpath" ]; then
+                  pid="$(printf '%s' "$fdpath" | cut -d/ -f3)"
+                  comm="$(cat "/proc/$pid/comm" 2>/dev/null || echo unknown)"
+                  ${pkgs.util-linux}/bin/logger -t nscd-conn-diag "peer pid=$pid comm=$comm inode=$peer_inode | $line"
+                else
+                  ${pkgs.util-linux}/bin/logger -t nscd-conn-diag "peer inode=$peer_inode not found (closed already?) | $line"
+                fi
+              else
+                ${pkgs.util-linux}/bin/logger -t nscd-conn-diag "no live peer inode | $line"
+              fi
+            done
+          fi
+          prev="$cur"
+          sleep 0.15
+        done
+      '';
+      Restart = "always";
+      RestartSec = 1;
+    };
+  };
+
   # Scanning (ET-2850 via eSCL/AirScan)
   hardware.sane.enable = true;
   hardware.sane.extraBackends = [ pkgs.sane-airscan ];

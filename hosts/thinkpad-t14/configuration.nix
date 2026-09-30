@@ -32,15 +32,29 @@
   services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
 
   environment.systemPackages = [
+    # TEMP DIAGNOSTIC (2026-09-29): `logger -t wake-diag` markers bracket each
+    # phase so we can measure, on the next slow/missed-keypress wake, exactly
+    # where the time goes (blackout, lock, hyprlock startup, suspend itself).
+    # `logger` writes straight to the journal regardless of who's holding this
+    # script's stdout, so `journalctl -t wake-diag` finds these markers even
+    # though the script runs under Hyprland's exec, not a systemd unit. See
+    # memory/2026-09-29 for the investigation this supports; revert once
+    # resolved.
     (pkgs.writeShellScriptBin "lock-and-suspend" ''
       set -eu
       export PATH=/run/current-system/sw/bin:$PATH
 
+      diag() { logger -t wake-diag "lock-and-suspend: $1 @ $(date +%s.%3N)"; }
+
+      diag "start (lid closed)"
+
       # Hide the desktop up front so nothing flashes while we lock/suspend.
       screen-blackout-on || true
+      diag "blackout-on done"
 
       # Lock now, while the compositor is awake — this is the reliable path.
       loginctl lock-session
+      diag "loginctl lock-session issued"
 
       # Don't suspend until hyprlock is actually up, so we never sleep mid-lock.
       # Bounded so a wedged hyprlock can't block suspend forever.
@@ -48,10 +62,13 @@
         pidof hyprlock >/dev/null 2>&1 && break
         sleep 0.1
       done
+      diag "hyprlock pid seen (or wait exhausted)"
       # Brief settle so hyprlock finishes grabbing the session lock.
       sleep 0.4
 
+      diag "calling systemctl suspend"
       systemctl suspend
+      diag "systemctl suspend returned (system resumed)"
     '')
   ];
   # ---------------------------------------------------------------------------

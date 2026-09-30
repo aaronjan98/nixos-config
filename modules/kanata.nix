@@ -16,6 +16,15 @@
 
       # The host points to the deployed file under /etc
       configFile = "/etc/kanata/kanata-internal.kbd";
+
+      # TEMP DIAGNOSTIC (2026-09-29): --debug logs every physical key
+      # press/release kanata receives, with millisecond timestamps, so a
+      # suspend/resume-time input lag can be pinned to "kanata received the
+      # key late" vs. "kanata forwarded it fine but something downstream
+      # (Hyprland/hyprlock) sat on it". See memory/2026-09-29 for the
+      # investigation this supports. Revert once resolved — normal operation
+      # doesn't need per-keystroke logging.
+      extraArgs = [ "--debug" ];
     };
   };
 }

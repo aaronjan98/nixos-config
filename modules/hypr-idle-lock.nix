@@ -3,6 +3,17 @@
 let
   cfg = config.aj.hyprIdle;
 
+  # TEMP DIAGNOSTIC (2026-09-29): `logger -t wake-diag` calls below, and the
+  # early-exit guard in blackoutOn, target a reported bug where the screen
+  # doesn't return to its pre-suspend brightness. Root cause: blackout-on
+  # was NOT idempotent — every call re-read "current" brightness and saved
+  # it as the restore target, then zeroed it. Two independent triggers call
+  # blackout-on (the 5-min idle listener below, and lid-close via
+  # lock-and-suspend/before_sleep_cmd) and share the same state_dir, so idle
+  # dimming the screen and *then* closing the lid made the lid-close call
+  # capture 0% (already dimmed by the idle call) and clobber the real value.
+  # The guard below makes repeat calls a no-op instead of re-capturing.
+  # Revert the logging once confirmed; keep the idempotency guard.
   blackoutOn = pkgs.writeShellScriptBin "screen-blackout-on" ''
     #!/usr/bin/env bash
     set -eu
@@ -12,6 +23,11 @@ let
     state_dir="$runtime/screen-blackout"
     mkdir -p "$state_dir"
 
+    if [ -f "$state_dir/current" ]; then
+      logger -t wake-diag "screen-blackout-on: already blacked out, skipping re-capture (would have clobbered saved brightness) @ $(date +%s.%3N)"
+      exit 0
+    fi
+
     if command -v brightnessctl >/dev/null 2>&1; then
       # Screen brightness
       line="$(brightnessctl -m | head -n1 || true)"
@@ -20,6 +36,7 @@ let
 
       printf '%s\n' "$dev" > "$state_dir/device" || true
       printf '%s\n' "$cur" > "$state_dir/current" || true
+      logger -t wake-diag "screen-blackout-on: captured dev=$dev current=$cur @ $(date +%s.%3N)"
       brightnessctl -d "$dev" set 0% >/dev/null 2>&1 || true
 
       # Keyboard backlight
@@ -44,8 +61,10 @@ let
       if [ -f "$state_dir/device" ] && [ -f "$state_dir/current" ]; then
         dev="$(cat "$state_dir/device")"
         cur="$(cat "$state_dir/current")"
+        logger -t wake-diag "screen-blackout-off: restoring dev=$dev to current=$cur @ $(date +%s.%3N)"
         brightnessctl -d "$dev" set "$cur" >/dev/null 2>&1
       else
+        logger -t wake-diag "screen-blackout-off: no saved state, falling back to 40% @ $(date +%s.%3N)"
         brightnessctl set 40% >/dev/null 2>&1
       fi
 
@@ -113,8 +132,22 @@ in
       # background hyprlock acquires the lock in milliseconds. As belt-and-braces
       # we also hold suspend off until hyprlock is actually running (bounded by
       # InhibitDelayMaxSec below), so it can never suspend mid-lock.
-      before_sleep_cmd = /run/current-system/sw/bin/screen-blackout-on; loginctl lock-session; for i in $(seq 1 50); do pidof hyprlock >/dev/null 2>&1 && break; sleep 0.1; done
-      after_sleep_cmd = hyprctl dispatch dpms on; /run/current-system/sw/bin/screen-blackout-off
+      #
+      # On the thinkpad, `lock-and-suspend` (lid-close bind) already blackouts
+      # and locks before calling `systemctl suspend` — which itself triggers
+      # this same before_sleep_cmd via logind's PrepareForSleep signal. Without
+      # the `pidof hyprlock ||` guard, that path always ran screen-blackout-on
+      # and loginctl lock-session a second time for no reason. The guard keeps
+      # this as the general safety net for every OTHER suspend path (manual
+      # `systemctl suspend`, low battery, etc.) while skipping the redundant
+      # work when hyprlock is already up. The wait loop still always runs so
+      # suspend stays held off until hyprlock is confirmed running.
+      # TEMP DIAGNOSTIC (2026-09-29): `logger -t wake-diag` markers bracket
+      # before/after-sleep timing so a slow/missed-keypress wake can be
+      # correlated against lock-and-suspend's own markers and kanata's
+      # --debug key-event log (modules/kanata.nix). Revert once resolved.
+      before_sleep_cmd = logger -t wake-diag "hypridle before_sleep_cmd start @ $(date +%s.%3N)"; pidof hyprlock >/dev/null 2>&1 || { /run/current-system/sw/bin/screen-blackout-on; loginctl lock-session; }; for i in $(seq 1 50); do pidof hyprlock >/dev/null 2>&1 && break; sleep 0.1; done; logger -t wake-diag "hypridle before_sleep_cmd done @ $(date +%s.%3N)"
+      after_sleep_cmd = logger -t wake-diag "hypridle after_sleep_cmd start @ $(date +%s.%3N)"; hyprctl dispatch dpms on; /run/current-system/sw/bin/screen-blackout-off; logger -t wake-diag "hypridle after_sleep_cmd done @ $(date +%s.%3N)"
     }
   
     # Idle is inhibited at the compositor level while audio is actually playing
