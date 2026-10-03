@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """hypr-session — per-domain save/restore for the 2D Hyprland workspace model.
 
-Phase A+B: placement + editable menu (`skip`). Float geometry (Phase C) is
-recorded as a bare `float` marker but not yet applied on restore.
+Phase A+B: placement + editable menu (`skip`). Phase C: floating windows keep
+their size and position (`float WxH@x,y`, recorded relative to the monitor that
+holds the workspace, so it survives a docked/undocked layout change).
 
 Spec: ~/Repositories/projects/project-memory/hypr-session-spec.md
 """
@@ -87,7 +88,8 @@ def default_header() -> str:
         f"# hypr-session — {socket.gethostname()}\n"
         "# Format: domain -> slot -> windows (one launch command per line).\n"
         "#   flags:  skip             keep as a menu entry, do not launch\n"
-        "#           float [WxH@pos]  launch floating (geometry applied later)\n"
+        "#           float WxH@x,y    floating, at this size/position\n"
+        "#                            (x,y relative to the workspace's monitor)\n"
         "# Edit freely. `hypr-session save` overwrites the current domain;\n"
         "# last write wins (the file and a save are equal writers)."
     )
@@ -128,6 +130,42 @@ def hyprctl_json(*args):
 
 def current_domain() -> int:
     return domain_of(hyprctl_json("activeworkspace")["id"])
+
+
+# --- monitors --------------------------------------------------------------
+
+def monitor_geometry():
+    """{monitor name: (origin_x, origin_y, logical_w, logical_h)}.
+
+    Window `at`/`size` are in logical layout coordinates, so a monitor's usable
+    box is its origin plus width/scale x height/scale."""
+    geo = {}
+    for m in hyprctl_json("monitors"):
+        scale = m.get("scale") or 1.0
+        geo[m["name"]] = (
+            int(m.get("x", 0)),
+            int(m.get("y", 0)),
+            int(round((m.get("width") or 0) / scale)),
+            int(round((m.get("height") or 0) / scale)),
+        )
+    return geo
+
+
+def workspace_monitors():
+    """{workspace id: monitor name} for every workspace that currently exists."""
+    return {w["id"]: w.get("monitor") for w in hyprctl_json("workspaces")}
+
+
+def monitor_box_for(wid, geo, wsmon):
+    """The monitor box currently holding workspace `wid`. Falls back to the
+    focused monitor when that workspace doesn't exist yet (fresh restore)."""
+    name = wsmon.get(wid)
+    if name in geo:
+        return geo[name]
+    for m in hyprctl_json("monitors"):
+        if m.get("focused") and m["name"] in geo:
+            return geo[m["name"]]
+    return next(iter(geo.values()), (0, 0, 0, 0))
 
 
 def cmdline_of(pid: int):
@@ -186,7 +224,7 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
         if fresh:
             addr = sorted(fresh)[0]
             subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
-                            f"{wid},address:{addr}"], check=False)
+                            f"{wid},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
             return addr
     print(f"ws {wid}: WARNING: '{cls}' window never appeared after "
           f"{SPAWN_WAIT_STEPS * 0.5:.0f}s — not moved ({cmd})", file=sys.stderr)
@@ -200,7 +238,7 @@ def move_existing_or_spawn(cmd: str, cls: str, wid: int):
     existing = sorted(windows_of_class(cls))
     if existing:
         subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
-                        f"{wid},address:{existing[0]}"], check=False)
+                        f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
         return existing[0]
     return spawn_and_move(cmd, cls, wid)
 
@@ -288,7 +326,7 @@ def match_and_move(cls, items):
                 if not placed[i] and wident == ident:
                     subprocess.run(
                         ["hyprctl", "dispatch", "movetoworkspacesilent",
-                         f"{ws},address:{addr}"], check=False)
+                         f"{ws},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
                     placed[i] = True
                     moved_addrs.add(addr)
                     break
@@ -300,7 +338,43 @@ def match_and_move(cls, items):
 
 # --- entry <-> text --------------------------------------------------------
 
-_FLOAT_RE = re.compile(r"\s+float(?:\s+(\S+))?$")
+# The spec is matched narrowly (not `\S+`) so that a trailing flag can never be
+# mistaken for geometry: with `\S+`, `float move=<class>` swallowed the move=
+# flag as its spec and silently dropped the spawn-and-move behaviour.
+_FLOATSPEC = r"\d+x\d+@-?\d+,-?\d+"
+_FLOAT_RE = re.compile(rf"\s+float(?:\s+({_FLOATSPEC}))?$")
+_FLOATSPEC_RE = re.compile(r"^(\d+)x(\d+)@(-?\d+),(-?\d+)$")
+
+
+def make_floatspec(at, size, box) -> str:
+    """`WxH@X,Y`, with X,Y relative to the monitor holding the window so the
+    geometry still means the same thing under a different monitor layout."""
+    ox, oy = box[0], box[1]
+    return (f"{int(size[0])}x{int(size[1])}"
+            f"@{int(at[0]) - ox},{int(at[1]) - oy}")
+
+
+def parse_floatspec(spec):
+    """`WxH@X,Y` -> (w, h, rel_x, rel_y); None for a bare `float` marker."""
+    m = _FLOATSPEC_RE.match((spec or "").strip())
+    return tuple(int(g) for g in m.groups()) if m else None
+
+
+def resolve_float_geometry(spec, box):
+    """Monitor-relative spec -> absolute (x, y, w, h), clamped onto the monitor
+    so a smaller panel can't strand the window offscreen."""
+    parsed = parse_floatspec(spec)
+    if not parsed:
+        return None
+    w, h, rx, ry = parsed
+    ox, oy, mw, mh = box
+    if mw > 0:
+        w = min(w, mw)
+        rx = max(0, min(rx, mw - w))
+    if mh > 0:
+        h = min(h, mh)
+        ry = max(0, min(ry, mh - h))
+    return ox + rx, oy + ry, w, h
 
 
 def parse_entry(line: str):
@@ -458,6 +532,7 @@ def collect(target_domains):
     """
     model = defaultdict(lambda: defaultdict(list))
     sessions = tmux_sessions()
+    geo, wsmon = monitor_geometry(), workspace_monitors()
     for c in hyprctl_json("clients"):
         wid = c.get("workspace", {}).get("id", 0)
         if wid < 1:  # special/scratchpad/invalid
@@ -493,13 +568,110 @@ def collect(target_domains):
             {
                 "cmd": cmd,
                 "skip": False,
-                "float": "" if c.get("floating") else None,
+                "float": (
+                    make_floatspec(c.get("at") or [0, 0], c.get("size") or [0, 0],
+                                   monitor_box_for(wid, geo, wsmon))
+                    if c.get("floating") else None
+                ),
                 "class": cls,
                 "move": move,
                 "restore": restore,
             }
         )
     return model
+
+
+# --- float geometry (Phase C) ----------------------------------------------
+
+def entry_class(e) -> str:
+    """The window class an entry resolves to (same precedence cmd_restore uses,
+    plus `restore=`, whose `cmd` is a tab title rather than a command)."""
+    return (e.get("restore") or e.get("move") or e.get("class")
+            or cmd_appkey(e["cmd"])).lower()
+
+
+def entry_identity(e):
+    """The window title this entry is expected to carry, when that's knowable —
+    a match-app's active tab/note, or the tmux session a terminal reattaches to
+    (tmux `set-titles-string '#S'` makes the title the session name). None means
+    any window of the class will do."""
+    if e.get("restore"):
+        return e["cmd"]
+    try:
+        parts = shlex.split(e.get("cmd") or "")
+    except ValueError:
+        return None
+    if "-As" in parts:  # ghostty -e tmux new -As <session>
+        i = parts.index("-As")
+        if i + 1 < len(parts):
+            return parts[i + 1]
+    return None
+
+
+def apply_float_geometry(plan, dry_run=False):
+    """Give every saved floating window its size and position back.
+
+    A final pass over the whole plan rather than a step at spawn time, so it also
+    re-places windows that were already open and therefore skipped by the dedup
+    guard. That makes `restore` idempotent for geometry, and usable on its own to
+    repair floats that a monitor hotplug shuffled out of place.
+
+    Targets are paired to live windows by identity first (a tmux session name or
+    a match-app's active tab), then by nearest current position. Same-class
+    windows with no identity are genuinely interchangeable — four scratch
+    terminals — so nearest-position keeps a re-run from shuffling them around.
+    """
+    wanted = defaultdict(list)  # (wid, class) -> [(floatspec, identity)]
+    for wid, e in plan:
+        if e.get("float"):  # a bare `float` marker has no geometry to apply
+            wanted[(wid, entry_class(e))].append((e["float"], entry_identity(e)))
+    if not wanted:
+        return 0
+
+    if not dry_run:
+        time.sleep(0.5)  # let freshly-spawned windows settle before measuring
+    geo, wsmon = monitor_geometry(), workspace_monitors()
+    clients = hyprctl_json("clients")
+    placed = 0
+    for (wid, cls), specs in sorted(wanted.items()):
+        box = monitor_box_for(wid, geo, wsmon)
+        free = [c for c in clients
+                if c.get("workspace", {}).get("id") == wid
+                and (c.get("class") or "").lower() == cls]
+        for spec, ident in specs:
+            target = resolve_float_geometry(spec, box)
+            if not target:
+                continue
+            x, y, w, h = target
+            if not free:
+                print(f"ws {wid}: no {cls} window left for float {w}x{h}@{x},{y}",
+                      file=sys.stderr)
+                continue
+            cx, cy = x + w / 2, y + h / 2
+
+            def rank(c, ident=ident, cx=cx, cy=cy):
+                titled = ident and window_identity(cls, c.get("title")) == ident
+                return (0 if titled else 1,
+                        (c["at"][0] + c["size"][0] / 2 - cx) ** 2
+                        + (c["at"][1] + c["size"][1] / 2 - cy) ** 2)
+
+            best = min(free, key=rank)
+            free.remove(best)
+            if dry_run:
+                print(f"ws {wid}: float {cls} -> {w}x{h}@{x},{y}")
+                placed += 1
+                continue
+            addr = f"address:{best['address']}"
+            if not best.get("floating"):
+                subprocess.run(["hyprctl", "dispatch", "setfloating", addr],
+                               check=False, stdout=subprocess.DEVNULL)
+            # Size first, then position: a resize is anchored and shifts `at`.
+            subprocess.run(["hyprctl", "dispatch", "resizewindowpixel",
+                            f"exact {w} {h},{addr}"], check=False, stdout=subprocess.DEVNULL)
+            subprocess.run(["hyprctl", "dispatch", "movewindowpixel",
+                            f"exact {x} {y},{addr}"], check=False, stdout=subprocess.DEVNULL)
+            placed += 1
+    return placed
 
 
 # --- commands --------------------------------------------------------------
@@ -560,6 +732,16 @@ def cmd_restore(args):
                 if not e["skip"]:
                     plan.append((wid, e))
 
+    # Geometry-only repair: reapply saved float positions and nothing else — no
+    # spawning, no tab matching. This is what a monitor hotplug needs, since
+    # Hyprland strands floating windows off their own monitor on re-add but
+    # leaves everything else correct. Safe to run at any time (idempotent).
+    if args.floats_only:
+        placed = apply_float_geometry(plan, args.dry_run)
+        verb = "would place" if args.dry_run else "placed"
+        print(f"{verb} {placed} floating window(s)")
+        return
+
     # `restore=` entries are matched to app-restored windows by identity (grouped,
     # handled after the loop); everything else is placed/spawned directly.
     direct = []
@@ -604,7 +786,7 @@ def cmd_restore(args):
             existing = sorted(windows_of_class("obsidian"))
             if existing:
                 subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
-                                f"{wid},address:{existing[0]}"], check=False)
+                                f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
                 obsidian_main_used = True
                 present[wid].add("obsidian")
                 launched += 1
@@ -620,6 +802,7 @@ def cmd_restore(args):
                 ["hyprctl", "dispatch", "exec",
                  f"[workspace {wid} silent] {e['cmd']}"],
                 check=False,
+                stdout=subprocess.DEVNULL,
             )
             ok = True  # fire-and-forget exec; no window to confirm against
         if ok:
@@ -644,10 +827,16 @@ def cmd_restore(args):
             print(f"{cls}: matched {moved}/{len(items)} window(s)",
                   file=sys.stderr)
 
+    # Last, once every window exists: hand the floating ones their geometry back.
+    floated = apply_float_geometry(plan, args.dry_run)
+
     verb = "would restore" if args.dry_run else "restored"
     bits = []
     if skipped:
         bits.append(f"skipped {skipped} already-open")
+    if floated:
+        verbed = "would place" if args.dry_run else "placed"
+        bits.append(f"{verbed} {floated} floating")
     if failed:
         bits.append(f"{failed} FAILED to place — see warnings above")
     tail = f" ({', '.join(bits)})" if bits else ""
@@ -675,6 +864,9 @@ def main():
     pr.add_argument("--all", action="store_true", help="restore every domain")
     pr.add_argument("--dry-run", action="store_true",
                     help="print what would launch, don't spawn anything")
+    pr.add_argument("--floats-only", action="store_true",
+                    help="only reapply saved floating geometry; never spawn or "
+                         "match windows (use after a monitor hotplug)")
     pr.set_defaults(func=cmd_restore)
 
     pe = sub.add_parser("edit", help="open the session file in $EDITOR")

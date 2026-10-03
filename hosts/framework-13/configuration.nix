@@ -60,6 +60,15 @@ in {
   # you later want that.)
   aj.hyprIdle.extraBlackoutCmd = "${config.aj.speakersSuspendOff.script} off";
 
+  # Hard backstop for the case the 5-min blackout can't catch: while audio plays
+  # (a Discord voice call, an autoplaying tab) the PipeWire idle inhibitor freezes
+  # hypridle, so the speakers-off never fires and the amp stays on all day. This
+  # watches raw input instead of idle, so after 30 min of no keyboard/mouse/touch
+  # it cuts the speakers regardless of audio. Lower the number if 30 min is too
+  # long a grace period; it only matters while something is holding audio open.
+  aj.hyprIdle.inputCutoffSecs = 1800;
+  aj.hyprIdle.inputCutoffCmd = "${config.aj.speakersSuspendOff.script} off";
+
   # The morning alarm is now owned by the voice-assistant orchestrator (runtime
   # schedule, plays through the Firefox/Navidrome web player) — not a Nix timer.
   # See voice-assistant/orchestrator/alarm.py.

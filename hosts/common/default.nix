@@ -15,6 +15,7 @@
     ../../modules/hypr-idle-lock.nix
     ../../modules/hypr-session-autosave.nix
     ../../modules/tmux-resurrect-repair.nix
+    ../../modules/hypr-monitor-watch.nix
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
@@ -595,6 +596,18 @@
   ];
   programs.firefox = {
     enable = true;
+    # Loads userChrome.css and binds Alt+F to toggle the auto-hiding chrome.
+    # Goes through AutoConfig rather than programs.firefox.preferences because
+    # toolkit.legacyUserProfileCustomizations.stylesheets is not in Mozilla's
+    # Preferences-policy allowlist, and because a policy cannot register a key
+    # handler. The stylesheet itself is in the dotfiles repo at
+    # ~/.mozilla/firefox/<profile>/chrome/userChrome.css.
+    #
+    # readFile, not autoConfigFiles: the wrapper splices that list with
+    # `toString`, which drops string context for a path literal, so the file
+    # never becomes a build input and the build dies on `cat`. Going through
+    # autoConfig hands the content to pkgs.writeText, which does get realised.
+    autoConfig = builtins.readFile ./firefox-autoconfig.js;
     policies = {
       ExtensionSettings = {
         "contextforge-bridge@local" = {

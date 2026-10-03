@@ -343,6 +343,7 @@ hypr-session edit                 # open the session file in $EDITOR
 hypr-session restore [domain]     # restore one domain (default: the one you're on)
 hypr-session restore --all        # restore every domain
 hypr-session restore --dry-run    # print what restore would do, without doing it
+hypr-session restore --all --floats-only   # only reapply saved float geometry
 ```
 
 Typical workflow:
@@ -369,7 +370,14 @@ How each app is brought back:
 - **Firefox / Obsidian** (`restore=` lines) — the app restores its own tabs/notes; hypr-session matches each window by its active tab/note and moves it to the right workspace. Nothing to type in.
 - **Terminals** (`move=` lines) — a new ghostty window is spawned running `tmux new -As <session>`, reattaching to that tmux session, then moved into place.
 - **Single-instance single-window apps** (vesktop, etc. — `SOLO_APPS`) — relaunching only focuses the one existing window, so hypr-session moves that window into place instead (spawning it only if it isn't running).
+- **Floating windows** (`float WxH@x,y` lines) — size and position are saved and reapplied, so a floating arrangement comes back exactly as it was. `x,y` is **relative to the monitor holding that workspace**, so the same file works docked and undocked; a window that wouldn't fit on a smaller panel is clamped on-screen rather than stranded off it.
 - `skip` on a line keeps it in the file as a menu item without launching it.
+
+Float geometry notes:
+- The float pass runs **last**, after every window exists, and applies to windows that were already open as well as ones it just spawned. So `restore` is idempotent for geometry, and re-running it is the quickest way to put floats back where they belong after a monitor hotplug has shuffled them.
+- **`--floats-only`** runs *just* that pass: no spawning, no `restore=` tab matching. That is what a monitor hotplug needs — Hyprland strands floating windows off their own monitor on re-add but leaves everything else correct — and it is what `hypr-monitor-watch.service` calls automatically, so a replug repairs itself. Safe to run by hand at any time.
+- Windows are paired to saved positions by identity first (tmux session name, or a `restore=` window's active tab), then by nearest current position. Interchangeable windows — four unnamed scratch terminals — may swap which one lands in which rectangle; the arrangement is identical either way.
+- A bare `float` with no geometry (from a pre-Phase-C save, or hand-written) still just floats the window, no positioning.
 
 Prerequisites (already configured on this system):
 - **Firefox**: "Open previous windows and tabs" enabled, so windows come back with their tabs.

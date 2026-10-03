@@ -85,6 +85,52 @@ let
     + lib.optionalString (cfg.extraBlackoutCmd != "") " ; ${cfg.extraBlackoutCmd}";
   unblackoutCmd = "/run/current-system/sw/bin/screen-blackout-off"
     + lib.optionalString (cfg.extraResumeCmd != "") " ; ${cfg.extraResumeCmd}";
+
+  # Hard input-idle backstop, independent of the PipeWire idle inhibitor.
+  #
+  # The 5-min hypridle blackout above is audio-aware on purpose: the
+  # wayland-pipewire-idle-inhibit service holds a Wayland idle inhibitor while
+  # sound plays, which freezes *every* hypridle timer so music/video isn't cut
+  # mid-playback. The downside is that anything holding an audio stream open —
+  # a Discord (Vesktop) voice channel, an autoplaying tab — pins idle forever
+  # and the desk speakers never get turned off. This watchdog closes that hole:
+  # it watches raw HID input via libinput (which the inhibitor cannot suppress)
+  # and runs a command after inputCutoffSecs of genuinely no keyboard/mouse/touch
+  # activity, regardless of audio. aj is in the `input` group, so it runs as the
+  # user (no root) and its command inherits the user's HOME/env (speakers.sh
+  # reads the HA token from ~/.../orchestrator/.env).
+  enableInputCutoff = cfg.inputCutoffSecs > 0 && cfg.inputCutoffCmd != "";
+
+  inputIdleCutoff = pkgs.writeShellScriptBin "input-idle-cutoff" ''
+    #!/usr/bin/env bash
+    set -u
+
+    cutoff="''${INPUT_CUTOFF_SECS:?input-idle-cutoff: INPUT_CUTOFF_SECS unset}"
+    cmd="''${INPUT_CUTOFF_CMD:?input-idle-cutoff: INPUT_CUTOFF_CMD unset}"
+
+    last=$(date +%s)
+    fired=0
+
+    # Line-buffer libinput so each event is seen promptly; process substitution
+    # keeps the loop in this shell so `last`/`fired` persist. `read -t` returns
+    # >128 on timeout (no input this window) and 1 on EOF (libinput died -> exit
+    # non-zero so systemd restarts us).
+    exec 3< <(stdbuf -oL libinput debug-events 2>/dev/null)
+    while :; do
+      IFS= read -r -t 15 -u 3 _line; rc=$?
+      if [ "$rc" -eq 0 ]; then
+        last=$(date +%s); fired=0
+      elif [ "$rc" -gt 128 ]; then
+        now=$(date +%s)
+        if [ "$fired" -eq 0 ] && [ $(( now - last )) -ge "$cutoff" ]; then
+          eval "$cmd" || true
+          fired=1
+        fi
+      else
+        exit 1
+      fi
+    done
+  '';
 in
 {
   options.aj.hyprIdle = {
@@ -105,6 +151,27 @@ in
         e.g. turn the desk speakers back on. Empty leaves resume unchanged.
       '';
     };
+    inputCutoffSecs = lib.mkOption {
+      type = lib.types.int;
+      default = 0;
+      description = ''
+        Hard backstop: if > 0, run inputCutoffCmd after this many seconds with no
+        keyboard/mouse/touch input — regardless of whether audio is playing. The
+        audio-aware 5-min blackout can't cover this case because the PipeWire idle
+        inhibitor freezes hypridle during playback, so a Discord voice call or an
+        autoplaying tab would otherwise keep the desk speakers on all day. Watches
+        libinput directly (immune to the inhibitor). 0 disables it (default), so
+        hosts that leave it unset (ThinkPad) get no watchdog and no libinput dep.
+      '';
+    };
+    inputCutoffCmd = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = ''
+        Command run (as the user) once inputCutoffSecs elapses with no input —
+        typically the desk-speakers-off command. Ignored unless inputCutoffSecs > 0.
+      '';
+    };
   };
 
   config = {
@@ -116,7 +183,7 @@ in
     wayland-pipewire-idle-inhibit
     blackoutOn
     blackoutOff
-  ];
+  ] ++ lib.optionals enableInputCutoff [ inputIdleCutoff pkgs.libinput ];
 
   # System-wide hypridle config
   environment.etc."xdg/hypr/hypridle.conf".text = ''
@@ -307,6 +374,24 @@ in
       ExecStart = "${pkgs.wayland-pipewire-idle-inhibit}/bin/wayland-pipewire-idle-inhibit --wayland";
       Restart = "on-failure";
       RestartSec = 1;
+    };
+  };
+
+  # Input-idle backstop (see inputIdleCutoff above). Runs as the user so it can
+  # read /dev/input via the `input` group and so its command inherits the user's
+  # HOME/env. Only created when a host opts in with inputCutoffSecs/Cmd.
+  systemd.user.services.input-idle-cutoff = lib.mkIf enableInputCutoff {
+    description = "Fire a command after prolonged input-idle, regardless of audio";
+    wantedBy = [ "default.target" ];
+    serviceConfig = {
+      Environment = [
+        "PATH=/run/current-system/sw/bin"
+        "INPUT_CUTOFF_SECS=${toString cfg.inputCutoffSecs}"
+        "INPUT_CUTOFF_CMD=${cfg.inputCutoffCmd}"
+      ];
+      ExecStart = "${inputIdleCutoff}/bin/input-idle-cutoff";
+      Restart = "on-failure";
+      RestartSec = 5;
     };
   };
   };

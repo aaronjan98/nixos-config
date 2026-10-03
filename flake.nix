@@ -64,6 +64,9 @@
           opencode = pkgsUnstable.opencode;
           zotero = pkgsUnstable.zotero;
           emacs-pgtk = pkgsUnstable.emacs-pgtk;
+          # Bumped past stable's 0.2.1 (crash in the Process/SplitParser stdout
+          # reader under heavy Bluetooth-discovery churn); 0.3.0 is far steadier.
+          quickshell = pkgsUnstable.quickshell;
         });
     in
     {
