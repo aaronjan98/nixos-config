@@ -76,6 +76,22 @@ workspace / workspace-domain switch (`~/.config/hypr/scripts/ws-rel`,`ws-domain`
   daemon-reload + restart. Verified end state: service active with `-c /etc/...`,
   no `--device`, old file gone, `/etc/libinput-gestures.conf` symlink present.
 
+## 3. (added after save) 3-finger up/down = switch tabs, app-aware
+- User asked for 3-finger vertical swipe → Firefox tab switch. Firefox here uses
+  VERTICAL tabs (Obsidian etc. use horizontal), so user wanted it app-specific.
+- Implemented (`399bd8e`) in `modules/libinput-gestures.nix`: a
+  `pkgs.writeShellScriptBin "gesture-tab-switch"` wrapper reads the active window
+  class via `hyprctl activewindow -j | jq` and only sends Ctrl+PageUp (prev) /
+  Ctrl+PageDown (next) via `hyprctl dispatch sendshortcut "CTRL, Prior/Next,
+  activewindow"` when the class matches a known tabbed app (*firefox*, *librewolf*,
+  *zen*, *obsidian*); no-op otherwise so it never fires stray shortcuts into a
+  terminal/spreadsheet. No ydotool needed. up = prev tab, down = next tab.
+- Smoke-tested: ghostty focused → clean no-op (exit 0); bad arg → usage (exit 2);
+  jq parses class fine. Live Firefox/Obsidian behavior not yet confirmed by feel.
+- Extend: add a `case` for other tabbed apps, or swap the two gesture lines if the
+  up/down direction feels reversed. Keysyms Prior/Next = PageUp/PageDown; if those
+  ever misfire, fall back to Tab / SHIFT Tab.
+
 ## State / open items
 - Both fixes deployed by aj on the framework (rm + nrs + user-service restart
   done). Gestures confirmed working on internal trackpad; Magic Trackpad expected
