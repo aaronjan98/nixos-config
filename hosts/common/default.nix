@@ -23,6 +23,7 @@
     ../../modules/cliphist.nix
     ../../modules/surya-ocr-server.nix
     ../../modules/obsidian-ipc.nix
+    ../../modules/rstudio-project.nix
     ../../modules/ollama.nix
     ../../modules/claude-code.nix
     ../../modules/openai-codex.nix

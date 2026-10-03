@@ -30,7 +30,9 @@ STATE_DIR = (
 SPAWN_GAP = 0.15
 # How long spawn_and_move waits for a freshly-launched window to appear
 # (steps of 0.5s). Sized for cold-boot restores where apps start slowly.
-SPAWN_WAIT_STEPS = 80  # ~40s
+# Bumped from 80 (~40s) after a `--all` restore under load (23 windows
+# launching together) let vesktop and a tmux terminal blow past 40s.
+SPAWN_WAIT_STEPS = 110  # ~55s
 
 # Apps that restore their own tabs/windows on launch. For these we don't launch
 # per-window: `save` records which window (by its active tab/note) belongs on
@@ -224,6 +226,8 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
             subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                             f"{wid},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
             return addr
+    print(f"ws {wid}: WARNING: '{cls}' window never appeared after "
+          f"{SPAWN_WAIT_STEPS * 0.5:.0f}s — not moved ({cmd})", file=sys.stderr)
     return None
 
 
@@ -756,6 +760,7 @@ def cmd_restore(args):
 
     launched = 0
     skipped = 0
+    failed = 0
     obsidian_main_used = False
     for wid, e in direct:
         key = (e.get("move") or e.get("class") or cmd_appkey(e["cmd"])).lower()
@@ -789,9 +794,9 @@ def cmd_restore(args):
                 continue
 
         if solo:
-            move_existing_or_spawn(e["cmd"], key, wid)
+            ok = move_existing_or_spawn(e["cmd"], key, wid) is not None
         elif move_cls:
-            spawn_and_move(e["cmd"], move_cls, wid)
+            ok = spawn_and_move(e["cmd"], move_cls, wid) is not None
         else:
             subprocess.run(
                 ["hyprctl", "dispatch", "exec",
@@ -799,8 +804,12 @@ def cmd_restore(args):
                 check=False,
                 stdout=subprocess.DEVNULL,
             )
-        present[wid].add(key)
-        launched += 1
+            ok = True  # fire-and-forget exec; no window to confirm against
+        if ok:
+            present[wid].add(key)
+            launched += 1
+        else:
+            failed += 1
         time.sleep(SPAWN_GAP)
 
     # restore= groups: let each app reopen its own windows, then move each to the
@@ -814,6 +823,7 @@ def cmd_restore(args):
         moved = match_and_move(cls, items)
         launched += moved
         if moved < len(items):
+            failed += len(items) - moved
             print(f"{cls}: matched {moved}/{len(items)} window(s)",
                   file=sys.stderr)
 
@@ -827,6 +837,8 @@ def cmd_restore(args):
     if floated:
         verbed = "would place" if args.dry_run else "placed"
         bits.append(f"{verbed} {floated} floating")
+    if failed:
+        bits.append(f"{failed} FAILED to place — see warnings above")
     tail = f" ({', '.join(bits)})" if bits else ""
     print(f"{verb} {launched} window(s){tail}")
 

@@ -414,7 +414,10 @@ logln "pix2tex model checkpoint dir listing (before running pix2tex):"
 logln ""
 
 # ---- Run OCR from a cache work directory, not from the source checkout ----
-cmd=( "$OCR" --no-cuda "$img" )
+# Low temperature (default pix2tex uses 0.333, sampled not greedy) to make decoding
+# near-deterministic and avoid rare low-probability tokens landing as stray control
+# bytes (e.g. \f/\a/\b decoding to form-feed/bell/backspace) in the output LaTeX.
+cmd=( "$OCR" --no-cuda --temperature 0.05 "$img" )
 
 logln "running (cwd=$work_dir): ${cmd[*]}"
 logln ""
