@@ -213,6 +213,23 @@ Long-running, multi-session work items with design decisions and progress checkl
 - `project-memory/math-ocr-pix2tex-venv-spec.md` — math OCR reimplementation using a Nix-managed wrapper plus pinned pix2tex repo/venv runtime
 - `project-memory/text-math-ocr-pipeline-spec.md` — broader Mathpix-like OCR plan for text OCR, math OCR, combined Markdown OCR, feedback capture, correction workflow, and optional `sauron` backend
 
+## Remote access between hosts (SSH over Tailscale)
+Both laptops run `sshd` reachable over the tailnet, so you can `ssh`/`rsync`
+directly between them by their `100.x` Tailscale addresses (key-only, no root).
+
+- Each host binds sshd on all interfaces but opens port **22 only on the
+  `tailscale0` firewall interface** — never on untrusted/public wifi. See the
+  `services.openssh` + `networking.firewall.interfaces.tailscale0` blocks in
+  `hosts/framework-13/configuration.nix` and `hosts/thinkpad-t14/configuration.nix`
+  (common only listens on loopback; each host widens it with `lib.mkForce`).
+- Find a host's tailnet IP with `tailscale status` (or `tailscale ip -4 <host>`).
+- Example — sync Obsidian plugins (which are gitignored, see below) between the
+  laptops: `rsync -a aj@<thinkpad-tailscale-ip>:~/Repositories/self-hosted/zettelkasten/.obsidian/plugins/ ~/Repositories/self-hosted/zettelkasten/.obsidian/plugins/`
+- Obsidian community plugins otherwise propagate automatically via a dedicated
+  Syncthing folder (`modules/syncthing.nix`) — the vault's notes stay in git, but
+  `.obsidian/plugins/` is gitignored (binaries, and LaTeX Math exceeds GitHub's
+  100MB file limit), so Syncthing carries just that folder between the laptops.
+
 ## Notes
 This repo is both a system configuration repo and an operational tooling repo.
 An agent working here should preserve clarity, reproducibility, and separation of responsibilities.

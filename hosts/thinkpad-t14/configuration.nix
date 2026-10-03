@@ -95,6 +95,25 @@
     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDGb60AEnOZcVGE+gU1ogT8Hen4VKFj/t+Y+/8tKyldvEf3gDpsdQk0q0QQUrmSCIsXATwItxebzGw/LIwTLN0YyRD55dF34UkRvVTHFJNSBnCQnpvlozbr6Q3u1ZHtETzX43ypGbHp7SfSjYFZIxjYQGlP7oXJkiL0kUvrFqh7cslIZl62/FzCsZIxJLojlWlscHMnYIqxlgSs5EZZ02sVp4/q85YkfNqL+j00rzD634bLTE/AbsKrcr37jLQkvlWMZU25B2owOjPFg0zb7G0dOE7q7g688MqUkWl/my4L6giKo27pov7abLJWEuvRYvViMGMegcPbSA4IpoRtYUMiBV1G9jIUgPxjfovdZzIh5OkqoFjawa299VaY/G6ZPc9GYVuy8w+gLBF+LQZfyDojBEIKSlx/JtDOQd90iepr6eoQZrX6G6AsswhWOswtWY8vXOHohGVUuAjHujKLxv212c1G1LIhBYLGRtV5wxVnR4wMcEc9gUL9iVScwmM/Ohs= aaronjan98@gmail.com"
   ];
 
+  # SSH over Tailscale — lets the Framework (and other tailnet peers) reach this
+  # laptop by its 100.x address, e.g. `rsync` the Obsidian plugins between the two
+  # (see modules/syncthing.nix). Common only listens on loopback; widen the bind
+  # to all interfaces but open port 22 ONLY on tailscale0, so sshd is never
+  # exposed on untrusted travel wifi. Key-only, no root login. Mirrors the
+  # Framework's block (hosts/framework-13/configuration.nix).
+  services.openssh = {
+    listenAddresses = lib.mkForce [
+      { addr = "127.0.0.1"; port = 22; }
+      { addr = "::1"; port = 22; }
+      { addr = "0.0.0.0"; port = 22; }
+    ];
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+    };
+  };
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+
   # Set at initial install — never change after first nixos-install.
   system.stateVersion = "25.11";
 }
