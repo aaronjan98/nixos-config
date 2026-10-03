@@ -554,6 +554,7 @@
     bemoji        # emoji picker (fuzzel + wtype/wl-copy) — bound to Super+. in Hyprland
     quickshell
     swww
+    matugen       # wallpaper -> Material You palette; feeds Quickshell theme (set-wallpapers hook)
 
     # Applications
     fastfetch
