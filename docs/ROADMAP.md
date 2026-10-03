@@ -398,6 +398,23 @@ Current decision:
 Why it belongs here:
 - this is a cross-cutting desktop feature that affects Quickshell, terminals, and other app themes
 
+Progress:
+- **Phase 1 (Quickshell, dark scheme) — ✅ done 2026-10-03.** `matugen` added to
+  system packages here; the `set-wallpapers` script (dotfiles) runs
+  `matugen image <current> --mode dark`, rendering `~/.cache/quickshell/colors.json`
+  from a wallpaper-derived Material You palette. Quickshell's `Appearance.qml`
+  watches that file (`FileView`) and recolours live — no reload, no rebuild. The
+  shell's 8 palette tokens take their hue from matugen roles while keeping their
+  original alphas, with fallbacks to the old purple theme. Config:
+  `~/.config/matugen/{config.toml,templates/quickshell-colors.json}`. Required the
+  frame corner-gap fix first (done, see quickshell ROADMAP).
+- **Phase 2 (auto light/dark) — pending.** Light wallpapers need a light scheme,
+  but Quickshell has ~145 hardcoded white foregrounds; a true light mode must route
+  those through central `fg`/`bg` tokens (text flips to dark; white overlays/borders
+  stay) before `set-wallpapers` can pick `--mode` from wallpaper luminance.
+- **Later:** extend matugen templates to terminals (kitty/ghostty) and GTK so the
+  whole desktop tracks the wallpaper — just add `[templates.*]` blocks.
+
 ### Qylock / Quickshell lockscreen path
 Goal:
 - revisit the lockscreen implementation if the higher-fidelity QML animation path becomes worth the complexity
