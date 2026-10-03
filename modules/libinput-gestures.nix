@@ -16,13 +16,35 @@
 # latter is never started on this Hyprland setup (see
 # modules/hypr-session-autosave.nix and modules/hypr-monitor-watch.nix).
 {
+  # Gesture bindings, declared here instead of a loose ~/.config/
+  # libinput-gestures.conf that only Syncthing kept in step between hosts. The
+  # service below is pointed at this file with `-c`, so the per-user copy (if one
+  # still exists) is ignored and both machines get byte-identical gestures.
+  environment.etc."libinput-gestures.conf".text = ''
+    # Watch ALL touchpads, not just the first auto-detected one. Without this,
+    # libinput-gestures binds to a single device (the internal PIXA3854
+    # touchpad) and ignores external ones like the Apple Magic Trackpad.
+    device all
+
+    # 3-finger: open / close the Quickshell notification center.
+    gesture swipe left  3  sh -lc 'qs ipc call notifs openCenter'
+    gesture swipe right 3  sh -lc 'qs ipc call notifs closeCenter'
+
+    # 4-finger: move between workspaces (left/right) and workspace domains
+    # (up/down). Scripts live in aj's Hyprland dotfiles.
+    gesture swipe left  4  /home/aj/.config/hypr/scripts/ws-rel +1
+    gesture swipe right 4  /home/aj/.config/hypr/scripts/ws-rel -1
+    gesture swipe up    4  /home/aj/.config/hypr/scripts/ws-domain down
+    gesture swipe down  4  /home/aj/.config/hypr/scripts/ws-domain up
+  '';
+
   systemd.user.services.libinput-gestures = {
     description = "Actions gestures on your touchpad using libinput";
     after = [ "default.target" ];
     wantedBy = [ "default.target" ];
     serviceConfig = {
       Type = "simple";
-      ExecStart = "${pkgs.libinput-gestures}/bin/libinput-gestures";
+      ExecStart = "${pkgs.libinput-gestures}/bin/libinput-gestures -c /etc/libinput-gestures.conf";
       Environment = "PATH=/run/current-system/sw/bin:/etc/profiles/per-user/%u/bin";
       Restart = "on-failure";
       RestartSec = "5s";
