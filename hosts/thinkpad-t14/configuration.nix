@@ -89,25 +89,8 @@
     qwerty.id       = "F4NZQDP-JYNM45X-6M4J5QE-UY4RI3E-DYCRDWS-BX2L6KF-SIW3M3I-WG7I5AR";
   };
 
-  # SSH reachable over Tailscale only (mirrors framework-13's config): sshd
-  # binds broadly, but the firewall only admits port 22 on tailscale0, so
-  # nothing is exposed to the LAN/internet. Lets either machine rsync/ssh to
-  # the other over the tailnet without opening anything publicly.
-  services.openssh = {
-    listenAddresses = lib.mkForce [
-      { addr = "127.0.0.1"; port = 22; }
-      { addr = "::1"; port = 22; }
-      { addr = "0.0.0.0"; port = 22; }
-    ];
-    settings = {
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-    };
-  };
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
-
   # Same two keys framework-13 authorizes for direct `aj` login — without
-  # this, PasswordAuthentication=false above would leave no auth method that
+  # this, PasswordAuthentication=false below would leave no auth method that
   # actually succeeds once sshd is reachable.
   users.users.aj.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"
