@@ -66,11 +66,13 @@ in
     gesture swipe down  3  ${tabSwitch}/bin/gesture-tab-switch next
 
     # 4-finger: move between workspaces (left/right) and workspace domains
-    # (up/down). Scripts live in aj's Hyprland dotfiles.
-    gesture swipe left  4  /home/aj/.config/hypr/scripts/ws-rel +1
-    gesture swipe right 4  /home/aj/.config/hypr/scripts/ws-rel -1
-    gesture swipe up    4  /home/aj/.config/hypr/scripts/ws-domain down
-    gesture swipe down  4  /home/aj/.config/hypr/scripts/ws-domain up
+    # (up/down). Scripts live in aj's Hyprland dotfiles. Direction follows the
+    # "swipe toward where you're going" model: swipe right -> next workspace (to
+    # the right), swipe down -> next domain (down the stack), and the reverse.
+    gesture swipe left  4  /home/aj/.config/hypr/scripts/ws-rel -1
+    gesture swipe right 4  /home/aj/.config/hypr/scripts/ws-rel +1
+    gesture swipe up    4  /home/aj/.config/hypr/scripts/ws-domain up
+    gesture swipe down  4  /home/aj/.config/hypr/scripts/ws-domain down
   '';
 
   systemd.user.services.libinput-gestures = {
