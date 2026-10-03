@@ -601,7 +601,11 @@
     # toolkit.legacyUserProfileCustomizations.stylesheets is not in Mozilla's
     # Preferences-policy allowlist, and because a policy cannot register a key
     # handler. The stylesheet itself is in the dotfiles repo at
-    # ~/.mozilla/firefox/<profile>/chrome/userChrome.css.
+    # ~/.config/firefox/userChrome.css — NOT inside a profile directory,
+    # since those carry a random per-install salt. ~/.config/hypr/scripts/
+    # firefox-userchrome-link symlinks it into whichever profile is Default,
+    # re-run at every Hyprland startup (see that script for the ThinkPad vs.
+    # Framework profile-salt mismatch this fixes).
     #
     # readFile, not autoConfigFiles: the wrapper splices that list with
     # `toString`, which drops string context for a path literal, so the file
