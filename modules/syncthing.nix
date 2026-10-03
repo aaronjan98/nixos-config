@@ -70,6 +70,19 @@ in
               };
             };
           };
+
+          # Obsidian community-plugin binaries for the zettelkasten vault. The
+          # vault's NOTES stay in git exactly as before; `.obsidian/plugins/` is
+          # gitignored (plugin binaries don't belong in git — LaTeX Math alone is
+          # a 103MB Sympy/WASM bundle that exceeds GitHub's 100MB file limit), so
+          # Syncthing carries just this subdir instead. Install a plugin once on
+          # either laptop and it propagates. Scoped to the laptops only (exclude
+          # qwerty — it's a headless media server with no Obsidian). No versioning:
+          # these are regenerable binaries, not documents worth 30 days of history.
+          "obsidian-plugins" = {
+            path = "/home/aj/Repositories/self-hosted/zettelkasten/.obsidian/plugins";
+            devices = lib.filter (d: d != "qwerty") (lib.attrNames cfg.devices);
+          };
         };
 
         options = {
