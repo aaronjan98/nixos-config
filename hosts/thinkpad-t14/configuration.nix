@@ -89,6 +89,31 @@
     qwerty.id       = "F4NZQDP-JYNM45X-6M4J5QE-UY4RI3E-DYCRDWS-BX2L6KF-SIW3M3I-WG7I5AR";
   };
 
+  # SSH reachable over Tailscale only (mirrors framework-13's config): sshd
+  # binds broadly, but the firewall only admits port 22 on tailscale0, so
+  # nothing is exposed to the LAN/internet. Lets either machine rsync/ssh to
+  # the other over the tailnet without opening anything publicly.
+  services.openssh = {
+    listenAddresses = lib.mkForce [
+      { addr = "127.0.0.1"; port = 22; }
+      { addr = "::1"; port = 22; }
+      { addr = "0.0.0.0"; port = 22; }
+    ];
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+    };
+  };
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+
+  # Same two keys framework-13 authorizes for direct `aj` login — without
+  # this, PasswordAuthentication=false above would leave no auth method that
+  # actually succeeds once sshd is reachable.
+  users.users.aj.openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDGb60AEnOZcVGE+gU1ogT8Hen4VKFj/t+Y+/8tKyldvEf3gDpsdQk0q0QQUrmSCIsXATwItxebzGw/LIwTLN0YyRD55dF34UkRvVTHFJNSBnCQnpvlozbr6Q3u1ZHtETzX43ypGbHp7SfSjYFZIxjYQGlP7oXJkiL0kUvrFqh7cslIZl62/FzCsZIxJLojlWlscHMnYIqxlgSs5EZZ02sVp4/q85YkfNqL+j00rzD634bLTE/AbsKrcr37jLQkvlWMZU25B2owOjPFg0zb7G0dOE7q7g688MqUkWl/my4L6giKo27pov7abLJWEuvRYvViMGMegcPbSA4IpoRtYUMiBV1G9jIUgPxjfovdZzIh5OkqoFjawa299VaY/G6ZPc9GYVuy8w+gLBF+LQZfyDojBEIKSlx/JtDOQd90iepr6eoQZrX6G6AsswhWOswtWY8vXOHohGVUuAjHujKLxv212c1G1LIhBYLGRtV5wxVnR4wMcEc9gUL9iVScwmM/Ohs= aaronjan98@gmail.com"
+  ];
+
   # SSH public keys for the local git server on this machine.
   aj.gitServer.authorizedKeys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK+2LbKzQXnAojIRQPRsSBe6LwseuXyiyvByfzJA85E2 aj@thinkpad-t14"
