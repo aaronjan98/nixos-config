@@ -18,7 +18,7 @@ import socket
 import subprocess
 import sys
 import time
-from collections import OrderedDict, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from pathlib import Path
 
 STATE_DIR = (
@@ -210,22 +210,46 @@ def windows_of_class(cls: str):
 
 def spawn_and_move(cmd: str, cls: str, wid: int):
     """Run cmd, wait for a NEW window of class `cls`, move it to workspace wid.
-    Sequential (one window at a time) so the new window is unambiguous."""
+    Sequential (one window at a time) so the new window is unambiguous.
+
+    Some Electron apps (vesktop/Discord) briefly show a splash/loading window
+    of the same class before the real main window replaces it. A one-shot
+    "first new window wins" check grabs the splash, moves it, and returns —
+    then the real window maps moments later on whatever workspace was active,
+    never touched. So instead of returning on the first hit, keep re-moving
+    whatever new window currently exists until the same address survives two
+    consecutive checks (~1s), which the splash doesn't.
+    """
     before = windows_of_class(cls)
     subprocess.Popen(cmd, shell=True, start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # Generous deadline: on a cold boot everything launches at once, so slow
     # Electron cold-starts (vesktop) and terminals waiting on tmux/continuum
     # restore can take well over 15s to show a window. Returns as soon as the
-    # window appears, so the ceiling only bites when a spawn genuinely stalls.
-    for _ in range(SPAWN_WAIT_STEPS):  # up to ~40s (0.5s * 80)
+    # window appears and settles, so the ceiling only bites when a spawn
+    # genuinely stalls.
+    last_addr = None
+    settled = 0
+    for _ in range(SPAWN_WAIT_STEPS):
         time.sleep(0.5)
         fresh = windows_of_class(cls) - before
-        if fresh:
-            addr = sorted(fresh)[0]
+        if not fresh:
+            # The window we moved vanished (likely a splash) — keep watching.
+            last_addr = None
+            settled = 0
+            continue
+        addr = sorted(fresh)[0]
+        if addr != last_addr:
             subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                             f"{wid},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
-            return addr
+            last_addr = addr
+            settled = 0
+        else:
+            settled += 1
+            if settled >= 2:
+                return addr
+    if last_addr:
+        return last_addr  # ran out of time, but something is parked there
     print(f"ws {wid}: WARNING: '{cls}' window never appeared after "
           f"{SPAWN_WAIT_STEPS * 0.5:.0f}s — not moved ({cmd})", file=sys.stderr)
     return None
@@ -708,16 +732,19 @@ def cmd_restore(args):
     else:
         domains = [current_domain()]
 
-    # Snapshot which app classes are already open on each workspace, ONCE, before
-    # launching anything. An entry is skipped only if its app is already present
-    # on its target workspace at this point — so duplicates saved on a fresh
-    # workspace still all spawn, but we never re-open something you already have
-    # open (e.g. a terminal you restored a tmux session into yourself).
-    present = defaultdict(set)
+    # Snapshot how many windows of each class are already open on each
+    # workspace, ONCE, before launching anything. Each entry consumes one count
+    # from this snapshot if available (skip) and otherwise spawns — so if you
+    # saved 2 floating terminals on a workspace and 1 is already open, only
+    # that 1 is skipped and the other still spawns, instead of a plain
+    # present/absent check wrongly treating the whole class as "already done"
+    # (which previously also misfired against entries this very run had just
+    # launched, since that set used to be mutated inside the loop below).
+    present = defaultdict(Counter)
     for c in hyprctl_json("clients"):
         wid = c.get("workspace", {}).get("id", 0)
         if wid >= 1:
-            present[wid].add((c.get("class") or "").lower())
+            present[wid][(c.get("class") or "").lower()] += 1
 
     # Flatten to an ordered plan so spawn-and-move entries run sequentially.
     plan = []  # (wid, entry)
@@ -764,7 +791,8 @@ def cmd_restore(args):
     obsidian_main_used = False
     for wid, e in direct:
         key = (e.get("move") or e.get("class") or cmd_appkey(e["cmd"])).lower()
-        if key and key in present[wid]:
+        if key and present[wid][key] > 0:
+            present[wid][key] -= 1
             print(f"ws {wid}: {e['cmd']}  [already open — skip]")
             skipped += 1
             continue
@@ -788,7 +816,6 @@ def cmd_restore(args):
                 subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                                 f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
                 obsidian_main_used = True
-                present[wid].add("obsidian")
                 launched += 1
                 time.sleep(SPAWN_GAP)
                 continue
@@ -806,7 +833,6 @@ def cmd_restore(args):
             )
             ok = True  # fire-and-forget exec; no window to confirm against
         if ok:
-            present[wid].add(key)
             launched += 1
         else:
             failed += 1
