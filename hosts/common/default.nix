@@ -16,6 +16,7 @@
     ../../modules/hypr-session-autosave.nix
     ../../modules/tmux-resurrect-repair.nix
     ../../modules/hypr-monitor-watch.nix
+    ../../modules/libinput-gestures.nix
     ../../modules/git-server.nix
     ../../modules/flatpak-repo.nix
     ../../modules/screenshot-tools.nix
@@ -450,7 +451,6 @@
 
   ### Basic system packages ###
   services.flatpak.enable = true;
-  systemd.packages = [ pkgs.libinput-gestures ];
   environment.systemPackages = with pkgs; [
     # Gnome & System utilities
     glib
