@@ -15,6 +15,36 @@
 # `After`/`WantedBy` target default.target, not graphical-session.target: the
 # latter is never started on this Hyprland setup (see
 # modules/hypr-session-autosave.nix and modules/hypr-monitor-watch.nix).
+let
+  # App-aware tab switch for the 3-finger vertical swipe. Only known tabbed apps
+  # act; everything else is a deliberate no-op so the gesture never fires a stray
+  # Ctrl+PageUp/Down into, say, a terminal or a spreadsheet. Firefox (vertical
+  # tabs) and Obsidian (horizontal tabs) both move prev/next tab with
+  # Ctrl+PageUp / Ctrl+PageDown, so the keystroke is shared; add a case if an app
+  # needs different keys. up = previous tab, down = next tab (swap the two
+  # gesture lines below if that feels backwards).
+  tabSwitch = pkgs.writeShellScriptBin "gesture-tab-switch" ''
+    #!/usr/bin/env bash
+    set -eu
+    export PATH=/run/current-system/sw/bin:$PATH
+
+    case "''${1:-}" in
+      next) key=Next  ;;   # Ctrl+PageDown -> next tab
+      prev) key=Prior ;;   # Ctrl+PageUp   -> previous tab
+      *) echo "usage: gesture-tab-switch next|prev" >&2; exit 2 ;;
+    esac
+
+    class="$(hyprctl activewindow -j \
+      | ${pkgs.jq}/bin/jq -r '.class // empty' \
+      | tr '[:upper:]' '[:lower:]')"
+
+    case "$class" in
+      *firefox*|*librewolf*|*zen*|*obsidian*)
+        hyprctl dispatch sendshortcut "CTRL, $key, activewindow" ;;
+      *) exit 0 ;;   # not a known tabbed app: do nothing
+    esac
+  '';
+in
 {
   # Gesture bindings, declared here instead of a loose ~/.config/
   # libinput-gestures.conf that only Syncthing kept in step between hosts. The
@@ -26,9 +56,14 @@
     # touchpad) and ignores external ones like the Apple Magic Trackpad.
     device all
 
-    # 3-finger: open / close the Quickshell notification center.
+    # 3-finger left/right: open / close the Quickshell notification center.
     gesture swipe left  3  sh -lc 'qs ipc call notifs openCenter'
     gesture swipe right 3  sh -lc 'qs ipc call notifs closeCenter'
+
+    # 3-finger up/down: previous / next tab, but only in known tabbed apps
+    # (Firefox, Obsidian) — no-op everywhere else. See gesture-tab-switch above.
+    gesture swipe up    3  ${tabSwitch}/bin/gesture-tab-switch prev
+    gesture swipe down  3  ${tabSwitch}/bin/gesture-tab-switch next
 
     # 4-finger: move between workspaces (left/right) and workspace domains
     # (up/down). Scripts live in aj's Hyprland dotfiles.
