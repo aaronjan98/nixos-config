@@ -195,10 +195,12 @@ in
       # The "lockscreen app died" death screen was NOT caused by locking before
       # sleep; it was the `screenshot` background (see hyprlock.conf below) making
       # hyprlock wait ~10s on a wlr-screencopy before it could grab the session
-      # lock, which lost the race with suspend ("yeeten"). With a static-image
-      # background hyprlock acquires the lock in milliseconds. As belt-and-braces
-      # we also hold suspend off until hyprlock is actually running (bounded by
-      # InhibitDelayMaxSec below), so it can never suspend mid-lock.
+      # lock, which lost the race with suspend ("yeeten"). We've since gone back
+      # to the see-through `screenshot` background; the race is held off instead
+      # by (a) framework-13 never suspending, and (b) the ThinkPad's
+      # lock-and-suspend locking while awake + settling before suspend. As a
+      # further belt-and-braces we hold suspend off here until hyprlock is
+      # actually running (bounded by InhibitDelayMaxSec below).
       #
       # On the thinkpad, `lock-and-suspend` (lid-close bind) already blackouts
       # and locks before calling `systemctl suspend` — which itself triggers
@@ -259,14 +261,22 @@ in
 
     background {
       monitor =
-      # Static wallpaper, NOT `path = screenshot`. `screenshot` makes hyprlock
-      # wait on a wlr-screencopy of every output (~10s with panel + external
-      # monitor) before it can acquire the session lock. That race — whether
-      # locking before suspend OR on wake — is what caused hyprlock to get
-      # "yeeten" and Hyprland to show its "lockscreen app died" screen. A static
-      # image loads instantly, so the lock is up before suspend proceeds. Blur
-      # and effects below still apply to the image.
-      path = /home/aj/Pictures/Wallpapers/current.png
+      # See-through lock: `screenshot` grabs the live desktop and the blur +
+      # overlay below dim it, so you see what's behind the lock rather than a
+      # static wallpaper. (It was briefly a static image because `screenshot`
+      # makes hyprlock wait on a wlr-screencopy of every output — ~10s with the
+      # Framework's external monitor — before it can acquire the session lock,
+      # and a suspend landing in that window got hyprlock "yeeten" and showed
+      # Hyprland's "lockscreen app died" screen.) Why it's safe to use again:
+      #   - framework-13 never suspends (logind ignores idle/lid/suspend), so its
+      #     lock only ever fires from idle timers — nothing races the copy.
+      #   - thinkpad-t14 suspends on lid, but lock-and-suspend now LOCKS while the
+      #     compositor is fully awake and settles before calling suspend
+      #     (hosts/thinkpad-t14/configuration.nix), so the copy finishes first.
+      # If "lockscreen app died" ever returns on the ThinkPad, lengthen that
+      # settle, or pre-capture with grim to a file and point `path` at it (static
+      # load, screencopy moved out of the lock critical path).
+      path = screenshot
       color = rgba(25, 20, 20, 0.45)
 
       blur_passes = 1

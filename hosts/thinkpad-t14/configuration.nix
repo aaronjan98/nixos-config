@@ -63,8 +63,10 @@
         sleep 0.1
       done
       diag "hyprlock pid seen (or wait exhausted)"
-      # Brief settle so hyprlock finishes grabbing the session lock.
-      sleep 0.4
+      # Settle so hyprlock finishes grabbing the session lock AND its `screenshot`
+      # background finishes the wlr-screencopy before we suspend — a suspend
+      # landing mid-copy is what brought back the "lockscreen app died" screen.
+      sleep 1.5
 
       diag "calling systemctl suspend"
       systemctl suspend
