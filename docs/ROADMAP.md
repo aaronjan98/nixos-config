@@ -408,10 +408,16 @@ Progress:
   original alphas, with fallbacks to the old purple theme. Config:
   `~/.config/matugen/{config.toml,templates/quickshell-colors.json}`. Required the
   frame corner-gap fix first (done, see quickshell ROADMAP).
-- **Phase 2 (auto light/dark) — pending.** Light wallpapers need a light scheme,
-  but Quickshell has ~145 hardcoded white foregrounds; a true light mode must route
-  those through central `fg`/`bg` tokens (text flips to dark; white overlays/borders
-  stay) before `set-wallpapers` can pick `--mode` from wallpaper luminance.
+- **Phase 2 (auto light/dark) — ✅ done 2026-10-03.** `set-wallpapers` now measures
+  wallpaper luminance with ImageMagick (added here alongside matugen) and picks
+  `matugen --mode light|dark` (threshold 0.5). Quickshell gained a central `fg` token
+  (+ `fgA(α)` helper); the ~140 hardcoded white foregrounds (`color: "white"` and
+  `Qt.rgba(1,1,1,α)`) now route through it, so text/icons flip dark on light
+  wallpapers and stay light on dark ones. `isDark` is derived from `fg`'s luminance;
+  panel alphas are per-mode. matugen writes atomically (rename), which defeats
+  Quickshell's file watch, so `set-wallpapers` triggers the reload explicitly via
+  `qs ipc call palette reload` (IpcHandler in Appearance.qml). Frosted-glass look:
+  `layerrule = blur, quickshell` in the Hyprland config + lowered panel alphas.
 - **Later:** extend matugen templates to terminals (kitty/ghostty) and GTK so the
   whole desktop tracks the wallpaper — just add `[templates.*]` blocks.
 

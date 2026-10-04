@@ -555,6 +555,7 @@
     quickshell
     swww
     matugen       # wallpaper -> Material You palette; feeds Quickshell theme (set-wallpapers hook)
+    imagemagick   # set-wallpapers uses `magick` to measure wallpaper luminance -> light/dark scheme
 
     # Applications
     fastfetch
