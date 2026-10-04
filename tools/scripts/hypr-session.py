@@ -208,17 +208,30 @@ def windows_of_class(cls: str):
     }
 
 
-def spawn_and_move(cmd: str, cls: str, wid: int):
+# How many consecutive 0.5s ticks a freshly-detected window must keep the same
+# address before spawn_and_move trusts it and returns. Vesktop/Discord was
+# measured (via a controlled, polled launch) showing a splash window under the
+# same "vesktop" class for ~2.5s — title literally "vesktop"/"Discord" — before
+# closing and handing off to the real window at a NEW address. A 1-tick settle
+# locked onto the splash every time. SOLO_SETTLE_TICKS gives solo apps (the
+# only ones observed doing this) enough margin to outlast that; generic
+# spawn-and-move callers (plain terminals, etc.) keep the fast 1-tick default
+# since they've never shown this behavior and don't need the extra latency.
+SOLO_SETTLE_TICKS = 8  # ~4s
+DEFAULT_SETTLE_TICKS = 2  # ~1s
+
+
+def spawn_and_move(cmd: str, cls: str, wid: int, settle_ticks: int = DEFAULT_SETTLE_TICKS):
     """Run cmd, wait for a NEW window of class `cls`, move it to workspace wid.
     Sequential (one window at a time) so the new window is unambiguous.
 
-    Some Electron apps (vesktop/Discord) briefly show a splash/loading window
-    of the same class before the real main window replaces it. A one-shot
-    "first new window wins" check grabs the splash, moves it, and returns —
+    Some apps briefly show a splash/loading window of the same class before
+    the real main window replaces it at a different address. A one-shot
+    "first new window wins" check would grab the splash, move it, and return —
     then the real window maps moments later on whatever workspace was active,
     never touched. So instead of returning on the first hit, keep re-moving
-    whatever new window currently exists until the same address survives two
-    consecutive checks (~1s), which the splash doesn't.
+    whatever new window currently exists until the same address survives
+    `settle_ticks` consecutive checks, which a splash doesn't.
     """
     before = windows_of_class(cls)
     subprocess.Popen(cmd, shell=True, start_new_session=True,
@@ -246,7 +259,7 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
             settled = 0
         else:
             settled += 1
-            if settled >= 2:
+            if settled >= settle_ticks:
                 return addr
     if last_addr:
         return last_addr  # ran out of time, but something is parked there
@@ -264,7 +277,7 @@ def move_existing_or_spawn(cmd: str, cls: str, wid: int):
         subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                         f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
         return existing[0]
-    return spawn_and_move(cmd, cls, wid)
+    return spawn_and_move(cmd, cls, wid, settle_ticks=SOLO_SETTLE_TICKS)
 
 
 def obsidian_open_vault():
