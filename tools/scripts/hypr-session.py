@@ -448,6 +448,27 @@ def match_and_move(cls, items):
         if all(placed):
             break
         time.sleep(0.5)
+
+    # Exact-identity matching failed for whatever's left — the saved active
+    # tab was itself stale (you tabbed around since the last save, so the
+    # title hypr-session recorded no longer matches what the app's own
+    # session restore brings back). Rather than leaving every leftover
+    # window wherever it defaulted to (often all piled on one workspace),
+    # spread whatever unclaimed windows of this class remain across whatever
+    # slots are still unplaced — wrong specific window in a given slot beats
+    # the right window nowhere near its intended workspace.
+    if not all(placed):
+        leftover_windows = sorted(
+            addr for addr, _ in windows_of_class_detailed(cls)
+            if addr not in moved_addrs
+        )
+        leftover_slots = [i for i, p in enumerate(placed) if not p]
+        for addr, i in zip(leftover_windows, leftover_slots):
+            ws, _ = wanted[i]
+            subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                            f"{ws},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
+            placed[i] = True
+
     return sum(placed)
 
 
