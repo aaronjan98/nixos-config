@@ -9,6 +9,7 @@ Spec: ~/Repositories/projects/project-memory/hypr-session-spec.md
 """
 
 import argparse
+import atexit
 import json
 import os
 import re
@@ -81,6 +82,83 @@ def window_identity(cls: str, title: str) -> str:
 
 def state_file() -> Path:
     return STATE_DIR / f"{socket.gethostname()}.conf"
+
+
+# --- autosave safety -------------------------------------------------------
+#
+# A periodic `save --all` (hypr-session-autosave.nix) is read-only against the
+# live session in the sense that it never spawns or moves anything — but if it
+# fires while a restore is still placing windows, or just after one finished
+# with failures, it happily writes that half-finished layout to disk as if it
+# were the user's intent. That's exactly what silently erased vesktop's
+# correct workspace (twice): a restore left it on the wrong workspace, the
+# 15-minute timer woke up before anyone noticed, and `save --all` overwrote
+# the one record of where it was actually supposed to go. `restore` now
+# records a lock while it runs and a status afterward so an automated
+# (`--auto`) save can skip itself instead of compounding the damage; a manual
+# `save` is unaffected — it IS the human confirming the layout is correct.
+
+LOCK_STALE_SECONDS = 600  # a lock this old belongs to a crashed restore, not
+                          # a running one — ignore it rather than wedging
+                          # autosave off forever
+AUTOSAVE_SETTLE_SECONDS = 90  # give float geometry / late spawns time to land
+                              # before trusting the live session as final
+
+
+def lock_file() -> Path:
+    return STATE_DIR / f"{socket.gethostname()}.restore.lock"
+
+
+def status_file() -> Path:
+    return STATE_DIR / f"{socket.gethostname()}.restore-status.json"
+
+
+def acquire_restore_lock() -> None:
+    lf = lock_file()
+    lf.parent.mkdir(parents=True, exist_ok=True)
+    lf.write_text(json.dumps({"pid": os.getpid(), "started": time.time()}))
+    atexit.register(release_restore_lock)  # safety net for an abnormal exit
+
+
+def release_restore_lock() -> None:
+    try:
+        lock_file().unlink()
+    except OSError:
+        pass
+
+
+def write_restore_status(domains, failed: int) -> None:
+    status_file().write_text(json.dumps({
+        "end_time": time.time(),
+        "domains": domains,
+        "failed": failed,
+        "needs_review": failed > 0,
+    }))
+
+
+def autosave_skip_reason():
+    """None if an automated save should proceed; otherwise why it shouldn't."""
+    lf = lock_file()
+    if lf.exists():
+        try:
+            age = time.time() - json.loads(lf.read_text())["started"]
+        except (OSError, ValueError, KeyError):
+            age = LOCK_STALE_SECONDS + 1  # unreadable lock — treat as stale
+        if age < LOCK_STALE_SECONDS:
+            return "a restore is still in progress"
+    sf = status_file()
+    if sf.exists():
+        try:
+            status = json.loads(sf.read_text())
+        except (OSError, ValueError):
+            return None
+        age = time.time() - status.get("end_time", 0)
+        if age < AUTOSAVE_SETTLE_SECONDS:
+            return f"a restore finished {age:.0f}s ago — letting it settle"
+        if status.get("needs_review"):
+            return ("the last restore reported failures — run "
+                    "`hypr-session save --all` yourself once it's fixed")
+    return None
 
 
 def default_header() -> str:
@@ -714,6 +792,11 @@ def apply_float_geometry(plan, dry_run=False):
 # --- commands --------------------------------------------------------------
 
 def cmd_save(args):
+    if args.auto:
+        reason = autosave_skip_reason()
+        if reason:
+            print(f"autosave skipped: {reason}", file=sys.stderr)
+            return
     path = state_file()
     header, blocks = read_blocks(path)
     if args.all:
@@ -729,6 +812,14 @@ def cmd_save(args):
         else:
             blocks[d] = f"domain {d}:\n    # (no windows captured)"
     write_blocks(path, header, blocks)
+    if not args.auto:
+        # A manual save is the human vouching for the current layout — clear
+        # any "needs review" flag a failed restore left behind so autosave
+        # resumes.
+        try:
+            status_file().unlink()
+        except OSError:
+            pass
     dom_desc = "all domains" if args.all else f"domain {current_domain()}"
     print(f"saved {dom_desc} -> {path}")
 
@@ -781,6 +872,11 @@ def cmd_restore(args):
         verb = "would place" if args.dry_run else "placed"
         print(f"{verb} {placed} floating window(s)")
         return
+
+    # Record that a restore is in flight so an automated (`--auto`) save
+    # doesn't snapshot a half-finished layout — see "autosave safety" above.
+    if not args.dry_run:
+        acquire_restore_lock()
 
     # `restore=` entries are matched to app-restored windows by identity (grouped,
     # handled after the loop); everything else is placed/spawned directly.
@@ -869,6 +965,10 @@ def cmd_restore(args):
     # Last, once every window exists: hand the floating ones their geometry back.
     floated = apply_float_geometry(plan, args.dry_run)
 
+    if not args.dry_run:
+        write_restore_status(domains, failed)
+        release_restore_lock()
+
     verb = "would restore" if args.dry_run else "restored"
     bits = []
     if skipped:
@@ -896,6 +996,10 @@ def main():
 
     ps = sub.add_parser("save", help="save the current domain (or --all)")
     ps.add_argument("--all", action="store_true", help="save the whole 2D grid")
+    ps.add_argument("--auto", action="store_true",
+                    help="automated save (e.g. a timer): skip quietly if a "
+                         "restore is in flight, still settling, or reported "
+                         "failures that haven't been reviewed")
     ps.set_defaults(func=cmd_save)
 
     pr = sub.add_parser("restore", help="restore a domain (default: current)")

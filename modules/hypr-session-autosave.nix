@@ -4,11 +4,16 @@
 # --all`, the same way tmux-continuum autosaves. A reboot then only needs
 # `hypr-session restore --all` to bring every domain's apps back.
 #
-# `save --all` is read-only against the live session (it only reads hyprctl
-# clients + tmux sessions and rewrites the state file), so running it on a timer
-# is safe. It overwrites last-write-wins, so the state file is a live snapshot,
-# not a hand-curated document — run `hypr-session edit` only when the timer is
-# paused if you want a curated restore.
+# `save --all` only reads hyprctl clients + tmux sessions and rewrites the
+# state file — it never spawns or moves windows itself, so running it on a
+# timer can't directly break anything. But it overwrites last-write-wins, so
+# if it fires while a `restore` is still placing windows (or just after one
+# finished with failures), it happily bakes that half-finished layout in as
+# if it were the user's intent. `--auto` below makes it skip itself in those
+# windows instead — see the "autosave safety" comment in hypr-session.py. The
+# state file is a live snapshot, not a hand-curated document — run
+# `hypr-session edit` only when the timer is paused if you want a curated
+# restore.
 #
 # Env (WAYLAND_DISPLAY / HYPRLAND_INSTANCE_SIGNATURE / XDG_RUNTIME_DIR) reaches
 # the systemd user manager via the `systemctl --user import-environment` +
@@ -23,7 +28,10 @@
       # login where the timer still ticks but there's no compositor to snapshot.
       ExecCondition = "${pkgs.bash}/bin/bash -lc 'hyprctl version >/dev/null 2>&1'";
       # login shell so PATH resolves hypr-session / hyprctl / tmux / obsidian-remote
-      ExecStart = "${pkgs.bash}/bin/bash -lc 'hypr-session save --all'";
+      # --auto lets `save` skip itself while a restore is still in flight,
+      # still settling, or reported failures that haven't been reviewed yet —
+      # see the "autosave safety" comment in hypr-session.py.
+      ExecStart = "${pkgs.bash}/bin/bash -lc 'hypr-session save --all --auto'";
     };
   };
 
