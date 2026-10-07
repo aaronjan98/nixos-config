@@ -3,6 +3,7 @@
 {
   networking.hosts."127.0.0.1" = [
     "ai.local"
+    "contextforge.local"
     "movies.local"
     "photos.local"
     "syncthing.local"
@@ -19,6 +20,19 @@
       "ai.local:80".extraConfig = ''
         bind 127.0.0.1
         reverse_proxy 127.0.0.1:5050
+      '';
+
+      # Friendly local alias for the Context Forge frontend (Vite dev server).
+      # Vite's default server.host is "localhost", which resolves to ::1 here,
+      # so the dev server listens on [::1]:5173 only — dial it over IPv6, not
+      # 127.0.0.1 (that gives a 502). Vite's DNS-rebinding guard also rejects any
+      # Host header that isn't loopback, so rewrite Host to a literal it trusts
+      # (same reason as the syncthing vhost below). This keeps HMR working too.
+      "contextforge.local:80".extraConfig = ''
+        bind 127.0.0.1
+        reverse_proxy [::1]:5173 {
+          header_up Host localhost:5173
+        }
       '';
 
       "movies.local:80".extraConfig = ''
