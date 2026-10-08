@@ -32,7 +32,7 @@ PRIVATE_FLAG=""
 [[ "$VISIBILITY" == "--private" ]] && PRIVATE_FLAG="--private"
 
 tea repos create \
-    --login forgejo \
+    --login home \
     --name "$NAME" \
     $PRIVATE_FLAG
 
