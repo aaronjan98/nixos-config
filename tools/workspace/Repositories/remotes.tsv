@@ -32,6 +32,7 @@ school/Engineering_Course_Differential_Equations_and_Dynamical_Systems	local	ssh
 school/published-real-analysis-notes	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/Math-450A-Class-Notes.git
 school/published-real-analysis-notes	hub	git@github.com:aaronjan98/Math-450A-Class-Notes.git
 school/published-real-analysis-notes	local	ssh://git@localhost/srv/git/repos/Math-450A-Class-Notes.git
+school/published-stat-modeling-notes	home	git@sweetpea-git:/srv/git/repos/Math-444-Stat-Modeling-Notes.git
 school/published-stat-modeling-notes	origin	git@github.com:aaronjan98/Math-444-Stat-Modeling-Notes.git
 school/published-stats-notes	home	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/Prob-Stats-Notes.git
 school/published-stats-notes	hub	git@github.com:aaronjan98/Prob-Stats-Notes.git
