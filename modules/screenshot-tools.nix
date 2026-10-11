@@ -75,17 +75,33 @@
     (writeShellScriptBin "shot-menu" ''
       set -euo pipefail
 
+      # Route through the host-scaled fuzzel wrapper so this menu matches the
+      # size of every other fuzzel popup (Super+Space launcher, emoji picker,
+      # etc.) instead of the raw fuzzel.ini defaults (tuned for the Framework's
+      # HiDPI panel, oversized on the ThinkPad's 1080p panel). The wrapper picks
+      # size by hostname, not monitor layout, so plugging/unplugging the
+      # external display doesn't change which size applies. Falls back to raw
+      # fuzzel if the dotfile script isn't present.
+      #
+      # Also tag this popup with its own layer-shell namespace so a layerrule
+      # can kill just its animation (see 40-windowrules.conf) without touching
+      # the fade on every other fuzzel popup — that's what left a ghost frame
+      # behind in fullscreen shots.
+      picker=(fuzzel --namespace=fuzzel-shot)
+      fz="$HOME/.config/hypr/scripts/fz"
+      [ -x "$fz" ] && picker=("$fz" --namespace=fuzzel-shot)
+
       choice="$(
         printf "%s\n" \
           "Region → Save" \
           "Fullscreen (all displays) → Save" \
           "Fullscreen (focused display) → Save" \
           "Open screenshots folder" \
-        | fuzzel --dmenu --prompt "Screenshot: "
+        | "''${picker[@]}" --dmenu --prompt "Screenshot: "
       )"
 
       # User hit Escape / cancelled
-      if [ -z "${choice:-}" ]; then
+      if [ -z "''${choice:-}" ]; then
         exit 0
       fi
 

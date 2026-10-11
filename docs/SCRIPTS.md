@@ -465,6 +465,30 @@ Typical use:
 
 ---
 
+## `notetake-record.sh` / `notetake-foldin.sh`
+Purpose:
+- background audio recorder + on-demand Whisper transcription for taking notes live with an agent (class, office hours, meetings) — toggle recording, then ask the agent to "fold in what was just said" mid-conversation
+- `notetake-record.sh {start [pipewire-source]|stop|status}` toggles a background `pw-record` process
+- `notetake-foldin.sh` stops the current segment (finalizing its WAV header), transcribes it with `whisper-cli`, prints the transcript, and immediately starts the next segment
+
+Why segmented, not one continuous file:
+- `pw-record` only writes a valid WAV header on clean process exit — a file still being written is unreadable by other tools (`sox` fails with "invalid chunk ID" mid-recording). Each fold-in rotates to a fresh segment instead of trying to slice a live file.
+
+Default mic source: `alsa_input.pci-0000_07_00.6.HiFi__Mic1__source` (confirmed live; `Mic2` on this machine is unrouted/dead)
+
+Output:
+- `~/.cache/notetake/session-<timestamp>/segment-<unixtime>.wav` — not auto-deleted, clean up manually
+- Whisper model cached at `~/.cache/notetake/models/ggml-base.en.bin` (downloaded once via `nix-shell -p whisper-cpp`)
+
+Relationship to `record-session`:
+- **Not a replacement** — these solve different shapes of the same general problem. `record-session` is the right tool for "record one continuous conversation, get a transcript at the end" (e.g. a phone call): Ctrl+C-to-stop, auto-transcribes with the larger/more-accurate `small.en` model, writes directly to `~/Documents/transcripts/`.
+- `notetake-*` exists specifically for the *incremental* case `record-session` doesn't cover: staying recorded through a whole class/meeting while periodically asking the agent to fold in just the last segment, live, without stopping. It can also be used for the single-shot case (`start`, let it run, `stop`, transcribe the one resulting segment) but `record-session` is the more polished tool for that if you don't need mid-conversation fold-ins.
+
+Quickshell integration:
+- Paperclip-glyph bar icon (`NotetakeIcon.qml` + `NotetakeCtl.qml` service) in the dotfiles repo toggles this directly — see that repo's `rices/limerence/docs/widgets-and-services.md`
+
+Full writeup (workflow, quirks, cross-repo map): `Inside/Projects/notetake - live note-taking recorder.md` in the zettelkasten vault
+
 ## `backup-secrets.sh`
 Inverse of `restore-secrets.sh`. Saves SSH files from `~/.ssh/` back into pass.
 Run manually after editing SSH material (e.g. adding a host to `~/.ssh/config`).

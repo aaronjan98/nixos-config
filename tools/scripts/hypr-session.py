@@ -9,6 +9,7 @@ Spec: ~/Repositories/projects/project-memory/hypr-session-spec.md
 """
 
 import argparse
+import atexit
 import json
 import os
 import re
@@ -81,6 +82,83 @@ def window_identity(cls: str, title: str) -> str:
 
 def state_file() -> Path:
     return STATE_DIR / f"{socket.gethostname()}.conf"
+
+
+# --- autosave safety -------------------------------------------------------
+#
+# A periodic `save --all` (hypr-session-autosave.nix) is read-only against the
+# live session in the sense that it never spawns or moves anything — but if it
+# fires while a restore is still placing windows, or just after one finished
+# with failures, it happily writes that half-finished layout to disk as if it
+# were the user's intent. That's exactly what silently erased vesktop's
+# correct workspace (twice): a restore left it on the wrong workspace, the
+# 15-minute timer woke up before anyone noticed, and `save --all` overwrote
+# the one record of where it was actually supposed to go. `restore` now
+# records a lock while it runs and a status afterward so an automated
+# (`--auto`) save can skip itself instead of compounding the damage; a manual
+# `save` is unaffected — it IS the human confirming the layout is correct.
+
+LOCK_STALE_SECONDS = 600  # a lock this old belongs to a crashed restore, not
+                          # a running one — ignore it rather than wedging
+                          # autosave off forever
+AUTOSAVE_SETTLE_SECONDS = 90  # give float geometry / late spawns time to land
+                              # before trusting the live session as final
+
+
+def lock_file() -> Path:
+    return STATE_DIR / f"{socket.gethostname()}.restore.lock"
+
+
+def status_file() -> Path:
+    return STATE_DIR / f"{socket.gethostname()}.restore-status.json"
+
+
+def acquire_restore_lock() -> None:
+    lf = lock_file()
+    lf.parent.mkdir(parents=True, exist_ok=True)
+    lf.write_text(json.dumps({"pid": os.getpid(), "started": time.time()}))
+    atexit.register(release_restore_lock)  # safety net for an abnormal exit
+
+
+def release_restore_lock() -> None:
+    try:
+        lock_file().unlink()
+    except OSError:
+        pass
+
+
+def write_restore_status(domains, failed: int) -> None:
+    status_file().write_text(json.dumps({
+        "end_time": time.time(),
+        "domains": domains,
+        "failed": failed,
+        "needs_review": failed > 0,
+    }))
+
+
+def autosave_skip_reason():
+    """None if an automated save should proceed; otherwise why it shouldn't."""
+    lf = lock_file()
+    if lf.exists():
+        try:
+            age = time.time() - json.loads(lf.read_text())["started"]
+        except (OSError, ValueError, KeyError):
+            age = LOCK_STALE_SECONDS + 1  # unreadable lock — treat as stale
+        if age < LOCK_STALE_SECONDS:
+            return "a restore is still in progress"
+    sf = status_file()
+    if sf.exists():
+        try:
+            status = json.loads(sf.read_text())
+        except (OSError, ValueError):
+            return None
+        age = time.time() - status.get("end_time", 0)
+        if age < AUTOSAVE_SETTLE_SECONDS:
+            return f"a restore finished {age:.0f}s ago — letting it settle"
+        if status.get("needs_review"):
+            return ("the last restore reported failures — run "
+                    "`hypr-session save --all` yourself once it's fixed")
+    return None
 
 
 def default_header() -> str:
@@ -208,17 +286,30 @@ def windows_of_class(cls: str):
     }
 
 
-def spawn_and_move(cmd: str, cls: str, wid: int):
+# How many consecutive 0.5s ticks a freshly-detected window must keep the same
+# address before spawn_and_move trusts it and returns. Vesktop/Discord was
+# measured (via a controlled, polled launch) showing a splash window under the
+# same "vesktop" class for ~2.5s — title literally "vesktop"/"Discord" — before
+# closing and handing off to the real window at a NEW address. A 1-tick settle
+# locked onto the splash every time. SOLO_SETTLE_TICKS gives solo apps (the
+# only ones observed doing this) enough margin to outlast that; generic
+# spawn-and-move callers (plain terminals, etc.) keep the fast 1-tick default
+# since they've never shown this behavior and don't need the extra latency.
+SOLO_SETTLE_TICKS = 8  # ~4s
+DEFAULT_SETTLE_TICKS = 2  # ~1s
+
+
+def spawn_and_move(cmd: str, cls: str, wid: int, settle_ticks: int = DEFAULT_SETTLE_TICKS):
     """Run cmd, wait for a NEW window of class `cls`, move it to workspace wid.
     Sequential (one window at a time) so the new window is unambiguous.
 
-    Some Electron apps (vesktop/Discord) briefly show a splash/loading window
-    of the same class before the real main window replaces it. A one-shot
-    "first new window wins" check grabs the splash, moves it, and returns —
+    Some apps briefly show a splash/loading window of the same class before
+    the real main window replaces it at a different address. A one-shot
+    "first new window wins" check would grab the splash, move it, and return —
     then the real window maps moments later on whatever workspace was active,
     never touched. So instead of returning on the first hit, keep re-moving
-    whatever new window currently exists until the same address survives two
-    consecutive checks (~1s), which the splash doesn't.
+    whatever new window currently exists until the same address survives
+    `settle_ticks` consecutive checks, which a splash doesn't.
     """
     before = windows_of_class(cls)
     subprocess.Popen(cmd, shell=True, start_new_session=True,
@@ -246,7 +337,7 @@ def spawn_and_move(cmd: str, cls: str, wid: int):
             settled = 0
         else:
             settled += 1
-            if settled >= 2:
+            if settled >= settle_ticks:
                 return addr
     if last_addr:
         return last_addr  # ran out of time, but something is parked there
@@ -264,7 +355,7 @@ def move_existing_or_spawn(cmd: str, cls: str, wid: int):
         subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                         f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
         return existing[0]
-    return spawn_and_move(cmd, cls, wid)
+    return spawn_and_move(cmd, cls, wid, settle_ticks=SOLO_SETTLE_TICKS)
 
 
 def obsidian_open_vault():
@@ -357,6 +448,27 @@ def match_and_move(cls, items):
         if all(placed):
             break
         time.sleep(0.5)
+
+    # Exact-identity matching failed for whatever's left — the saved active
+    # tab was itself stale (you tabbed around since the last save, so the
+    # title hypr-session recorded no longer matches what the app's own
+    # session restore brings back). Rather than leaving every leftover
+    # window wherever it defaulted to (often all piled on one workspace),
+    # spread whatever unclaimed windows of this class remain across whatever
+    # slots are still unplaced — wrong specific window in a given slot beats
+    # the right window nowhere near its intended workspace.
+    if not all(placed):
+        leftover_windows = sorted(
+            addr for addr, _ in windows_of_class_detailed(cls)
+            if addr not in moved_addrs
+        )
+        leftover_slots = [i for i, p in enumerate(placed) if not p]
+        for addr, i in zip(leftover_windows, leftover_slots):
+            ws, _ = wanted[i]
+            subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
+                            f"{ws},address:{addr}"], check=False, stdout=subprocess.DEVNULL)
+            placed[i] = True
+
     return sum(placed)
 
 
@@ -701,6 +813,11 @@ def apply_float_geometry(plan, dry_run=False):
 # --- commands --------------------------------------------------------------
 
 def cmd_save(args):
+    if args.auto:
+        reason = autosave_skip_reason()
+        if reason:
+            print(f"autosave skipped: {reason}", file=sys.stderr)
+            return
     path = state_file()
     header, blocks = read_blocks(path)
     if args.all:
@@ -716,6 +833,14 @@ def cmd_save(args):
         else:
             blocks[d] = f"domain {d}:\n    # (no windows captured)"
     write_blocks(path, header, blocks)
+    if not args.auto:
+        # A manual save is the human vouching for the current layout — clear
+        # any "needs review" flag a failed restore left behind so autosave
+        # resumes.
+        try:
+            status_file().unlink()
+        except OSError:
+            pass
     dom_desc = "all domains" if args.all else f"domain {current_domain()}"
     print(f"saved {dom_desc} -> {path}")
 
@@ -768,6 +893,11 @@ def cmd_restore(args):
         verb = "would place" if args.dry_run else "placed"
         print(f"{verb} {placed} floating window(s)")
         return
+
+    # Record that a restore is in flight so an automated (`--auto`) save
+    # doesn't snapshot a half-finished layout — see "autosave safety" above.
+    if not args.dry_run:
+        acquire_restore_lock()
 
     # `restore=` entries are matched to app-restored windows by identity (grouped,
     # handled after the loop); everything else is placed/spawned directly.
@@ -856,6 +986,10 @@ def cmd_restore(args):
     # Last, once every window exists: hand the floating ones their geometry back.
     floated = apply_float_geometry(plan, args.dry_run)
 
+    if not args.dry_run:
+        write_restore_status(domains, failed)
+        release_restore_lock()
+
     verb = "would restore" if args.dry_run else "restored"
     bits = []
     if skipped:
@@ -883,6 +1017,10 @@ def main():
 
     ps = sub.add_parser("save", help="save the current domain (or --all)")
     ps.add_argument("--all", action="store_true", help="save the whole 2D grid")
+    ps.add_argument("--auto", action="store_true",
+                    help="automated save (e.g. a timer): skip quietly if a "
+                         "restore is in flight, still settling, or reported "
+                         "failures that haven't been reviewed")
     ps.set_defaults(func=cmd_save)
 
     pr = sub.add_parser("restore", help="restore a domain (default: current)")
