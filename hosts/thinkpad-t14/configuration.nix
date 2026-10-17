@@ -14,7 +14,7 @@
   # pcie_aspm=off works around a suspend/resume instability on this hardware.
   boot.kernelParams = [ "pcie_aspm=off" ];
 
-  # --- Lid close: lock, THEN suspend -----------------------------------------
+  # --- Lid close: lock, THEN suspend (unless coffee mode is on) --------------
   # Problem: with logind's default HandleLidSwitch=suspend, closing the lid
   # suspended the machine while hypridle was still launching hyprlock. During
   # that transition the panel powers off and the compositor stops servicing the
@@ -23,10 +23,19 @@
   # reliably while the compositor is fully awake.
   #
   # Fix: tell logind to IGNORE the lid, and have Hyprland bind the lid switch to
-  # `lock-and-suspend` (see ~/.config/hypr/conf.d/20-binds.conf). That locks
-  # while everything is awake (fast + reliable) and only then suspends — so the
-  # machine is already locked before it sleeps, with no race and no typing
-  # window on wake.
+  # `lid-close-handler` / `lid-open-handler` (see ~/.config/hypr/conf.d/20-binds.conf).
+  # The close handler locks while everything is awake (fast + reliable) and
+  # only then suspends — so the machine is already locked before it sleeps,
+  # with no race and no typing window on wake.
+  #
+  # Coffee-mode exception: the quickshell bar's coffee-cup button stops the
+  # `hypridle` user service to keep the screen/system awake indefinitely (see
+  # HypridleCtl.qml). Before this, closing the lid still suspended regardless
+  # — coffee mode never touched the lid-switch bind. Now the close handler
+  # checks hypridle's state: if it's stopped (coffee mode), the lid closing
+  # only blackens the screen (no lock, no suspend) so whatever's running
+  # keeps running; the open handler un-blackens it. If hypridle is active
+  # (normal mode), behavior is unchanged from before.
   services.logind.settings.Login.HandleLidSwitch = "ignore";
   services.logind.settings.Login.HandleLidSwitchExternalPower = "ignore";
   services.logind.settings.Login.HandleLidSwitchDocked = "ignore";
@@ -40,13 +49,27 @@
     # though the script runs under Hyprland's exec, not a systemd unit. See
     # memory/2026-09-29 for the investigation this supports; revert once
     # resolved.
-    (pkgs.writeShellScriptBin "lock-and-suspend" ''
+    (pkgs.writeShellScriptBin "lid-close-handler" ''
       set -eu
       export PATH=/run/current-system/sw/bin:$PATH
 
-      diag() { logger -t wake-diag "lock-and-suspend: $1 @ $(date +%s.%3N)"; }
+      diag() { logger -t wake-diag "lid-close-handler: $1 @ $(date +%s.%3N)"; }
 
       diag "start (lid closed)"
+
+      if ! systemctl --user is-active --quiet hypridle; then
+        # Coffee mode: hypridle is stopped, so don't lock or suspend — just
+        # blank the display. DPMS off (not screen-blackout-on's brightness-0)
+        # because brightness-0 is only a backlight PWM scale-down — the
+        # compositor keeps rendering real content to the panel, and ambient
+        # room light reflecting off brighter pixels stays faintly visible.
+        # DPMS off blanks the output at the DRM level (no signal at all),
+        # same mechanism the 15-min idle listener below already uses for a
+        # true full blackout.
+        diag "coffee mode (hypridle stopped) - dpms off only, no lock/suspend"
+        hyprctl dispatch dpms off || true
+        exit 0
+      fi
 
       # Hide the desktop up front so nothing flashes while we lock/suspend.
       screen-blackout-on || true
@@ -71,6 +94,18 @@
       diag "calling systemctl suspend"
       systemctl suspend
       diag "systemctl suspend returned (system resumed)"
+    '')
+    (pkgs.writeShellScriptBin "lid-open-handler" ''
+      set -eu
+      export PATH=/run/current-system/sw/bin:$PATH
+
+      # Only act here in coffee mode: a normal-mode lid close suspended the
+      # machine, and hypridle's own after_sleep_cmd (modules/hypr-idle-lock.nix)
+      # already restores dpms/brightness on resume. Firing dpms on again here
+      # in that case is harmless (dpms on is idempotent) but unnecessary.
+      if ! systemctl --user is-active --quiet hypridle; then
+        hyprctl dispatch dpms on || true
+      fi
     '')
   ];
   # ---------------------------------------------------------------------------
