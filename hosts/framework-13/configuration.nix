@@ -33,6 +33,7 @@ in {
     ../../modules/orchestrator.nix
     ../../modules/speakers-suspend-off.nix
     ../../modules/wifi-reliability.nix
+ ../../modules/matter-plug-healer.nix
   ];
 
   networking.hostName = "framework-13";
