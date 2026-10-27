@@ -57,6 +57,17 @@ GHOSTTY_CLASS = "com.mitchellh.ghostty"
 # `move=<class>`; restore uses move_existing_or_spawn. Extend as needed.
 SOLO_APPS = {"vesktop"}
 
+# RStudio is Electron too (confirmed via `ps`) and shows the same splash-then-
+# real-window pattern as vesktop, but unlike vesktop it's NOT single-instance —
+# "Open Project in New Session" (modules/rstudio-project.nix) deliberately runs
+# multiple isolated sessions side by side. So it can't use SOLO_APPS (whose
+# move_existing_or_spawn assumes exactly one window ever and would steal a
+# second entry's window right back off whatever workspace the first entry just
+# placed it on). It gets the generic multi-instance-safe move= treatment
+# (like GHOSTTY_CLASS below) plus the long splash-settle window.
+RSTUDIO_CLASS = "rstudio"
+LONG_SETTLE_CLASSES = SOLO_APPS | {RSTUDIO_CLASS}
+
 
 def tmux_sessions():
     try:
@@ -288,14 +299,18 @@ def windows_of_class(cls: str):
 
 # How many consecutive 0.5s ticks a freshly-detected window must keep the same
 # address before spawn_and_move trusts it and returns. Vesktop/Discord was
-# measured (via a controlled, polled launch) showing a splash window under the
-# same "vesktop" class for ~2.5s — title literally "vesktop"/"Discord" — before
-# closing and handing off to the real window at a NEW address. A 1-tick settle
-# locked onto the splash every time. SOLO_SETTLE_TICKS gives solo apps (the
-# only ones observed doing this) enough margin to outlast that; generic
+# measured (via a controlled, polled launch, no contention) showing a splash
+# window under the same "vesktop" class for ~2.5s — title literally
+# "vesktop"/"Discord" — before closing and handing off to the real window at a
+# NEW address. RStudio (also Electron, confirmed via `ps`) shows the same
+# pattern. A real `--all` reboot restore (many apps launching at once, far
+# more contention than the isolated measurement) still lost vesktop AND
+# rstudio to their splashes at an earlier, shorter margin — so this needs
+# comfortable headroom, not just the measured minimum. LONG_SETTLE_TICKS gives
+# known splash-prone classes (LONG_SETTLE_CLASSES) that margin; generic
 # spawn-and-move callers (plain terminals, etc.) keep the fast 1-tick default
 # since they've never shown this behavior and don't need the extra latency.
-SOLO_SETTLE_TICKS = 8  # ~4s
+LONG_SETTLE_TICKS = 20  # ~10s
 DEFAULT_SETTLE_TICKS = 2  # ~1s
 
 
@@ -355,7 +370,7 @@ def move_existing_or_spawn(cmd: str, cls: str, wid: int):
         subprocess.run(["hyprctl", "dispatch", "movetoworkspacesilent",
                         f"{wid},address:{existing[0]}"], check=False, stdout=subprocess.DEVNULL)
         return existing[0]
-    return spawn_and_move(cmd, cls, wid, settle_ticks=SOLO_SETTLE_TICKS)
+    return spawn_and_move(cmd, cls, wid, settle_ticks=LONG_SETTLE_TICKS)
 
 
 def obsidian_open_vault():
@@ -696,6 +711,12 @@ def collect(target_domains):
             # restore; keep a launch command for the case it isn't running yet.
             cmd = launch_command(c.get("pid", -1), cls)
             move = cls.lower()
+        elif cls.lower() == RSTUDIO_CLASS:
+            # Multi-instance capable (unlike SOLO_APPS) but still needs
+            # spawn-and-move, since a bare launch has no way to target a
+            # workspace reliably once its splash window is accounted for.
+            cmd = launch_command(c.get("pid", -1), cls)
+            move = cls.lower()
         else:
             cmd = launch_command(c.get("pid", -1), cls)
         if not cmd:
@@ -953,7 +974,8 @@ def cmd_restore(args):
         if solo:
             ok = move_existing_or_spawn(e["cmd"], key, wid) is not None
         elif move_cls:
-            ok = spawn_and_move(e["cmd"], move_cls, wid) is not None
+            settle = LONG_SETTLE_TICKS if move_cls in LONG_SETTLE_CLASSES else DEFAULT_SETTLE_TICKS
+            ok = spawn_and_move(e["cmd"], move_cls, wid, settle_ticks=settle) is not None
         else:
             subprocess.run(
                 ["hyprctl", "dispatch", "exec",
