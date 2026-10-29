@@ -15,6 +15,13 @@ the Framework 13 the day before (commit `1587d31`, see
    with Obsidian focused worked every time (tab title changed). `hyprctl dispatch
    sendshortcut` into `activewindow` succeeded ("ok" in the journal) on physical swipes
    too — detection and dispatch were both fine *when the gesture was recognized at all*.
+   **Note**: the user initially observed "works in Firefox, not in Obsidian" and later
+   "worked in Obsidian, then stopped working back in Firefox" — this pattern is
+   coincidental, not app-specific. The misdetection in step 3 below happens entirely in
+   the touchpad hardware/driver *before* the app-aware script or window class is ever
+   consulted, so which app is focused can't affect it. Each swipe is close to a coin
+   flip; the observed per-app pattern was just which way enough individual flips landed
+   during each testing round.
 3. Captured raw libinput events with `libinput debug-events --device /dev/input/event14`
    (the `SynPS/2 Synaptics TouchPad`) during a live physical 3-finger swipe. Result: the
    touchpad reported it as a **2-finger `POINTER_SCROLL_FINGER`**, never a

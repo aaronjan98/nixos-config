@@ -169,7 +169,9 @@ than tracked per-finger — and the 2-vs-3-finger boundary is the hardest one fo
 call correctly. Confirmed directly with `libinput debug-events --device /dev/input/eventN`:
 a real 3-finger swipe was reported as a 2-finger `POINTER_SCROLL_FINGER`, never reaching
 `GESTURE_SWIPE`. 4-finger gestures stayed reliable throughout because that threshold is
-cruder.
+cruder. The misdetection happens in hardware before the app-aware script ever runs, so an
+observed "works in Firefox, not Obsidian" (or vice versa) pattern is coincidental, not
+app-specific — each swipe is close to a coin flip regardless of which app is focused.
 
 The kernel flags that this touchpad *advertises* support for the better SMBus/RMI4 protocol
 (true per-finger multitouch — `dmesg`: "says it can support a different bus ... try setting
