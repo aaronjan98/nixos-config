@@ -155,3 +155,29 @@ Full detail: `memory/2026-08-01 keyboard accents emoji and host-scaled dotfiles.
   `~/.config/hypr/scripts/fz` hostname-gated wrapper (covers launcher, bemoji via
   `BEMOJI_PICKER_CMD`, accent-pick); quickshell notif-center size gated on
   `uiScale >= 1.5`. Reusable pattern for any per-host size divergence in dotfiles.
+
+---
+
+## Touchpad gestures: 3-finger tab-switch is unreliable on the ThinkPad, fine on the Framework
+
+Full detail: `memory/2026-10-29 thinkpad 3-finger gesture touchpad firmware.md`.
+
+Both hosts run the identical gesture config (`modules/libinput-gestures.nix`), so this is
+**hardware, not config**. The ThinkPad T14's touchpad (Synaptics, PNP `LEN2073`) runs in
+legacy PS/2 "semi-MT" mode — finger count is approximated from contact area/shape rather
+than tracked per-finger — and the 2-vs-3-finger boundary is the hardest one for semi-MT to
+call correctly. Confirmed directly with `libinput debug-events --device /dev/input/eventN`:
+a real 3-finger swipe was reported as a 2-finger `POINTER_SCROLL_FINGER`, never reaching
+`GESTURE_SWIPE`. 4-finger gestures stayed reliable throughout because that threshold is
+cruder.
+
+The kernel flags that this touchpad *advertises* support for the better SMBus/RMI4 protocol
+(true per-finger multitouch — `dmesg`: "says it can support a different bus ... try setting
+psmouse.synaptics_intertouch to 1"), but three escalating fixes
+(`psmouse.synaptics_intertouch=1` kernel param → also force-loading `rmi_core`/`rmi_smbus`
+early to rule out a module-load race → a full Lenovo BIOS update `0.1.30`→`0.1.35`) all hit
+the **identical** `SMbus companion is not ready yet` failure. This points to the touchpad
+unit itself being unable to complete the handshake, not a timing race or stale firmware —
+likely needs a kernel source patch to fix, if fixable at all. Decided not to pursue that;
+living with occasional 3-finger misfires on this host instead. Don't re-attempt the same
+three fixes without reading the full note first.

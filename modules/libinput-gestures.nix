@@ -15,6 +15,17 @@
 # `After`/`WantedBy` target default.target, not graphical-session.target: the
 # latter is never started on this Hyprland setup (see
 # modules/hypr-session-autosave.nix and modules/hypr-monitor-watch.nix).
+#
+# ThinkPad-only: 3-finger swipe is unreliable on the ThinkPad T14 (fine on
+# framework-13) even though this config is shared verbatim. Root-caused to the
+# ThinkPad's touchpad running in legacy PS/2 "semi-MT" mode, where the 2-vs-3
+# finger boundary is the hardest for the hardware to call correctly — confirmed
+# with `libinput debug-events`, a real 3-finger swipe showed up as a 2-finger
+# scroll. This is NOT fixable from here: `psmouse.synaptics_intertouch=1`,
+# force-loading `rmi_core`/`rmi_smbus` early, and a full Lenovo BIOS update all
+# hit the identical `SMbus companion is not ready yet` kernel failure. See
+# memory/2026-10-29 thinkpad 3-finger gesture touchpad firmware.md before
+# re-attempting any of those on this host.
 let
   # App-aware tab switch. Only known tabbed apps act; everything else is a
   # deliberate no-op so the gesture never fires a stray shortcut into a terminal
