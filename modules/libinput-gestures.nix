@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 
 # Supervise libinput-gestures (3-finger = switch browser/editor tab,
 # 4-finger = switch workspace / workspace-domain).
@@ -85,6 +85,24 @@ in
     description = "Actions gestures on your touchpad using libinput";
     after = [ "default.target" ];
     wantedBy = [ "default.target" ];
+    # A long-running libinput-gestures daemon reads its config ONCE at startup and
+    # holds the store paths it references (this config + the gesture-tab-switch it
+    # embeds) frozen for its whole lifetime. switch-to-configuration only restarts
+    # a user unit when the unit FILE or a restartTrigger changes; the unit file
+    # here only moves when the libinput-gestures package bumps, and the gesture
+    # config lives in a SEPARATE environment.etc file the unit had no link to. So
+    # across rebuilds the daemon kept running untouched while nrs churned the store
+    # paths underneath it and GC reclaimed the old ones — silently REMOVING a
+    # capability that had been working (the 2026-10-28 "3-finger tab switch stopped
+    # after a rebuild" failure; same dangling-store-path class as the enable-symlink
+    # rot described in the header). This trigger links the unit to the rendered
+    # config (which embeds the gesture-tab-switch store path, so a script edit OR an
+    # unrelated dep bump that only changes its hash both count), so any rebuild that
+    # alters what the daemon references restarts it onto the new paths before the old
+    # ones vanish. NB: nixos-rebuild only reconciles user units for a user with an
+    # active session; if a rebuild ran without one, `systemctl --user restart
+    # libinput-gestures`.
+    restartTriggers = [ config.environment.etc."libinput-gestures.conf".source ];
     serviceConfig = {
       Type = "simple";
       ExecStart = "${pkgs.libinput-gestures}/bin/libinput-gestures -c /etc/libinput-gestures.conf";
