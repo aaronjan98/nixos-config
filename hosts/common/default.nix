@@ -12,6 +12,7 @@
     ../../modules/networkmanager-profiles.nix
     ../../modules/hypr-dispatch.nix
     ../../modules/wol-sauron.nix
+    ../../modules/ntfy-sauron-gpu-relay.nix
     ../../modules/hypr-idle-lock.nix
     ../../modules/hypr-session-autosave.nix
     ../../modules/tmux-resurrect-repair.nix

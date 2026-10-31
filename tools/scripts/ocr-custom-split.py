@@ -883,11 +883,31 @@ def pix2tex_output_is_suspicious(span_text: str, output: str) -> str | None:
     return None
 
 
+def has_garbled_exponent_artifact(text: str) -> bool:
+    """Detect OCR's most common way of destroying a superscript exponent or
+    derivative mark: collapsing it directly onto an adjacent digit with no
+    separator, e.g. "4e^t" misread as "4det", or "y''" misread so the prime
+    marks vanish and merge into a run of letters. Genuine simple math in
+    these captures only ever pairs a digit with a single-letter variable
+    ("3t", "2y"), never a multi-letter run, so two or more letters stuck to
+    a digit is a reliable sign the line actually needs the real OCR
+    backend rather than the local cleanup path.
+
+    Examples this catches that the marker list below misses:
+    - "Y + 2 +y=4det."       (4e^t -> 4det; confirmed live false-negative)
+    - "y\" — 2y — 3y = —11te”\"." (11e^t -> 11te; belt-and-suspenders, this
+      one was already rejected by the stray-quote-character check)
+    """
+    return bool(re.search(r"\d[A-Za-z]{2,}", text))
+
+
 def span_is_simple_math(span: Span) -> bool:
     text, _suffix = split_math_suffix(span.text)
     if any(marker in text for marker in ("\\", "√", "∑", "∫", "≤", "≥", "≠", "≈")):
         return False
     if "/" in text:
+        return False
+    if has_garbled_exponent_artifact(text):
         return False
     cleaned = cleanup_math_text(text)
     if not cleaned or len(cleaned) > 80:
@@ -1394,6 +1414,8 @@ def block_is_tesseract_cleanable(block: DisplayBlock) -> bool:
     if len(lines) == 1:
         raw = lines[0].lower()
         if any(marker in raw for marker in ("cos", "sin", "tan", "exp", "e*", "e ", "e'", "e\"", "c,", "r,", "lambda", "mu", "cent", "cytent", "cytet", "=c ", " et", "tet")):
+            return False
+        if has_garbled_exponent_artifact(lines[0]):
             return False
         cleaned = cleanup_math_text(lines[0])
         simplified = cleaned.replace("\\Delta", "Delta")

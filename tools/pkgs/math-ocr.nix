@@ -115,6 +115,12 @@ let
     OCR_CUSTOM_BACKEND = "sauron";
     OCR_CUSTOM_DISPLAY_BACKEND = "sauron";
     OCR_CUSTOM_INLINE_BACKEND = "sauron";
+    # Go straight over Tailscale to Sauron's LAN IP instead of the bare
+    # "sauron" ssh-config alias, which bounces through the public
+    # ssh.aaronjanovitch.com dynamic-DNS/port-forward -- that path has shown
+    # two different failure modes independent of whether Sauron is actually
+    # up, while the direct tailnet hop has been reliable all session.
+    SAURON_HOST = "sauron.home";
   };
 
   combinedRuntimeInputs = [
