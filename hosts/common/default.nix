@@ -629,6 +629,15 @@
           installation_mode = "force_installed";
           install_url = "file:///home/aj/Repositories/projects/voice-assistant/browser-extension/orchestrator-bridge.xpi";
         };
+        # Dark Reader, set to follow the system colour scheme (Settings >
+        # Automation > System color scheme) — which set-wallpapers drives via
+        # gsettings color-scheme — replaces Super Dark Mode, which had no
+        # system-sync option on Firefox. 1.3M+ daily users on AMO, actively
+        # maintained since 2017, vs. the ~1-user alternative first considered.
+        "addon@darkreader.org" = {
+          installation_mode = "force_installed";
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/darkreader/latest.xpi";
+        };
       };
     };
   };

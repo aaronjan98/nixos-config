@@ -4,9 +4,10 @@
 // (programs.firefox.autoConfig, fed by builtins.readFile). The wrapper emits the
 // mandatory "first line must be a comment", so this file starts at real code.
 //
-// Two jobs:
+// Three jobs:
 //   1. Turn on userChrome.css loading.
 //   2. Bind Alt+F in every browser window to toggle the auto-hiding chrome.
+//   3. Force on xdg-desktop-portal settings integration (see below).
 //
 // The stylesheet keys off a `chromeshown` attribute on the root element:
 // absent (the default) means the bars auto-hide, present means they are
@@ -14,6 +15,19 @@
 // script ever fails to run.
 
 defaultPref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+
+// widget.use-xdg-desktop-portal.settings: 0 off / 1 on / 2 auto-detect.
+// "auto-detect" (the default) gates on a desktop-environment allowlist that
+// doesn't recognise Hyprland, so it silently never turns on — website content
+// stayed stuck on whatever prefers-color-scheme Firefox guessed at its very
+// first run, permanently ignoring both the wallpaper and the (correctly
+// flipping) gsettings/portal state. Forcing it to 1 is what actually fixed
+// this, confirmed directly: color-scheme and gtk-theme were already flipping
+// correctly the whole time and made no difference on their own until this
+// was also set. Not on the Preferences-policy allowlist (same class of
+// problem as the userChrome.css pref above), so this goes through AutoConfig
+// too, not programs.firefox.preferences.
+defaultPref("widget.use-xdg-desktop-portal.settings", 1);
 defaultPref("userchrome.autohide.pinned", false);
 
 (function () {
