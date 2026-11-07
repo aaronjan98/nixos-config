@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+import os
+from pathlib import Path
 from typing import Literal
 
 from homeassistant.components import conversation
@@ -12,6 +14,18 @@ from homeassistant.helpers import entity_registry as er, intent
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DEFAULT_URL, DOMAIN
+
+
+def _orchestrator_auth_headers() -> dict[str, str]:
+    """Read the HA service credential without exposing it in Nix or Git."""
+    directory = os.environ.get("CREDENTIALS_DIRECTORY")
+    if not directory:
+        return {}
+    try:
+        token = (Path(directory) / "ha-orchestrator-token").read_text(encoding="utf-8").strip()
+    except OSError:
+        return {}
+    return {"X-HA-Orchestrator-Token": token} if token else {}
 
 
 def _resolve_location(hass: HomeAssistant, device_id: str | None) -> str:
@@ -71,6 +85,7 @@ class OrchestratorAgent(AbstractConversationAgent):
         self.hass = hass
         self.entry = entry
         self._url = entry.data.get("url", DEFAULT_URL)
+        self._auth_headers = _orchestrator_auth_headers()
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:
@@ -87,6 +102,7 @@ class OrchestratorAgent(AbstractConversationAgent):
         payload = {
             "model": "orchestrator",
             "conversation_id": user_input.conversation_id,
+            "device_id": user_input.device_id,
             "messages": [
                 {
                     "role": "system",
@@ -125,6 +141,7 @@ class OrchestratorAgent(AbstractConversationAgent):
             async with session.post(
                 f"{self._url}/v1/chat/completions",
                 json=payload,
+                headers=self._auth_headers,
                 timeout=200,
             ) as resp:
                 data = await resp.json()

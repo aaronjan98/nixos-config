@@ -50,6 +50,12 @@ in {
     };
   };
 
+  # Authenticate device identity claims sent by the HA conversation agent.
+  # Provision the source file outside the Nix store before rebuilding.
+  systemd.services.home-assistant.serviceConfig.LoadCredential = [
+    "ha-orchestrator-token:/var/lib/voice-assistant/ha-orchestrator-token"
+  ];
+
   # Matter server — local controller the HA "matter" integration connects to
   # (ws://localhost:5580/ws). Lets HA commission and drive Matter devices like
   # the KP125M speaker plug directly on the LAN, bypassing python-kasa (which
