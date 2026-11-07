@@ -79,6 +79,12 @@
       enable = true;
       # allowedTCPPorts = [ 22 6969 ];
       allowedUDPPorts = [ 41641 ];
+      # Open WebUI household front door (ai.home -> Caddy -> 127.0.0.1:5050).
+      # Tailnet only: family and remote access arrive over Tailscale, keeping
+      # the plaintext HTTP hop inside WireGuard. To let LAN devices reach it
+      # without Tailscale, add 80 to allowedTCPPorts above — that single line
+      # is the only thing that widens exposure beyond the tailnet.
+      interfaces.tailscale0.allowedTCPPorts = [ 80 ];
     };
   };
   programs = {

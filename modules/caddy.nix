@@ -3,6 +3,10 @@
 {
   networking.hosts."127.0.0.1" = [
     "ai.local"
+    # Also resolved locally so this host reaches its own front door without a
+    # round trip through sweetpea's dnsmasq. Other devices resolve ai.home via
+    # that dnsmasq override instead; both land on the same Caddy vhost below.
+    "ai.home"
     "contextforge.local"
     "movies.local"
     "photos.local"
@@ -19,6 +23,21 @@
     virtualHosts = {
       "ai.local:80".extraConfig = ''
         bind 127.0.0.1
+        reverse_proxy 127.0.0.1:5050
+      '';
+
+      # Household front door for Open WebUI — the same instance as ai.local,
+      # under a name other devices can reach. Deliberately NOT bound to
+      # 127.0.0.1 like the aliases around it: family and remote access are the
+      # entire point. Exposure is constrained at the firewall instead, which
+      # opens port 80 only on tailscale0 (see hosts/common/default.nix), so
+      # reaching this means being on the tailnet and the plaintext hop stays
+      # inside WireGuard — which matters because auto_https is off globally.
+      #
+      # DNS caveat: sweetpea's dnsmasq wildcards *.home to itself, so without
+      # an explicit override record for ai.home pointing at this host's tailnet
+      # address, other devices land on sweetpea's nginx and get a 404.
+      "ai.home:80".extraConfig = ''
         reverse_proxy 127.0.0.1:5050
       '';
 
