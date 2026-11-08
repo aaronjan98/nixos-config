@@ -43,6 +43,28 @@
       # misconfiguration fails closed to the restricted tier rather than
       # trusting an unauthenticated identity claim.
       ENABLE_FORWARD_USER_INFO_HEADERS = "true";
+
+      # Show every connection's models to every account, and let the workflow
+      # shim decide who may actually *use* one.
+      #
+      # Open WebUI only applies access grants to rows in its own models table,
+      # which base models discovered from a Connection do not have — so the
+      # shim's workflows are invisible to non-admins until someone hand-creates
+      # a "Workspace model" per workflow in the UI. That would put
+      # authorization for these workflows in mutable SQLite state while the
+      # workflows themselves live in git: two sources of truth, the weaker one
+      # unversionable, and a manual click needed for every workflow added.
+      #
+      # The shim already enforces authorization on the verified Open WebUI JWT
+      # via each WORKFLOW.md's `access:` field, and returns 403 independently of
+      # what this UI chooses to display. Visibility is not the boundary, so it
+      # is safe to stop pretending it is one.
+      #
+      # Consequence to keep in mind: this exposes models from *every*
+      # connection to everyone. Adding a metered connection later means its
+      # models appear in the household's picker too, and the gating for that
+      # would have to live somewhere else.
+      BYPASS_MODEL_ACCESS_CONTROL = "true";
     };
   };
 }
