@@ -28,8 +28,17 @@ in {
       # Same secret Open WebUI signs its forwarded user JWT with, so the shim
       # can verify who is asking and scope sessions per person. Provisioned by
       # modules/orchestrator.nix, which owns /var/lib/voice-assistant.
+      # The identity secret lets the shim verify who is asking. The three below
+      # are what workflows actually need in order to act, and they are here
+      # rather than read from pass because pass cannot work in this context:
+      # there is no pinentry to answer a passphrase prompt, so `pass show`
+      # blocks forever, and a household caller could not unlock AJ's gpg-agent
+      # even if there were. Observed as a request that hung until it was killed.
       LoadCredential = [
         "openwebui-identity-secret:/var/lib/voice-assistant/openwebui-identity-secret"
+        "nextcloud-dj-app-password:/var/lib/voice-assistant/nextcloud-dj-app-password"
+        "vizio-kodi-password:/var/lib/voice-assistant/vizio-kodi-password"
+        "jellyfin-credential:/var/lib/voice-assistant/jellyfin-credential"
       ];
 
       # `claude` lives on the system path, and the agent's own tool calls

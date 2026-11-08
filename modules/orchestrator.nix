@@ -48,6 +48,27 @@ in {
       "$(${pkgs.coreutils}/bin/cat "$webui_secret")" > "$webui_env")
     ${pkgs.coreutils}/bin/chown root:root "$webui_env"
     ${pkgs.coreutils}/bin/chmod 0400 "$webui_env"
+
+    # Service credentials for the workflow shim's agents. Unlike the two above
+    # these cannot be generated — each must match an external service — so this
+    # only guarantees the file exists with the right ownership. Empty
+    # placeholders are created deliberately: systemd LoadCredential fails the
+    # whole unit when a source file is missing, so an absent secret would take
+    # the shim down entirely, whereas an empty one fails just the workflow that
+    # needs it, with a message naming the file.
+    #
+    # pass remains the source of truth; these are deployment copies, the same
+    # relationship the HA token already has. Fill them with, e.g.:
+    #   pass show homelab/vizio-kodi/kodi | sudo tee /var/lib/voice-assistant/vizio-kodi-password >/dev/null
+    for secret in nextcloud-dj-app-password vizio-kodi-password jellyfin-credential; do
+      path="$credential_dir/$secret"
+      if [ ! -e "$path" ]; then
+        (umask 077; : > "$path")
+        echo "voice-assistant: $path is an empty placeholder; workflows needing it will fail until it is filled"
+      fi
+      ${pkgs.coreutils}/bin/chown root:root "$path"
+      ${pkgs.coreutils}/bin/chmod 0400 "$path"
+    done
   '';
 
   systemd.services.voice-orchestrator = {
