@@ -21,6 +21,11 @@ in {
 
     extraComponents = [
       "esphome"              # auto-discovers ESPHome satellites on the LAN
+      "cast"                 # Google Cast — the three Nest/Home Minis become
+                             # media_player targets for TTS replies and music.
+                             # Their mics are locked down by Google and cannot
+                             # feed the Assist pipeline; only playback works,
+                             # so an ESPHome satellite stays the voice input.
       "matter"               # local Matter control (KP125M speaker plug, etc.)
       "wyoming"              # voice pipeline bridge to Whisper + Piper
       "assist_pipeline"
