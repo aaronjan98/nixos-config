@@ -24,8 +24,21 @@
   # photos.home already exist as vhosts on sweetpea, serving the same Jellyfin
   # and Immich on qwerty. Keeping local duplicates would mean one name with two
   # behaviours depending on which machine you typed it from.
+  # ai.home is deliberately NOT here. It used to be, and that was the cause of
+  # a long blank-page hunt: a /etc/hosts entry pointed it at 127.0.0.1, but the
+  # ai.home vhost below is the only one without a `bind`, so Caddy puts it in a
+  # second server listening on :80 while these loopback-only sites sit on
+  # 127.0.0.1:80. Linux delivers traffic for 127.0.0.1:80 to the specifically
+  # bound socket, i.e. the server that has no ai.home route, and Caddy answers
+  # an unmatched host with an empty response — a blank page, and empty-MIME-type
+  # failures on the SPA's module imports.
+  #
+  # Without the override, ai.home resolves through sweetpea's dnsmasq like
+  # every other .home name, and sweetpea's nginx proxies to this host's tailnet
+  # address, which lands on the :80 server unambiguously. Same path photos.home
+  # and movies.home already take. The cost is that reaching it from this
+  # machine hairpins via sweetpea; 127.0.0.1:5050 is always available directly.
   networking.hosts."127.0.0.1" = [
-    "ai.home"
     "contextforge.home"
     "syncthing.home"
   ];
