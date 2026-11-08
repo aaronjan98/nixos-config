@@ -20,6 +20,12 @@ in {
       ExecStart = "${python}/bin/uvicorn main:app --host 127.0.0.1 --port 8130";
       WorkingDirectory = repoDir;
 
+      # Shares the orchestrator's .env because both resolve the same identities
+      # with the same allowlists — TRUSTED_WEBUI_USER_IDS and the HA device ids.
+      # Keeping two copies would let them disagree about who is personal tier,
+      # which is the kind of divergence nobody notices until it matters.
+      EnvironmentFile = "/home/aj/Repositories/projects/voice-assistant/orchestrator/.env";
+
       # Runs as aj deliberately: it shells out to `claude`, which authenticates
       # with AJ's Claude Code credentials under ~/.claude. A system user would
       # have no subscription to spend and no session history to resume.
