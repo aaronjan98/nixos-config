@@ -38,6 +38,7 @@ in {
         "openwebui-identity-secret:/var/lib/voice-assistant/openwebui-identity-secret"
         "nextcloud-dj-app-password:/var/lib/voice-assistant/nextcloud-dj-app-password"
         "vizio-kodi-password:/var/lib/voice-assistant/vizio-kodi-password"
+        "firestick-kodi-password:/var/lib/voice-assistant/firestick-kodi-password"
         "jellyfin-credential:/var/lib/voice-assistant/jellyfin-credential"
       ];
 

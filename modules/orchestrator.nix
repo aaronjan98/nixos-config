@@ -60,7 +60,11 @@ in {
     # pass remains the source of truth; these are deployment copies, the same
     # relationship the HA token already has. Fill them with, e.g.:
     #   pass show homelab/vizio-kodi/kodi | sudo tee /var/lib/voice-assistant/vizio-kodi-password >/dev/null
-    for secret in nextcloud-dj-app-password vizio-kodi-password jellyfin-credential; do
+    # firestick-kodi-password is the one the Kodi actuator actually uses:
+    # 10.0.50.134 is the Fire TV Stick attached to the Vizio, not the TV itself,
+    # and bin/kodi-play.sh reads homelab/firestick-kodi/family/kodi. The vizio
+    # entry is kept because docs/qwerty.md references both and it costs nothing.
+    for secret in nextcloud-dj-app-password vizio-kodi-password firestick-kodi-password jellyfin-credential; do
       path="$credential_dir/$secret"
       if [ ! -e "$path" ]; then
         (umask 077; : > "$path")
