@@ -1,0 +1,43 @@
+{ config, pkgs, lib, ... }:
+
+let
+  python = pkgs.python3.withPackages (ps: [
+    ps.fastapi
+    ps.uvicorn
+    ps.pyyaml       # WORKFLOW.md frontmatter
+  ]);
+  repoDir = "/home/aj/Repositories/projects/voice-assistant/workflow-shim";
+in {
+  # OpenAI-compatible front end for Claude Code workflows, so Open WebUI's
+  # model picker becomes a workflow picker. See workflow-shim/main.py for the
+  # design and workflows/<name>/WORKFLOW.md for each workflow's scope.
+  systemd.services.workflow-shim = {
+    description = "Claude Workflow Shim (OpenAI-compatible)";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network.target" ];
+
+    serviceConfig = {
+      ExecStart = "${python}/bin/uvicorn main:app --host 127.0.0.1 --port 8130";
+      WorkingDirectory = repoDir;
+
+      # Runs as aj deliberately: it shells out to `claude`, which authenticates
+      # with AJ's Claude Code credentials under ~/.claude. A system user would
+      # have no subscription to spend and no session history to resume.
+      User = "aj";
+
+      # Same secret Open WebUI signs its forwarded user JWT with, so the shim
+      # can verify who is asking and scope sessions per person. Provisioned by
+      # modules/orchestrator.nix, which owns /var/lib/voice-assistant.
+      LoadCredential = [
+        "openwebui-identity-secret:/var/lib/voice-assistant/openwebui-identity-secret"
+      ];
+
+      # `claude` lives on the system path, and the agent's own tool calls
+      # inherit this PATH.
+      Environment = "PATH=/run/current-system/sw/bin";
+
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+  };
+}

@@ -31,6 +31,7 @@ in {
     ../common/default.nix
     ../../modules/home-assistant.nix
     ../../modules/orchestrator.nix
+    ../../modules/workflow-shim.nix
     ../../modules/speakers-suspend-off.nix
     ../../modules/wifi-reliability.nix
  ../../modules/matter-plug-healer.nix
