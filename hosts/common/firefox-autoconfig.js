@@ -92,3 +92,72 @@ defaultPref("userchrome.autohide.pinned", false);
     } catch (_) {}
   }
 })();
+
+// Home dashboard page-focus fallback.
+// New Tab Override uses focus_website=true, but Firefox can still leave the
+// URL bar focused. Only intervene when home.home is the selected page.
+(function () {
+  try {
+    const svc =
+      typeof Services !== "undefined"
+        ? Services
+        : ChromeUtils.importESModule("resource://gre/modules/Services.sys.mjs")
+            .Services;
+
+    function isHome(uri) {
+      try {
+        return uri && uri.scheme === "http" && uri.host === "home.home";
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function focusHome(win, browser) {
+      if (!browser) return;
+      win.setTimeout(function () {
+        if (
+          win.closed ||
+          win.gBrowser?.selectedBrowser !== browser ||
+          !isHome(browser.currentURI) ||
+          win.gBrowser?.userTypedValue
+        ) return;
+
+        const focused = win.document.commandDispatcher?.focusedElement;
+        const urlInput = win.gURLBar?.inputField;
+        // Do not steal focus from other Firefox controls or page elements.
+        if (focused && focused !== urlInput && focused !== browser) return;
+        browser.focus();
+      }, 0);
+    }
+
+    svc.obs.addObserver(function (win) {
+      const tabs = win.gBrowser;
+      if (!tabs) return;
+
+      const listener = {
+        onLocationChange(browser, webProgress, request, location) {
+          if (webProgress?.isTopLevel && isHome(location)) {
+            focusHome(win, browser);
+          }
+        },
+        onStateChange(browser, webProgress, request, stateFlags) {
+          if (
+            webProgress?.isTopLevel &&
+            (stateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP)
+          ) {
+            focusHome(win, browser);
+          }
+        }
+      };
+
+      tabs.addTabsProgressListener(listener);
+      // A startup homepage can finish loading before the listener is added.
+      focusHome(win, tabs.selectedBrowser);
+      win.addEventListener("unload", function () {
+        tabs.removeTabsProgressListener(listener);
+      }, { once: true });
+    }, "browser-delayed-startup-finished");
+  } catch (e) {
+    try { Components.utils.reportError(e); } catch (_) {}
+  }
+})();
