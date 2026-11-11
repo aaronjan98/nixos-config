@@ -622,7 +622,26 @@
     # autoConfig hands the content to pkgs.writeText, which does get realised.
     autoConfig = builtins.readFile ./firefox-autoconfig.js;
     policies = {
+      # Always open the homelab launcher on a fresh Firefox launch rather
+      # than restoring the previously configured Firefox Home/session page.
+      Homepage = {
+        URL = "http://home.home";
+        StartPage = "homepage-locked";
+      };
+      # New Tab Override reads enterprise-managed settings through storage.managed.
+      # Firefox itself does not support a custom new-tab URL preference.
+      "3rdparty".Extensions."newtaboverride@agenedia.com" = {
+        type = "custom_url";
+        url = "http://home.home";
+        focus_website = true;
+      };
       ExtensionSettings = {
+        # Remove Toby's competing new-tab override; it is no longer needed.
+        "toby-ext@gettoby.com".installation_mode = "blocked";
+        "newtaboverride@agenedia.com" = {
+          installation_mode = "force_installed";
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/new-tab-override/latest.xpi";
+        };
         "contextforge-bridge@local" = {
           installation_mode = "force_installed";
           install_url = "file:///home/aj/Repositories/projects/context-harness/contextforge-bridge-signed.xpi";
