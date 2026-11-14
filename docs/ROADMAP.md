@@ -266,30 +266,64 @@ Open questions:
 - Whether TLP should be involved at all, or manage the threshold entirely via the custom module
 
 ### Kanata: TCP server, launcher layer, and multi-profile support
-Goal:
-- Enable the Kanata TCP server so Quickshell can receive layer-change events and send mode/profile switch commands (required by the left bar mode indicator island — see quickshell ROADMAP)
-- Add a `launcher` layer (L mode) to the kanata config: single tap of Super enters launcher mode, where each letter key launches a configured app
-- Add a `default` profile `.kbd` file alongside the existing `kanata-internal.kbd` (the "aj" profile)
+**Full spec for the Quickshell side: `~/.config/quickshell/project-memory/kanata-island.md`.**
+It records the verified TCP protocol and the findings below.
 
-Changes needed in `hosts/thinkpad-t14/kanata/kanata-internal.kbd`:
-1. Add `tcp-port 7979` (or similar) to `defcfg` so the TCP server starts with kanata
-2. Add a `(deflayer launcher ...)` that maps letter keys to app-launch commands via `cmd` actions
-3. Decide on Super tap-to-enter: currently Super (lmet) is used as a chord modifier — a one-shot or tap-hold-press on lmet with a short tap timeout could enter launcher layer
+Verified against the deployed kanata 1.9.0 (2026-11-13):
+- **TCP protocol confirmed.** Client sends `ChangeLayer{new}`, `RequestLayerNames`,
+  `RequestCurrentLayerName`, `RequestCurrentLayerInfo`, `ActOnFakeKey{name,action}`.
+  Kanata sends `LayerChange{new}`, `LayerNames{names}`, `MessagePush{message}`,
+  `CurrentLayerInfo`, `ConfigFileReload`. Newline-delimited JSON; kanata pushes a
+  `LayerChange` immediately on connect. `SetMouse` does not work on Linux.
+- **`cmd` actions are compiled out of the nixpkgs build** (`NOTE: kanata was compiled to
+  never allow cmd`). This **invalidates the original launcher-mode plan below**, which
+  assumed `cmd` actions could launch apps.
+- `(unicode é)` and `(macro bspc (unicode ê))` do validate — unicode output works on Linux.
+- Port 7979 is free.
 
-New file `hosts/thinkpad-t14/kanata/kanata-default.kbd`:
-- A simpler "default" profile without home-row mods or custom chords, for contexts where the full aj layout is unwanted
+Phase 1 — TCP server (required by the Quickshell bottom-left mode island) — **done**:
+1. `tcp-port` is NOT a valid `defcfg` directive on this build (`--check` rejects it).
+   Set `services.kanata.keyboards.internal.port = 7979;` in `modules/kanata.nix`
+   instead — shared by both hosts, generates `--port 7979` on the systemd unit and
+   opens the hardening (`IPAddressAllow localhost`, `PrivateNetwork = false`)
+   automatically. No `.kbd` file changes needed.
+2. `scripts/kanata-ctl-daemon.py` — TCP ↔ stdio JSON bridge, modelled on
+   `scripts/obs-ctl-daemon.py` (needed because Quickshell's `Socket`/`SocketServer`
+   wrap `QLocalSocket` — unix-domain only, confirmed via `quickshell-io.qmltypes`).
+   Built and tested against a mock server reproducing kanata's exact wire protocol
+   (pulled from `tcp_protocol/src/lib.rs` + `src/tcp_server.rs` at the `v1.9.0` tag);
+   not yet exercised against the real `kanata-internal` service, which needs
+   `nixos-rebuild switch` + a kanata restart — see
+   `~/.config/quickshell/project-memory/kanata-island.md` for why that's deferred.
 
-Open questions before implementing:
-- Confirm TCP port doesn't conflict with other services
-- Decide which keys in launcher mode launch which apps (user-defined mapping)
-- Decide whether launcher mode exits automatically after one keypress or requires explicit exit (e.g. Esc or caps tap)
-- Super tap conflict: lmet is currently used as a chord modifier in home-row mods (`dmet`, `kmet`) — a short tap timeout may cause misfires
+Note for the island: only `default`, `capslayer` and `majlayer` are sticky `layer-switch`
+modes. `arrows` and `nums` are `layer-while-held` and are not modes.
 
-Future: script-execution mode (a further named layer where letter keys execute arbitrary scripts — workspace bootstrap scripts being one category, but others are possible too); design is TBD but should be represented as another mode letter in the Quickshell island. The scripts themselves are documented as a standalone feature in `~/.config/ROADMAP.md`.
+Phase 2 — launcher layer (`L` mode), **replanned**: use kanata's `push-msg` action to send
+the pressed key to connected TCP clients as `MessagePush`, and let Quickshell launch the
+app. This avoids `cmd` entirely and reuses the socket Phase 1 already adds. Alternatives if
+that disappoints: emit an unusual chord and bind it in Hyprland (what `$launch_chord`
+already does for Tab/`\`), or switch to `nixpkgs#kanata-with-cmd` (exists, same 1.9.0) —
+last resort, since it widens kanata's blast radius to arbitrary execution.
+
+Open questions:
+- Super tap-to-enter launcher layer: `lmet` is currently a chord modifier in home-row mods
+  (`dmet`, `kmet`), so a short tap timeout may misfire
+- Which keys in launcher mode launch which apps
+- Whether launcher mode exits after one keypress or needs an explicit exit
+
+Deferred: `kanata-default.kbd` (a simpler "default" profile without home-row mods or custom
+chords) and the island's profile switcher. See the spec for why.
+
+Future: script-execution mode — a further named layer where letter keys run scripts; same
+`push-msg` mechanism applies. The scripts themselves are a standalone feature in
+`~/.config/ROADMAP.md`.
 
 Relevant files:
 - `hosts/thinkpad-t14/kanata/kanata-internal.kbd`
+- `hosts/framework-13/kanata/kanata-internal.kbd`
 - `modules/kanata.nix`
+- `scripts/kanata-ctl-daemon.py` (new)
 
 ### Live gesture-tracked workspace transitions
 Goal:

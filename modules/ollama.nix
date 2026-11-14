@@ -23,9 +23,19 @@
     # [Service]-less unit. The JWT signing secret is readable only from the
     # environment, so it arrives as a root-owned EnvironmentFile rather than a
     # systemd credential; both files come from modules/orchestrator.nix.
+    #
+    # Leading "-" makes the file OPTIONAL: modules/orchestrator.nix (which
+    # provisions it) is only imported on framework-13, not here, so on any
+    # other host this file never exists. Without the "-", systemd refuses to
+    # start the unit at all when the file is missing ("Failed to load
+    # environment files") -- confirmed breaking open-webui.service on
+    # thinkpad-t14 on 2026-11-13. With it, the unit starts and Open WebUI
+    # takes the fallback path the comment below already documents: plain,
+    # unsigned identity headers, which the orchestrator ignores -- fails
+    # closed to the restricted tier rather than refusing to start.
     (lib.mkIf config.services.open-webui.enable {
       open-webui.serviceConfig.EnvironmentFile =
-        [ "/var/lib/voice-assistant/openwebui-identity.env" ];
+        [ "-/var/lib/voice-assistant/openwebui-identity.env" ];
     })
   ];
 
