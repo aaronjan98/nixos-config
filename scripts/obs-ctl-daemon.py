@@ -244,6 +244,29 @@ async def handle_event(event_type, data):
             pass
 
 
+async def recording_timecode_poller():
+    # OBS doesn't push a per-second "timecode advanced" event -- the only
+    # way to see it tick is to re-ask GetRecordStatus. Only poll while a
+    # recording is actually in progress (active or paused), so this stays
+    # silent the rest of the time.
+    while True:
+        await asyncio.sleep(1)
+        if not state.connected:
+            continue
+        if not (state.recording["active"] or state.recording["paused"]):
+            continue
+        try:
+            d = await send_request("GetRecordStatus")
+        except Exception:
+            continue
+        state.recording = {
+            "active": bool(d.get("outputActive", state.recording["active"])),
+            "paused": bool(d.get("outputPaused", state.recording["paused"])),
+            "timecode": d.get("outputTimecode", state.recording["timecode"]),
+        }
+        emit_status()
+
+
 async def reader_loop(ws):
     async for raw in ws:
         msg = json.loads(raw)
@@ -378,7 +401,7 @@ class StdinProtocol(asyncio.Protocol):
 async def main():
     loop = asyncio.get_event_loop()
     await loop.connect_read_pipe(StdinProtocol, sys.stdin)
-    await connection_loop()
+    await asyncio.gather(connection_loop(), recording_timecode_poller())
 
 
 if __name__ == "__main__":
