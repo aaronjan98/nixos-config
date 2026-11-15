@@ -168,6 +168,7 @@
   ;; a new exec action later is a JSON edit, not a kanata rebuild. Each one
   ;; exits back to default in the same tap (one-shot, per the design above).
   exKitty    (multi (push-msg "kitty")    (layer-switch default))
+  exTorrent  (multi (push-msg "torrent")  (layer-switch default))
   exRadarr   (multi (push-msg "radarr")   (layer-switch default))
   exYoutube  (multi (push-msg "youtube")  (layer-switch default))
   exObsidian (multi (push-msg "obsidian") (layer-switch default))
@@ -320,9 +321,9 @@
 
   @exExit @exExit
 
-  @exKitty @exExit @exExit @exRadarr @exTiktok @exYoutube @exExit @exExit @exObsidian @exPhotos
+  @exTorrent @exExit @exExit @exRadarr @exTiktok @exYoutube @exExit @exExit @exObsidian @exPhotos
 
-  @exAmazon @exSonarr @exVesktop @exFirefox @exGhostty @exHome @exMovies @exExit @exLinks @exExit @exExit
+  @exAmazon @exSonarr @exVesktop @exFirefox @exGhostty @exHome @exMovies @exKitty @exLinks @exExit @exExit
 
   @exExit @exExit @exExit @exExit @exCloud @exExit
 
