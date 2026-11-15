@@ -15,6 +15,7 @@
   lsft_tt 200  lsft_ht 200  ;; left shift -> capslayer/shift
   rsft_tt 200  rsft_ht 200  ;; right shift -> majlayer/shift
   spc_tt 200   spc_ht 200   ;; space -> nums layer while held
+  lmet_tt 200  lmet_ht 200  ;; left Super (physical) -> execlayer
 
   ;; “special chord” modifiers (held together)
   fj_chord     (multi lalt lsft)             ;; F/J:   Alt+Shift
@@ -53,6 +54,12 @@
 
   ;; Extra: we explicitly include bspc so it’s always “available” as an output
   bspc
+
+  ;; Extra: physical left Super key (next to left Alt) -- NOT the home-row-mod
+  ;; `lmet` output (that's d's hold action, see @dmet below); this is the real
+  ;; key, previously absent from defsrc entirely, so it passed through
+  ;; untouched. Added for exec mode (Phase 3) -- see @lmet_exec.
+  lmet
 )
 
 (defalias
@@ -134,6 +141,38 @@
   bkslLU (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
   tabLM  (tap-hold-press $hrm_tt $hrm_ht tab  $launch_chord)
   bkslLM (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
+
+  ;; ===== exec mode (Phase 3, ~/.config/quickshell/project-memory/kanata-island.md) =====
+  ;; Tap physical left Super to enter execlayer; hold still passes through
+  ;; plain lmet so Super+anything keeps working as a normal Hyprland
+  ;; modifier. Only bound in `default` below -- capslayer/majlayer/nums/
+  ;; arrows just pass this physical key through as plain lmet, no exec-entry
+  ;; behaviour there (keeps this a single, predictable entry point).
+  lmet_exec (tap-hold-press $lmet_tt $lmet_ht (layer-switch execlayer) lmet)
+
+  ;; Every execlayer key not explicitly mapped below bounces straight back
+  ;; to default -- one-shot by construction: there is no key you can press
+  ;; in this layer that leaves you stuck in it.
+  exExit (layer-switch default)
+
+  ;; Each mapped key push-msg's a short SEMANTIC string, not the actual
+  ;; command -- ~/.config/quickshell/exec.json (read by KanataCtl.qml) is
+  ;; the ONE place that maps these strings to real commands/URLs, so adding
+  ;; a new exec action later is a JSON edit, not a kanata rebuild. Each one
+  ;; exits back to default in the same tap (one-shot, per the design above).
+  exKitty    (multi (push-msg "kitty")    (layer-switch default))
+  exRadarr   (multi (push-msg "radarr")   (layer-switch default))
+  exYoutube  (multi (push-msg "youtube")  (layer-switch default))
+  exObsidian (multi (push-msg "obsidian") (layer-switch default))
+  exPhotos   (multi (push-msg "photos")   (layer-switch default))
+  exAmazon   (multi (push-msg "amazon")   (layer-switch default))
+  exSonarr   (multi (push-msg "sonarr")   (layer-switch default))
+  exVesktop  (multi (push-msg "vesktop")  (layer-switch default))
+  exFirefox  (multi (push-msg "firefox")  (layer-switch default))
+  exGhostty  (multi (push-msg "ghostty")  (layer-switch default))
+  exHome     (multi (push-msg "home")     (layer-switch default))
+  exMovies   (multi (push-msg "movies")   (layer-switch default))
+  exCloud    (multi (push-msg "cloud")    (layer-switch default))
 )
 
 ;; ===== Ctrl+H -> Backspace (OS sees ONLY bspc, not Ctrl+bspc) =====
@@ -172,6 +211,7 @@
   _ _ _
 
   bspc
+  @lmet_exec
 )
 
 (deflayer arrows
@@ -191,6 +231,7 @@
   _ _ _
 
   bspc
+  lmet
 )
 
 (deflayer capslayer
@@ -211,6 +252,7 @@
   _ _ _
 
   bspc
+  lmet
 )
 
 (deflayer majlayer
@@ -231,6 +273,7 @@
   _ _ _
 
   bspc
+  lmet
 )
 
 (deflayer nums
@@ -252,4 +295,34 @@
   _ _ _
 
   bspc
+  lmet
+)
+
+;; One-shot exec layer (Phase 3): tap @lmet_exec in `default` to enter, any
+;; key either push-msg's its semantic string + bounces back to default
+;; (mapped keys, see the @ex* aliases above) or just bounces back to
+;; default with no side effect (everything else, @exExit) -- so there is no
+;; key that can leave you stuck in this layer. Row grouping below mirrors
+;; defsrc exactly, for the same reason the other deflayers do.
+(deflayer execlayer
+  @exExit
+
+  @exExit @exExit
+
+  @exExit @exExit
+
+  @exKitty @exExit @exExit @exRadarr @exExit @exYoutube @exExit @exExit @exObsidian @exPhotos
+
+  @exAmazon @exSonarr @exVesktop @exFirefox @exGhostty @exHome @exMovies @exExit @exExit @exExit @exExit
+
+  @exExit @exExit @exExit @exExit @exCloud @exExit
+
+  @exExit @exExit @exExit
+
+  @exExit @exExit @exExit
+
+  @exExit @exExit @exExit
+
+  @exExit
+  @lmet_exec
 )

@@ -74,8 +74,11 @@
       # 127.0.0.1 (that gives a 502). Vite's DNS-rebinding guard also rejects any
       # Host header that isn't loopback, so rewrite Host to a literal it trusts
       # (same reason as the syncthing vhost below). This keeps HMR working too.
+      # Bind both loopback families: the host resolves to ::1 as well as
+      # 127.0.0.1, and clients prefer IPv6. Without the ::1 bind, those requests
+      # fall through to the dual-stack :80 server (ai.home) and get an empty 200.
       "contextforge.home:80".extraConfig = ''
-        bind 127.0.0.1
+        bind 127.0.0.1 ::1
         reverse_proxy [::1]:5173 {
           header_up Host localhost:5173
         }
@@ -85,7 +88,7 @@
       # Syncthing's CSRF check rejects requests whose Host header doesn't match
       # its bind address, so rewrite Host to 127.0.0.1:8384 before forwarding.
       "syncthing.home:80".extraConfig = ''
-        bind 127.0.0.1
+        bind 127.0.0.1 ::1
         reverse_proxy 127.0.0.1:8384 {
           header_up Host {upstream_hostport}
         }

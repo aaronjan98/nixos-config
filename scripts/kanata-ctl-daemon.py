@@ -11,8 +11,13 @@
 #     {"cmd": "set_layer", "layer": "<name>"}
 #     {"cmd": "refresh"}
 #
-#   stdout (one full state snapshot per line, emitted on every change):
+#   stdout (one full state snapshot per line, emitted on every change, PLUS
+#   one relay line per exec-mode keypress, shaped differently -- see below):
 #     {"connected": bool, "layer": str, "layers": [str...]}
+#     {"execMsg": <value>}   -- relayed verbatim from kanata's MessagePush,
+#                                see KanataCtl.qml's stdout handler for why
+#                                this must be checked before the snapshot
+#                                fields are read
 #
 # Wire protocol to kanata itself (confirmed against kanata v1.9.0 source,
 # tcp_protocol/src/lib.rs and src/tcp_server.rs -- see
@@ -23,6 +28,10 @@
 #                       connect with the current layer, and again on every
 #                       layer change (including ones this client caused)
 #                       {"LayerNames": {"names": ["<name>", ...]}}
+#                       {"MessagePush": {"message": <value>}}  -- sent by the
+#                       execlayer's `push-msg` actions (kanata-internal.kbd);
+#                       field is `message`, not `msg` -- confirmed against
+#                       source, see the spec doc linked above
 # Struct-variant enums serialize as {"Variant": {field: value}}, including
 # the empty-field variants (RequestLayerNames is "{}", not a bare string).
 # Messages are JSON values written back to back (kanata appends a trailing
@@ -91,6 +100,10 @@ async def handle_message(msg):
     elif "LayerNames" in msg:
         state.layers = msg["LayerNames"].get("names", [])
         emit_status()
+    elif "MessagePush" in msg:
+        # Relayed as-is, not folded into state.snapshot() -- this isn't
+        # state, it's a one-off event per execlayer keypress.
+        emit({"execMsg": msg["MessagePush"].get("message", "")})
     elif "Error" in msg:
         emit({"transientError": msg["Error"].get("msg", "")})
 

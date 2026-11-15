@@ -299,25 +299,29 @@ Phase 1 — TCP server (required by the Quickshell bottom-left mode island) — 
 Note for the island: only `default`, `capslayer` and `majlayer` are sticky `layer-switch`
 modes. `arrows` and `nums` are `layer-while-held` and are not modes.
 
-Phase 2 — launcher layer (`L` mode), **replanned**: use kanata's `push-msg` action to send
-the pressed key to connected TCP clients as `MessagePush`, and let Quickshell launch the
-app. This avoids `cmd` entirely and reuses the socket Phase 1 already adds. Alternatives if
-that disappoints: emit an unusual chord and bind it in Hyprland (what `$launch_chord`
-already does for Tab/`\`), or switch to `nixpkgs#kanata-with-cmd` (exists, same 1.9.0) —
-last resort, since it widens kanata's blast radius to arbitrary execution.
+Phase 2/3 — exec layer (`Exec` mode), **implemented**: kanata's `push-msg` action sends a
+short semantic string per key to connected TCP clients as `MessagePush`;
+`scripts/kanata-ctl-daemon.py` relays it to Quickshell's `KanataCtl.qml`, which looks it up
+in `~/.config/quickshell/exec.json` and runs the mapped command via `Quickshell.execDetached`.
+This avoids `cmd` entirely and reuses the socket Phase 1 already adds.
 
-Open questions:
-- Super tap-to-enter launcher layer: `lmet` is currently a chord modifier in home-row mods
-  (`dmet`, `kmet`), so a short tap timeout may misfire
-- Which keys in launcher mode launch which apps
-- Whether launcher mode exits after one keypress or needs an explicit exit
+Open questions, resolved:
+- **Entry**: tap the PHYSICAL left Super key (next to left Alt) — not the home-row-mod
+  `lmet` OUTPUT used by `dmet`/`kmet`/chords, a separate thing. This physical key was never
+  in `defsrc` before, so adding it as a new tap-hold (`@lmet_exec`, tap = `layer-switch
+  execlayer`, hold = passthrough `lmet`) carries none of the misfire risk originally feared
+  — plain Super-alone is otherwise a no-op in this Hyprland setup, every real binding needs
+  Super+something.
+- **Key map**: `y`=youtube, `d`=vesktop, `f`=firefox, `h`=home.home, `p`=photos.home,
+  `n`=cloud.janovitch.com, `a`=amazon.com, `r`=radarr.home, `j`=movies.home, `s`=sonarr.home,
+  `o`=obsidian, `g`=ghostty, `q`=kitty. Semantic strings only — the actual commands/URLs live
+  in `exec.json`, not the `.kbd`, so adding more is a JSON edit.
+- **Exit**: one-shot. Every execlayer key — mapped or not — bounces straight back to
+  `default` in the same tap (`@exExit` for anything unmapped), so there's no key that leaves
+  you stuck in the layer.
 
 Deferred: `kanata-default.kbd` (a simpler "default" profile without home-row mods or custom
 chords) and the island's profile switcher. See the spec for why.
-
-Future: script-execution mode — a further named layer where letter keys run scripts; same
-`push-msg` mechanism applies. The scripts themselves are a standalone feature in
-`~/.config/ROADMAP.md`.
 
 Relevant files:
 - `hosts/thinkpad-t14/kanata/kanata-internal.kbd`
