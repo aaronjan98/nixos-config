@@ -299,11 +299,13 @@ Phase 1 — TCP server (required by the Quickshell bottom-left mode island) — 
 Note for the island: only `default`, `capslayer` and `majlayer` are sticky `layer-switch`
 modes. `arrows` and `nums` are `layer-while-held` and are not modes.
 
-Phase 2/3 — exec layer (`Exec` mode), **implemented**: kanata's `push-msg` action sends a
-short semantic string per key to connected TCP clients as `MessagePush`;
+Phase 2/3 — exec layer (`Exec` mode), **implemented and deployed**: kanata's `push-msg`
+action sends a short semantic string per key to connected TCP clients as `MessagePush`;
 `scripts/kanata-ctl-daemon.py` relays it to Quickshell's `KanataCtl.qml`, which looks it up
 in `~/.config/quickshell/exec.json` and runs the mapped command via `Quickshell.execDetached`.
-This avoids `cmd` entirely and reuses the socket Phase 1 already adds.
+This avoids `cmd` entirely and reuses the socket Phase 1 already adds. Clean reference doc
+(settled architecture, full current key map, operational gotchas):
+`~/.config/quickshell/rices/limerence/docs/kanata-island.md`.
 
 Open questions, resolved:
 - **Entry**: tap the PHYSICAL left Super key (next to left Alt) — not the home-row-mod
@@ -312,13 +314,24 @@ Open questions, resolved:
   execlayer`, hold = passthrough `lmet`) carries none of the misfire risk originally feared
   — plain Super-alone is otherwise a no-op in this Hyprland setup, every real binding needs
   Super+something.
-- **Key map**: `y`=youtube, `d`=vesktop, `f`=firefox, `h`=home.home, `p`=photos.home,
-  `n`=cloud.janovitch.com, `a`=amazon.com, `r`=radarr.home, `j`=movies.home, `s`=sonarr.home,
-  `o`=obsidian, `g`=ghostty, `q`=kitty. Semantic strings only — the actual commands/URLs live
-  in `exec.json`, not the `.kbd`, so adding more is a JSON edit.
+- **Key map** (15 keys; `exec.json` maps each string to the real command, not the `.kbd`, so
+  adding more is a JSON edit): `y`=youtube, `d`=vesktop, `f`=firefox, `h`=home.home,
+  `p`=photos.home, `n`=cloud.janovitch.com, `a`=amazon.com, `r`=radarr.home, `j`=movies.home,
+  `s`=sonarr.home, `o`=obsidian (spawns a new window via `obsidian-remote new-window`, same
+  command as the existing fuzzel "Obsidian (Spawn Window)" entry), `g`=ghostty, `q`=kitty,
+  `t`=tiktok, `l`=links.home.
 - **Exit**: one-shot. Every execlayer key — mapped or not — bounces straight back to
   `default` in the same tap (`@exExit` for anything unmapped), so there's no key that leaves
   you stuck in the layer.
+
+Deployment notes: real end-to-end test confirmed working (entry tap, mapped keys, unmapped-key
+no-op) after `nixos-rebuild switch` + a `kanata-internal` restart. Two real bugs surfaced
+during that deploy, not kanata-side — the Quickshell daemon bridge doesn't auto-restart when
+killed, and doesn't pick up a script edit without a full Quickshell restart (Python doesn't
+hot-reload, and Quickshell's own live-reload doesn't recycle an already-running `Process`
+child) — see the Quickshell-side doc above for the full writeup. The `t`/`l` keys above were
+added after the initial deploy and need one more `nixos-rebuild switch` + `kanata-internal`
+restart to go live.
 
 Deferred: `kanata-default.kbd` (a simpler "default" profile without home-row mods or custom
 chords) and the island's profile switcher. See the spec for why.

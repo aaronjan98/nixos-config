@@ -158,6 +158,32 @@ Full detail: `memory/2026-08-01 keyboard accents emoji and host-scaled dotfiles.
 
 ---
 
+## Kanata exec mode: one-shot app/URL launcher, and two Quickshell daemon gotchas
+
+Full detail: `memory/2026-11-14 kanata-exec-mode-phase3.md`. Clean architecture reference:
+`~/.config/quickshell/rices/limerence/docs/kanata-island.md`.
+
+Tap the physical left Super key to enter a one-shot kanata layer (`execlayer`,
+`hosts/*/kanata/kanata-internal.kbd`, both hosts kept byte-identical outside the per-host
+`defcfg` block) where each mapped key `push-msg`s a short semantic string and bounces back
+to `default` in the same tap; `scripts/kanata-ctl-daemon.py` relays the message to
+Quickshell, which looks it up in `~/.config/quickshell/exec.json` and runs the mapped
+command. Adding a new action is a `.kbd` alias + `exec.json` entry, see the doc above.
+
+Two generalizable gotchas surfaced while deploying this, relevant to **any** future
+Quickshell-spawned daemon or data-file work, not just kanata:
+- **A Quickshell `Process{running:true}` does not auto-respawn if its child dies
+  unexpectedly.** Killing the daemon's PID directly left it dead with nothing relaunching
+  it — had to restart the whole Quickshell process.
+- **Quickshell's QML live-reload does not restart an already-running `Process` child.**
+  Editing the daemon's Python script had zero effect on the live process (Python doesn't
+  hot-reload either) across several edits, even though editing the owning `.qml` file
+  clearly triggered a "Reloading configuration..." cycle each time. A data file read via
+  `FileView` has the same problem unless that `FileView` sets `watchChanges: true`
+  explicitly — without it, edits to the file only take effect on the next full reload.
+
+---
+
 ## Touchpad gestures: 3-finger tab-switch is unreliable on the ThinkPad, fine on the Framework
 
 Full detail: `memory/2026-10-29 thinkpad 3-finger gesture touchpad firmware.md`.

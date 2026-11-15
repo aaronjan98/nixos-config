@@ -25,3 +25,5 @@
 
 ### Local Build Outputs ###
 result
+__pycache__/
+*.pyc

@@ -180,6 +180,8 @@
   exHome     (multi (push-msg "home")     (layer-switch default))
   exMovies   (multi (push-msg "movies")   (layer-switch default))
   exCloud    (multi (push-msg "cloud")    (layer-switch default))
+  exTiktok   (multi (push-msg "tiktok")   (layer-switch default))
+  exLinks    (multi (push-msg "links")    (layer-switch default))
 )
 
 ;; ===== Ctrl+H -> Backspace (OS sees ONLY bspc, not Ctrl+bspc) =====
@@ -318,9 +320,9 @@
 
   @exExit @exExit
 
-  @exKitty @exExit @exExit @exRadarr @exExit @exYoutube @exExit @exExit @exObsidian @exPhotos
+  @exKitty @exExit @exExit @exRadarr @exTiktok @exYoutube @exExit @exExit @exObsidian @exPhotos
 
-  @exAmazon @exSonarr @exVesktop @exFirefox @exGhostty @exHome @exMovies @exExit @exExit @exExit @exExit
+  @exAmazon @exSonarr @exVesktop @exFirefox @exGhostty @exHome @exMovies @exExit @exLinks @exExit @exExit
 
   @exExit @exExit @exExit @exExit @exCloud @exExit
 
