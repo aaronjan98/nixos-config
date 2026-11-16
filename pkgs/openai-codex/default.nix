@@ -2,11 +2,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "openai-codex";
-  version = "0.167.1";
+  version = "0.169.0";
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@openai/codex/-/codex-${finalAttrs.version}-linux-x64.tgz";
-    hash = "sha256-bOo4/bel3mNhwYa/gjMUj6yRZezeNToekFWheqlcKp4=";
+    hash = "sha256-K1M7TLpfhSsT3TOTW0fCGdVC6rYo8NdXgqkSdLb2Vo8=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
