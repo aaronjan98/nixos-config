@@ -4,6 +4,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Pinned separately from nixpkgs-unstable so bumping vesktop doesn't drag
+    # zotero's bundled firefox-esr forward onto an EOL/insecure build.
+    nixpkgs-vesktop.url = "github:NixOS/nixpkgs/5d2b81a7a3be3e2f832879028e4d60abbf58e9a0";
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
@@ -17,7 +20,7 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, sops-nix, nix-tools, nix-flatpak, nixos-hardware, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-vesktop, sops-nix, nix-tools, nix-flatpak, nixos-hardware, ... }:
     let
       system = "x86_64-linux";
 
@@ -54,6 +57,8 @@
         overlays = [ localOverlay ];
       };
 
+      pkgsVesktop = import nixpkgs-vesktop { inherit system; };
+
       myOverlay = (final: prev:
         (localOverlay final prev) // {
           open-webui = pkgsUnstable.open-webui;
@@ -67,6 +72,10 @@
           # Bumped past stable's 0.2.1 (crash in the Process/SplitParser stdout
           # reader under heavy Bluetooth-discovery churn); 0.3.0 is far steadier.
           quickshell = pkgsUnstable.quickshell;
+          # Stable's 1.6.5 has broken Vencord patches against Discord's
+          # current web client (blank white UI on launch); pin to a separate,
+          # more recent nixpkgs rev for just this package - see nixpkgs-vesktop above.
+          vesktop = pkgsVesktop.vesktop;
         });
     in
     {
