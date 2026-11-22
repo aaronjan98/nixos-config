@@ -235,17 +235,25 @@ in
       on-resume = ${unblackoutCmd}
     }
 
-    # 10 mins: Lock Screen
+    # 10 mins: Lock, then power the displays off.
+    #
+    # DPMS-off is folded into the lock step on purpose. It used to be a separate
+    # 15-min listener, but hypridle force-"Resumed"s every listener the instant
+    # the session locks (journal: "Wayland session got locked" -> "Resumed: rule
+    # ..."). That had two effects: (a) it ran the 5-min blackout's on-resume
+    # (screen-blackout-off), turning the backlight back UP so the lockscreen sat
+    # lit, and (b) it reset idle progression so the 900s DPMS listener was usually
+    # pre-empted and the panel never powered off (observed 2026-11-19: the 900s
+    # rule fired ~half as often as the others). Doing dpms-off here, right after
+    # the lock engages, sidesteps both. The short sleep lets hyprlock grab the
+    # session lock first. Deliberately NO on-resume: a dpms-on here would be fired
+    # by that same spurious lock-resume and consumed before the real wake, leaving
+    # a black screen on return. Waking is handled instead by Hyprland's
+    # key_press_enables_dpms / mouse_move_enables_dpms (hypr conf.d misc{}), which
+    # is immune to the lock-resume.
     listener {
       timeout = 600
-      on-timeout = loginctl lock-session
-    }
-
-    # 15 mins: Turn off display (DPMS)
-    listener {
-      timeout = 900
-      on-timeout = hyprctl dispatch dpms off
-      on-resume = hyprctl dispatch dpms on
+      on-timeout = loginctl lock-session ; sleep 2 ; hyprctl dispatch dpms off
     }
   '';
 
@@ -360,6 +368,13 @@ in
   systemd.user.services.hypridle = {
     description = "Hypridle idle daemon";
     wantedBy = [ "default.target" ];
+    # hypridle reads its config only at startup, and that config lives in a
+    # SEPARATE environment.etc file — so without this link a config-only change
+    # leaves the unit file byte-identical, switch-to-configuration sees "no
+    # change", and the running daemon keeps the old timers until the next login.
+    # Trigger on the rendered config so `nrs` restarts it when the idle behaviour
+    # changes. (Same fix as modules/libinput-gestures.nix.)
+    restartTriggers = [ config.environment.etc."xdg/hypr/hypridle.conf".source ];
     serviceConfig = {
       Environment = [ "PATH=/run/current-system/sw/bin" ];
       ExecStart = "${pkgs.hypridle}/bin/hypridle";
