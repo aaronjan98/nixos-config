@@ -41,6 +41,7 @@
   networking.hosts."127.0.0.1" = [
     "contextforge.home"
     "syncthing.home"
+    "whiteboard.home"
   ];
 
   services.caddy = {
@@ -81,6 +82,18 @@
         bind 127.0.0.1 ::1
         reverse_proxy [::1]:5173 {
           header_up Host localhost:5173
+        }
+      '';
+
+      # Friendly local alias for the latex-whiteboard frontend (Vite dev server).
+      # Same shape as contextforge.home: loopback-bound, fixed port in that
+      # project's vite.config.ts (5174, since 5173 is context-harness's), Host
+      # header rewritten to a loopback literal to satisfy Vite's DNS-rebinding
+      # guard, both address families bound for the same reason as contextforge.home.
+      "whiteboard.home:80".extraConfig = ''
+        bind 127.0.0.1 ::1
+        reverse_proxy [::1]:5174 {
+          header_up Host localhost:5174
         }
       '';
 
