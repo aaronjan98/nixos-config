@@ -3,6 +3,10 @@ automation/pix2tex	pix2tex	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/p
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
 experiment/gods-eye-view	gods-eye-view	https://github.com/bilawalsidhu/gods-eye-view.git
+experiment/provenance-market/provenance-ai-backend	provenance-ai-backend	git@sweetpea-git:/srv/git/repos/provenance-ai-backend.git
+experiment/provenance-market/provenance-ai-frontend	provenance-ai-frontend	git@sweetpea-git:/srv/git/repos/provenance-ai-frontend.git
+experiment/provenance-market/provenance-market-backend-v1	provenance-market-backend-v1	git@sweetpea-git:/srv/git/repos/provenance-market-backend-v1.git
+experiment/provenance-market/provenance-market-backend-v2	provenance-market-backend-v2	git@sweetpea-git:/srv/git/repos/provenance-market-backend-v2.git
 experiment/vulnlab	vulnlab	ssh://git@localhost/srv/git/repos/vulnlab.git
 lantern-dev	lantern-dev	sweetpea:/opt/lantern
 projects/arduino	arduino	ssh://git@localhost/srv/git/repos/arduino.git
