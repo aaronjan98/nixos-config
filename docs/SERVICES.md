@@ -251,3 +251,31 @@ entry in `~/.ssh/config` encodes `User git` and `Port 2222` — necessary becaus
 SCP-style git URL syntax cannot encode a non-default port.
 
 **Architecture doc:** `~/Repositories/self-hosted/homelab/Raymer/project-memory/forgejo-sync.md`
+
+### Forgejo Actions (CI)
+
+Forgejo Actions is enabled on the sweetpea Forgejo instance (`/opt/forgejo/docker-compose.yml`,
+`FORGEJO__actions__ENABLED=true`). A runner container (`/opt/forgejo-runner/docker-compose.yml`,
+image `code.forgejo.org/forgejo/runner:6`) polls for jobs; it was registered with the label
+`nix-ci` and runs job containers via the host's Docker socket (bind-mounted, `group_add: "994"`
+to match the host `docker` GID). Registration token came from
+`docker exec -u git forgejo forgejo actions generate-runner-token` — it's one-time use, not
+stored anywhere (re-run that command if the runner ever needs re-registering).
+
+This repo has `.forgejo/workflows/flake-check.yml`, which runs on every push/PR:
+installs Nix (single-user, `--no-daemon`, since the job container has no init system) and
+runs `nix flake check --no-build`. `--no-build` is deliberate — a full build would try to
+realize the `nixosConfigurations.*.config.system.build.toplevel` derivations, which is far
+too heavy for sweetpea's hardware; `--no-build` still catches eval/syntax errors across all
+flake outputs, which is the actual goal (catch a broken commit before `nixos-rebuild switch`
+ever runs it).
+
+Only `nixos-config` has a flake, so this is the only repo wired up — sweetpea/qwerty aren't
+NixOS and have no flake to check (see the Forgejo git server architecture doc above, under
+"Open decisions," for the never-started plan to track their config declaratively).
+
+**Security note:** the runner mounts the host Docker socket, so any job it runs effectively
+has root-equivalent access to sweetpea. This Forgejo instance has registration disabled and
+is single-user (only `aj` has an account), so the only person who can push a workflow file
+is Aaron — acceptable for a single-user homelab, but would need real isolation (rootless
+runner, or no socket mount) before trusting it with anyone else's pushes.

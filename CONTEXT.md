@@ -177,6 +177,8 @@ Key scripts: `new-homelab-repo` (create repo end-to-end), `install-forgejo-hooks
 
 Architecture doc: `~/Repositories/self-hosted/homelab/Raymer/project-memory/forgejo-sync.md`
 
+Forgejo Actions is now enabled (runner on sweetpea at `/opt/forgejo-runner/`, label `nix-ci`). This repo has `.forgejo/workflows/flake-check.yml` running `nix flake check --no-build` on push/PR — see `docs/SERVICES.md` for the full setup and the security tradeoff of the socket-mounted runner.
+
 ## Routing guidance
 - If the task is about NixOS system configuration, inspect `hosts/` and `modules/`.
 - If the task is about how a package is sourced or updated, inspect `flake.nix`, `pkgs/`, `modules/`, and the relevant update script in `scripts/`.
