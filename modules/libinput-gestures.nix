@@ -45,7 +45,38 @@ let
       *) echo "usage: gesture-tab-switch next|prev" >&2; exit 2 ;;
     esac
 
-    class="$(hyprctl activewindow -j \
+    # Recover HYPRLAND_INSTANCE_SIGNATURE if it is not in the environment.
+    # The daemon is started by the systemd user manager at login, which races
+    # Hyprland's `systemctl --user import-environment`
+    # (~/.config/hypr/conf.d/10-programs.conf): when the unit wins that race it
+    # freezes a signature-less environment for its whole lifetime, `hyprctl`
+    # prints "HYPRLAND_INSTANCE_SIGNATURE not set!", jq fails to parse that,
+    # $class comes out empty, and the case below falls through to the
+    # unknown-app no-op -- a SILENT loss of the gesture, with only a stray
+    # "jq: parse error" in the journal to show for it (observed after the
+    # 2026-11-21 boot). The 4-finger scripts (~/.config/hypr/scripts/ws-rel and
+    # ws-domain) already carry this exact fallback, which is why they kept
+    # working while the 3-finger tab switch died. Same dangling-runtime-state
+    # class of bug as the two failures in this file's header: don't depend on
+    # inherited session state, re-derive it.
+    if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE-}" ]; then
+      sig_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr"
+      if [ -d "$sig_dir" ]; then
+        sig="$(ls -1t "$sig_dir" 2>/dev/null | head -n1 || true)"
+        [ -n "$sig" ] && export HYPRLAND_INSTANCE_SIGNATURE="$sig"
+      fi
+    fi
+
+    # Validate the IPC reply before trusting it, so a broken hyprctl is a loud
+    # failure in the journal instead of being indistinguishable from "focused
+    # window is not a tabbed app".
+    win="$(hyprctl activewindow -j 2>&1 || true)"
+    if ! printf '%s' "$win" | ${pkgs.jq}/bin/jq -e . >/dev/null 2>&1; then
+      echo "gesture-tab-switch: hyprctl IPC failed: $win" >&2
+      exit 1
+    fi
+
+    class="$(printf '%s' "$win" \
       | ${pkgs.jq}/bin/jq -r '.class // empty' \
       | tr '[:upper:]' '[:lower:]')"
 
