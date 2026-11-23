@@ -184,9 +184,22 @@ Quickshell-spawned daemon or data-file work, not just kanata:
 
 ---
 
-## Touchpad gestures: 3-finger tab-switch is unreliable on the ThinkPad, fine on the Framework
+## Touchpad gestures: 3-finger tab-switch on the ThinkPad -- hardware blamed, software was the bigger cause
 
 Full detail: `memory/2026-10-29 thinkpad 3-finger gesture touchpad firmware.md`.
+
+> **CORRECTED 2026-11-22 -- do not act on the paragraph below without reading the addendum
+> in that note.** The hardware misdetection is real but was NOT the dominant cause. A second
+> bug (the `HYPRLAND_INSTANCE_SIGNATURE` race described in the next section) was silently
+> discarding 3-finger swipes the touchpad had detected *correctly* -- ThinkPad journal counts
+> showed **55 detected-but-dropped vs 21 successful**, and the gesture was 100% dead (not
+> flaky) for the ~3.5 days before this was found. Every prior measurement of the "coin flip"
+> was taken with that bug active, so the true hardware-only hit rate is **unmeasured**. The
+> next step is to re-measure after `nrs`, NOT to re-attempt a hardware fix. Also: the
+> "semi-MT" label is wrong (`INPUT_PROP_SEMI_MT` is not set; the device reports TRIPLETAP/
+> QUADTAP and real MT slots), and the repeated `SMbus companion is not ready yet` is better
+> explained by AMD's `i2c_piix4` lacking `I2C_FUNC_SMBUS_HOST_NOTIFY` -- a structural
+> platform gap -- than by a defective touchpad unit.
 
 Both hosts run the identical gesture config (`modules/libinput-gestures.nix`), so this is
 **hardware, not config**. The ThinkPad T14's touchpad (Synaptics, PNP `LEN2073`) runs in
@@ -209,3 +222,38 @@ unit itself being unable to complete the handshake, not a timing race or stale f
 likely needs a kernel source patch to fix, if fixable at all. Decided not to pursue that;
 living with occasional 3-finger misfires on this host instead. Don't re-attempt the same
 three fixes without reading the full note first.
+
+---
+
+## Hyprland-touching scripts in systemd user units must re-derive HYPRLAND_INSTANCE_SIGNATURE
+
+Full detail: `memory/2026-11-22 gesture-tab-switch-hyprland-signature-race.md`.
+
+Distinct from the ThinkPad semi-MT hardware issue above — this one hit **framework-13**,
+where the hardware is fine. 3-finger tab switch broke while 4-finger workspace gestures
+kept working, because `libinput-gestures.service` is `wantedBy = default.target` and the
+systemd **user manager starts it at login, racing Hyprland's `systemctl --user
+import-environment`** (`~/.config/hypr/conf.d/10-programs.conf`). When the unit wins that
+race it inherits — and permanently freezes — an environment with no
+`HYPRLAND_INSTANCE_SIGNATURE`. A long-running daemon never re-reads the manager env.
+
+The failure is nasty because **`hyprctl` prints `HYPRLAND_INSTANCE_SIGNATURE not set!` to
+stdout and still exits 0.** Downstream `jq` chokes on it, the parsed class comes out empty,
+and an app-dispatch `case` falls through to its unknown-app no-op — a *silent* loss of
+capability whose only symptom was a stray `jq: parse error` in the journal. 4-finger
+survived purely because `~/.config/hypr/scripts/ws-rel` and `ws-domain` already carried a
+signature-recovery block that `gesture-tab-switch` lacked.
+
+Two rules for any future script a systemd user unit spawns against Hyprland:
+- **Re-derive the signature** rather than trusting the environment:
+  `ls -1t "$XDG_RUNTIME_DIR/hypr" | head -n1`. The ws-* scripts are the reference.
+- **Distinguish "IPC failed" from "IPC returned nothing"** — validate with `jq -e .` and
+  exit nonzero with the raw output. Collapsing those two into one silent no-op is what made
+  all three separate breakages of this one gesture hard to notice.
+
+Quick restore without a rebuild: `systemctl --user restart libinput-gestures` (the manager
+env does have the signature once Hyprland is up). Note that makes **three** distinct
+root causes for this single gesture — stale enable-symlink, frozen store paths, and now
+this env race — all documented in `modules/libinput-gestures.nix` (two in the file header,
+the env race inline in the `tabSwitch` script). Read them
+before touching that module.

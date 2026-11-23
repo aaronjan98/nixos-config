@@ -83,6 +83,11 @@ in {
   # ThinkPad uses the QML fallback (1.25); adjust this value to taste.
   environment.sessionVariables = {
     QS_UI_SCALE = "1.75";
+    # Declares that the desk speakers (Kasa plug via HA, scripts/speakers.sh)
+    # hang off this host, which makes Quickshell render its speaker toggle in
+    # the topbar. A capability flag, not a hostname check: if the speakers move
+    # machines, set it on that host instead and the icon follows.
+    QS_SPEAKERS = "1";
     # Cursor for the user session (Hyprland). Overrides the common mkDefault 32
     # for this host's HiDPI panel.
     XCURSOR_THEME = "Breeze_Hacked";

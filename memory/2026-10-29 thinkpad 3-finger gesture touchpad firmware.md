@@ -89,3 +89,85 @@ journalctl -k -b | grep -i -E "synaptics|rmi"
 fwupdmgr get-updates
 fwupdmgr update --assume-yes   # requires AC power; may need "Boot Order Lock" disabled in BIOS setup first
 ```
+
+---
+
+## ADDENDUM 2026-11-22 — the "coin flip" was mostly a SOFTWARE bug, not the touchpad
+
+**Read this before acting on anything above.** The hardware misdetection described in step 3
+is real and was directly observed, but this note **overstated how much of the failure it
+explains**, because a second, invisible bug was layered on top of it across every reboot.
+
+See `memory/2026-11-22 gesture-tab-switch-hyprland-signature-race.md`. Short version: the
+`libinput-gestures` daemon is started by the systemd user manager at login, racing
+Hyprland's `systemctl --user import-environment`. When the unit wins, it permanently
+inherits an environment with **no `HYPRLAND_INSTANCE_SIGNATURE`**, so `hyprctl` inside
+`gesture-tab-switch` printed an error *to stdout and exited 0*, jq choked, the window class
+came out empty, and the script hit its unknown-app `exit 0`. A **silent** no-op.
+
+### The evidence that reframes this note
+
+Journal counts on the ThinkPad across all retained boots:
+
+```
+successful dispatches ("ok"):      21
+detected-but-dropped ("jq error"): 55
+```
+
+Every one of those **55 `jq: parse error` lines is a 3-finger swipe the ThinkPad hardware
+detected CORRECTLY** — it reached `GESTURE_SWIPE`, libinput-gestures matched the binding,
+and the script was invoked. The hardware did its job; the env race then threw the result
+away. (Caveat: the two counts aren't a clean ratio — "ok" only appears for swipes in a
+tabbed app, while the jq error fires for *every* invocation regardless of focused app. So
+treat 55 as "confirmed hardware detections", not as "55 lost tab switches".)
+
+Crucially, **this boot alone: 0 ok, 3 jq errors.** The daemon had been running since
+2026-11-19 09:00:55 with no signature, meaning 3-finger tab switch on this host was
+**100% dead for ~3.5 days** — not flaky, dead.
+
+### Why this note reached the wrong proportion
+
+The 2026-10-29 session fixed the stale daemon with `systemctl --user restart
+libinput-gestures` (step 1), which *also* incidentally repaired the environment — so
+3-finger partly worked during that session and the residual flakiness looked like pure
+hardware. But the restart doesn't survive a reboot, and the race recurs on every boot, so
+afterward the gesture went fully dead again. The reported "worked in Firefox, not Obsidian,
+then stopped working back in Firefox" pattern is explained **better by reboots crossing the
+race** than by per-swipe hardware chance.
+
+### Corrected conclusion
+
+- Hardware coarse finger-counting on this touchpad **is real** (step 3's `debug-events`
+  capture stands: a 3-finger swipe arriving as a 2-finger `POINTER_SCROLL_FINGER`).
+- But it is **not** the dominant failure mode, and "close to a coin flip" is not supported.
+  The true hardware-only hit rate is **unmeasured** — every prior measurement was taken
+  with the env bug also active.
+- **Next step is to re-measure, not to re-attempt any hardware fix.** `nrs` on this host to
+  pick up the signature-recovery fix, then count `ok` vs failures over normal use.
+
+### Also corrected: the "semi-MT" label
+
+`/sys/class/input/input7/properties` reads `5` = POINTER + BUTTONPAD. The
+`INPUT_PROP_SEMI_MT` bit is **not** set, and the device advertises `BTN_TOOL_TRIPLETAP`,
+`QUADTAP`, `QUINTTAP` plus real MT slots (`ABS_MT_SLOT`, `MT_POSITION_X/Y`,
+`MT_TRACKING_ID`, `MT_PRESSURE`). So the kernel does not classify this as semi-MT. The
+mechanism is Synaptics PS/2 advanced-gesture mode tracking only two contact *positions* and
+deriving 3+ finger counts from a coarse width field — not a kernel semi-MT mode.
+
+### Better explanation for the identical `SMbus companion is not ready yet` failures
+
+The SMBus adapter here is `i2c_piix4` (`i2c-2: SMBus PIIX4 adapter port 0 at 0b00`).
+`psmouse-smbus` only creates the RMI4 companion on an adapter advertising
+`I2C_FUNC_SMBUS_HOST_NOTIFY`; Intel's `i2c-i801` has it, AMD's `i2c-piix4` does not. That
+would make the failure a **structural platform gap, not a defective touchpad unit** — which
+fits "three unrelated fixes, byte-identical failure" far better. Supporting detail: bus 2
+carries clients `2-0036`, `2-0037`, `2-0050` and nothing at `0x2c`, the usual RMI4 touchpad
+address. NOT verified on-machine (`i2c_dev` isn't loaded). Decisive test, needs root:
+
+```bash
+sudo modprobe i2c-dev
+nix run nixpkgs#i2c-tools -- i2cdetect -F 2 | grep -i "Host Notify"
+```
+
+If that reports no Host Notify, the RMI4/intertouch path is closed permanently and the
+"kernel dynamic-debug tracing" open question below can be closed for good.
