@@ -22,7 +22,7 @@
   lsft_tt 200  lsft_ht 200  ;; left shift -> capslayer/shift
   rsft_tt 200  rsft_ht 200  ;; right shift -> majlayer/shift
   spc_tt 200   spc_ht 200   ;; space -> nums layer while held
-  lmet_tt 200  lmet_ht 200  ;; left Super (physical) -> execlayer
+  lalt_tt 200  lalt_ht 200  ;; left Alt (physical) -> execlayer
 
   ;; “special chord” modifiers (held together)
   fj_chord     (multi lalt lsft)             ;; F/J:   Alt+Shift
@@ -62,11 +62,11 @@
   ;; Extra: we explicitly include bspc so it’s always “available” as an output
   bspc
 
-  ;; Extra: physical left Super key (next to left Alt) -- NOT the home-row-mod
-  ;; `lmet` output (that's d's hold action, see @dmet below); this is the real
-  ;; key, previously absent from defsrc entirely, so it passed through
-  ;; untouched. Added for exec mode (Phase 3) -- see @lmet_exec.
-  lmet
+  ;; Extra: physical left Alt key (next to left Super) -- NOT the home-row-mod
+  ;; `lalt` output (that's s's/l's hold action, see @salt/@lalt below); this
+  ;; is the real key, previously absent from defsrc entirely, so it passed
+  ;; through untouched. Added for exec mode (Phase 3) -- see @lalt_exec.
+  lalt
 )
 
 (defalias
@@ -150,12 +150,12 @@
   bkslLM (tap-hold-press $hrm_tt $hrm_ht bksl $launch_chord)
 
   ;; ===== exec mode (Phase 3, ~/.config/quickshell/project-memory/kanata-island.md) =====
-  ;; Tap physical left Super to enter execlayer; hold still passes through
-  ;; plain lmet so Super+anything keeps working as a normal Hyprland
-  ;; modifier. Only bound in `default` below -- capslayer/majlayer/nums/
-  ;; arrows just pass this physical key through as plain lmet, no exec-entry
-  ;; behaviour there (keeps this a single, predictable entry point).
-  lmet_exec (tap-hold-press $lmet_tt $lmet_ht (layer-switch execlayer) lmet)
+  ;; Tap physical left Alt to enter execlayer; hold still passes through
+  ;; plain lalt so Alt+anything keeps working as a normal modifier. Only
+  ;; bound in `default` below -- capslayer/majlayer/nums/arrows just pass
+  ;; this physical key through as plain lalt, no exec-entry behaviour there
+  ;; (keeps this a single, predictable entry point).
+  lalt_exec (tap-hold-press $lalt_tt $lalt_ht (layer-switch execlayer) lalt)
 
   ;; Every execlayer key not explicitly mapped below bounces straight back
   ;; to default -- one-shot by construction: there is no key you can press
@@ -221,7 +221,7 @@
   _ _ _
 
   bspc
-  @lmet_exec
+  @lalt_exec
 )
 
 (deflayer arrows
@@ -241,7 +241,7 @@
   _ _ _
 
   bspc
-  lmet
+  lalt
 )
 
 (deflayer capslayer
@@ -262,7 +262,7 @@
   _ _ _
 
   bspc
-  lmet
+  lalt
 )
 
 (deflayer majlayer
@@ -283,7 +283,7 @@
   _ _ _
 
   bspc
-  lmet
+  lalt
 )
 
 (deflayer nums
@@ -305,10 +305,10 @@
   _ _ _
 
   bspc
-  lmet
+  lalt
 )
 
-;; One-shot exec layer (Phase 3): tap @lmet_exec in `default` to enter, any
+;; One-shot exec layer (Phase 3): tap @lalt_exec in `default` to enter, any
 ;; key either push-msg's its semantic string + bounces back to default
 ;; (mapped keys, see the @ex* aliases above) or just bounces back to
 ;; default with no side effect (everything else, @exExit) -- so there is no
@@ -334,5 +334,5 @@
   @exExit @exExit @exExit
 
   @exExit
-  @lmet_exec
+  @lalt_exec
 )
