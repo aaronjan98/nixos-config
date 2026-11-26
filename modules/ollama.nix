@@ -54,6 +54,20 @@
       # trusting an unauthenticated identity claim.
       ENABLE_FORWARD_USER_INFO_HEADERS = "true";
 
+      # Closed now that every household account exists. It defaults to TRUE,
+      # and it had been left at the default — so anyone who could reach
+      # ai.home could create their own account. That is not nothing: a
+      # verified caller with no roster entry is still accepted by every
+      # `household` workflow, which is enough to drive the living-room TV and
+      # file download requests. It never reached personal-tier workflows or
+      # anyone's Nextcloud, both of which are default-deny.
+      #
+      # Signup only ever needed to be on for the very first admin account.
+      # New members are added in Admin Panel -> Users, which is also where
+      # their principal comes from for HOUSEHOLD_ROSTER — see
+      # voice-assistant/README.md, "Adding a household member".
+      ENABLE_SIGNUP = "false";
+
       # Show every connection's models to every account, and let the workflow
       # shim decide who may actually *use* one.
       #

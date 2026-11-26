@@ -16,6 +16,17 @@ in
     # Start the process at login so the socket is always ready; models are NOT
     # loaded until the first capture, and are released again when idle.
     wantedBy = [ "default.target" ];
+
+    # Give up after a few failures instead of thrashing. Restart=on-failure
+    # with RestartSec=2 and no limit meant that when the Surya venv went
+    # missing, this exited 127 ("run bootstrap-surya-ocr") and was restarted
+    # every two seconds indefinitely — a new process twice a second, flooding
+    # the journal and hiding real failures, for a service nothing was asking
+    # for at the time. A missing prerequisite should surface as a failed unit
+    # you can see, not as background noise.
+    startLimitIntervalSec = 120;
+    startLimitBurst = 4;
+
     serviceConfig = {
       ExecStart = "${ocrTools}/bin/surya-ocr-server";
       Restart = "on-failure";
