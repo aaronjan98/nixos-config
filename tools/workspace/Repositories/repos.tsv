@@ -3,11 +3,6 @@ automation/pix2tex	pix2tex	ssh://git@ssh.aaronjanovitch.com:2222/srv/git/repos/p
 automation/video-summary	video-summary	ssh://git@localhost/srv/git/repos/clipper-video-summary-client.git
 experiment/claw-code-parity	claw-code-parity	git@github.com:ultraworkers/claw-code-parity.git
 experiment/gods-eye-view	gods-eye-view	https://github.com/bilawalsidhu/gods-eye-view.git
-experiment/learnharness	learnharness	https://github.com/amosblomqvist/learnharness.git
-experiment/provenance-market/provenance-ai-backend	provenance-ai-backend	git@sweetpea-git:/srv/git/repos/provenance-ai-backend.git
-experiment/provenance-market/provenance-ai-frontend	provenance-ai-frontend	git@sweetpea-git:/srv/git/repos/provenance-ai-frontend.git
-experiment/provenance-market/provenance-market-backend-v1	provenance-market-backend-v1	git@sweetpea-git:/srv/git/repos/provenance-market-backend-v1.git
-experiment/provenance-market/provenance-market-backend-v2	provenance-market-backend-v2	git@sweetpea-git:/srv/git/repos/provenance-market-backend-v2.git
 experiment/vulnlab	vulnlab	ssh://git@localhost/srv/git/repos/vulnlab.git
 lantern-dev	lantern-dev	sweetpea:/opt/lantern
 projects/arduino	arduino	ssh://git@localhost/srv/git/repos/arduino.git
@@ -15,7 +10,6 @@ projects/canvas-accessibility-skill	canvas-accessibility-skill	ssh://git@localho
 projects/context-harness	context-harness	ssh://git@localhost/srv/git/repos/context-harness.git
 projects/ipod-dap-sync	ipod-dap-sync	ssh://git@localhost/srv/git/repos/ipod-dap-sync.git
 projects/language-tutor	language-tutor	ssh://git@localhost/srv/git/repos/language-tutor.git
-projects/latex-whiteboard	latex-whiteboard	ssh://git@localhost/srv/git/repos/latex-whiteboard.git
 projects/project-memory	project-memory	git@sweetpea-git:/srv/git/repos/project-memory.git
 projects/voice-assistant	voice-assistant	git@sweetpea-git:/srv/git/repos/voice-assistant.git
 school/differential_equations/directional_fields	directional_fields	ssh://git@localhost/srv/git/repos/directional_fields.git
