@@ -163,7 +163,7 @@ Full detail: `memory/2026-08-01 keyboard accents emoji and host-scaled dotfiles.
 Full detail: `memory/2026-11-14 kanata-exec-mode-phase3.md`. Clean architecture reference:
 `~/.config/quickshell/rices/limerence/docs/kanata-island.md`.
 
-Tap the physical left Super key to enter a one-shot kanata layer (`execlayer`,
+Tap the physical left Alt key to enter a one-shot kanata layer (`execlayer`,
 `hosts/*/kanata/kanata-internal.kbd`, both hosts kept byte-identical outside the per-host
 `defcfg` block) where each mapped key `push-msg`s a short semantic string and bounces back
 to `default` in the same tap; `scripts/kanata-ctl-daemon.py` relays the message to

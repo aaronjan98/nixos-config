@@ -59,6 +59,8 @@ in
             };
           };
 
+          # NOTE: `Wallpapers/current.png` inside this folder is excluded via
+          # the .stignore installed below — see the comment there.
           "Pictures" = {
             path = "/home/aj/Pictures";
             devices = lib.attrNames cfg.devices;
@@ -91,6 +93,34 @@ in
         };
       };
     };
+
+    # Keep the *current wallpaper pointer* out of the sync set.
+    #
+    # `~/Pictures/Wallpapers/current.png` is a symlink, and it is not just a
+    # cache — it IS the record of which wallpaper this machine is using
+    # (hypr/scripts/set-wallpapers writes it, then reapplies it to every output
+    # on session start and on monitor hotplug, and feeds it to matugen to derive
+    # the whole Quickshell palette and the system light/dark mode).
+    #
+    # Syncthing does track symlinks on Unix, so that per-machine pointer was
+    # being replicated between the laptops: picking a wallpaper on one host
+    # rewrote the other host's `current.png`, and the next session start there
+    # came up with the first host's wallpaper and a palette recoloured to match.
+    # Confirmed on the ThinkPad via the local index — `type:
+    # FILE_INFO_TYPE_SYMLINK`, `modifiedBy: HREY2AY` (framework-13's device ID).
+    # The wallpaper IMAGES still sync, which is the part that's actually wanted;
+    # only the "which one is active here" pointer is now host-local.
+    #
+    # Installed as a symlink into the store because Syncthing only ever reads
+    # .stignore. It is deliberately not synced by Syncthing itself (ignore files
+    # never are), which is exactly why it has to be declared here so every host
+    # gets it rather than being set up by hand once.
+    systemd.tmpfiles.rules = [
+      "L+ /home/aj/Pictures/.stignore - - - - ${pkgs.writeText "pictures-stignore" ''
+        // Host-local wallpaper pointer, not shared state. See modules/syncthing.nix.
+        /Wallpapers/current.png
+      ''}"
+    ];
 
     environment.systemPackages = [ pkgs.syncthing ];
   };
