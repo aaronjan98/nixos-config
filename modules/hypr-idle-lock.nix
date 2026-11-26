@@ -249,8 +249,20 @@ in
     # session lock first. Deliberately NO on-resume: a dpms-on here would be fired
     # by that same spurious lock-resume and consumed before the real wake, leaving
     # a black screen on return. Waking is handled instead by Hyprland's
-    # key_press_enables_dpms / mouse_move_enables_dpms (hypr conf.d misc{}), which
-    # is immune to the lock-resume.
+    # key_press_enables_dpms / mouse_move_enables_dpms, which are immune to the
+    # lock-resume.
+    #
+    # THOSE TWO ARE A HARD DEPENDENCY OF THIS LISTENER, and they are NOT
+    # Hyprland defaults — both default to 0 in 0.52.x. They have to be set
+    # explicitly in the dotfiles at ~/.config/hypr/conf.d/30-look.conf misc{};
+    # verify with `hyprctl getoption misc:key_press_enables_dpms` (want int: 1).
+    # They were missing until 2026-11-26, so for as long as this listener has
+    # existed, idling out with the lid OPEN powered the panel down with nothing
+    # able to turn it back on: keys and mouse did nothing, the session was
+    # locked so plain `bind`s were suppressed too, and recovery meant cycling
+    # the lid (whose resume runs after_sleep_cmd's `dpms on`) or rebooting.
+    # If this listener's dpms-off is ever kept while those options go away,
+    # the black screen comes straight back.
     listener {
       timeout = 600
       on-timeout = loginctl lock-session ; sleep 2 ; hyprctl dispatch dpms off
